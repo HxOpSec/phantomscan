@@ -1,3 +1,4 @@
+#include "modules/firewall.h"
 #include "modules/packet_capture.h"
 #include <iostream>
 #include "core/scanner.h"
@@ -24,6 +25,11 @@ std::cout << "[*] ОС цели: " << os << std::endl;
 
     std::cout << "\n[*] Найдено открытых портов: " << results.size() << std::endl;// Захват пакетов
 std::cout << "\n[*] Запускаем захват пакетов..." << std::endl;
+// Определяем фаервол
+std::cout << "\n[*] Проверяем фаервол..." << std::endl;
+FirewallDetector fw_detector;
+FirewallResult fw_result = fw_detector.detect(target);
+std::cout << "[*] Результат: " << fw_result.status << std::endl;
 PacketCapture capture("lo"); // lo = localhost, eth0 для реальной сети
 capture.start(10);           // Ловим 10 пакетов
 
