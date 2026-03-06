@@ -1,4 +1,5 @@
 #include "core/scanner.h"
+#include "modules/service_detect.h"
 #include <iostream>
 #include <sys/socket.h>    // Для работы с сокетами
 #include <netinet/in.h>    // Для структуры sockaddr_in
@@ -34,7 +35,7 @@ bool Scanner::check_port(int port) {
     FD_ZERO(&fdset);
     FD_SET(sock, &fdset);
 
-    struct timeval tv;
+    struct timeval tv;     
     tv.tv_sec = 1;   // 1 секунда
     tv.tv_usec = 0;
 
@@ -64,10 +65,13 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
             PortResult result;
             result.port = port;
             result.is_open = true;
-            result.service = "unknown"; // Позже добавим определение служб
+            ServiceDetector detector;
+result.service = detector.detect(target_ip, port);
             results.push_back(result);
 
-            std::cout << "[+] Port " << port << " is OPEN" << std::endl;
+            std::cout << "[+] Port " << result.port 
+          << " is OPEN | Service: " << result.service 
+          << std::endl;
         }
     }
 
