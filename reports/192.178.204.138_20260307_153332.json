@@ -1,0 +1,24 @@
+{
+  "target": "192.178.204.138",
+  "ip": "192.178.204.138",
+  "os": "Windows (TTL=105)",
+  "country": "United States",
+  "firewall": true,
+  "scan_time": 54,
+  "ports": [
+  ],
+  "subdomains": [
+    "www.google.com → 108.177.122.105",
+    "mail.google.com → 108.177.122.19",
+    "admin.google.com → 142.251.38.142",
+    "api.google.com → 142.251.38.132",
+    "blog.google.com → 142.251.38.137",
+    "shop.google.com → 64.233.184.92",
+    "vpn.google.com → 64.9.224.68",
+    "smtp.google.com → 64.233.166.26",
+    "ns1.google.com → 216.239.32.10",
+    "ns2.google.com → 216.239.34.10",
+    "mobile.google.com → 142.251.141.171",
+    "m.google.com → 142.251.141.171"
+  ]
+}
