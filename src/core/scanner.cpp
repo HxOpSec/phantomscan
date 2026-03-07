@@ -1,3 +1,4 @@
+#include "utils/colors.h"
 #include "core/scanner.h"
 #include "modules/service_detect.h"
 #include <iostream>
@@ -63,14 +64,25 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
 
     for (int port = start_port; port <= end_port; port++) {
 
-        if (port % 100 == 0) {
+        if (port % 50 == 0) {
             int done = port - start_port;
             int percent = (done * 100) / total;
             auto now = std::chrono::steady_clock::now();
             int elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
-            std::cout << "[~] Прогресс: " << percent << "% | "
-                      << "Порт: " << port << "/" << end_port << " | "
-                      << "Время: " << elapsed << "с" << std::endl;
+            int bar_width = 30;
+int filled = (percent * bar_width) / 100;
+std::string bar = "[";
+for (int i = 0; i < bar_width; i++) {
+    if (i < filled) bar += "█";
+    else bar += "░";
+}
+bar += "]";
+
+std::cout << "\r" << Color::MAGENTA
+          << bar << " " << percent << "% | "
+          << "Порт: " << port << "/" << end_port << " | "
+          << elapsed << "с"
+          << Color::RESET << std::flush;
         }
 
         bool open = check_port(port);
@@ -83,16 +95,21 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
             result.service = detector.detect(target_ip, port);
             results.push_back(result);
 
-            std::cout << "[+] Port " << result.port
-                      << " is OPEN | Service: " << result.service
-                      << std::endl;
+            std::cout << "\r" << Color::OK
+          << "Порт " << Color::BOLD << result.port << Color::RESET
+          << Color::GREEN << " ОТКРЫТ" << Color::RESET
+          << " | " << Color::YELLOW << result.service << Color::RESET
+          << std::string(20, ' ') << std::endl;
         }
 
     }  // ← закрывает for
 
     auto end_time = std::chrono::steady_clock::now();
     int total_sec = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time).count();
-    std::cout << "[*] Сканирование завершено за " << total_sec << " секунд" << std::endl;
+    std::cout << "\n" << Color::INFO
+          << "Сканирование завершено за "
+          << Color::YELLOW << total_sec << " секунд"
+          << Color::RESET << std::endl;
 
     return results;
 }  // ← закрывает функцию scan()
