@@ -1,3 +1,4 @@
+#include "modules/threads.h"
 #include <iostream>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -38,8 +39,8 @@ int main(int argc, char* argv[]) {
 
     // Сканер портов
     std::cout << Color::INFO << "Сканируем порты 1-1024..." << Color::RESET << std::endl;
-    Scanner scanner(target);
-    auto results = scanner.scan(1, 1024);
+ThreadScanner scanner(target, 10);
+auto results = scanner.scan(1, 1024);
     std::cout << Color::INFO << "Найдено открытых портов: "
               << Color::GREEN << results.size() << Color::RESET << std::endl;
     std::cout << "──────────────────────────────────────────────────────────\n";

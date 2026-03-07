@@ -1,6 +1,6 @@
 CXX      = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -I./include
-LDFLAGS  = -lpcap
+LDFLAGS  = -lpcap -lpthread
 TARGET   = builds/phantomscan
 SRC      = $(shell find src -name "*.cpp")
 OBJ      = $(SRC:.cpp=.o)
