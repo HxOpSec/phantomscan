@@ -1,3 +1,4 @@
+#include "modules/cve.h"
 #include "modules/whois.h"
 #include "utils/progress.h"
 #include <chrono>
@@ -59,7 +60,17 @@ int scan_sec = std::chrono::duration_cast<std::chrono::seconds>(scan_end - scan_
 
 // Таблица результатов
 print_table(results);
-    std::cout << "──────────────────────────────────────────────────────────\n";
+// CVE сканирование
+std::cout << "\n" << Color::WARN << "Проверяем уязвимости CVE..." 
+          << Color::RESET << std::endl;
+CVEScanner cve;
+for (const auto& r : results) {
+    std::cout << Color::INFO << "Порт " << r.port 
+              << " (" << r.service << "):" << Color::RESET << std::endl;
+    auto cves = cve.search(r.service);
+    cve.print_results(r.service, cves);
+}
+std::cout << "──────────────────────────────────────────────────────────\n";
 
     // Firewall Detection
     std::cout << Color::INFO << "Проверяем фаервол..." << Color::RESET << std::endl;

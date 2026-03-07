@@ -1,0 +1,38 @@
+{
+  "SSH": [
+    {"id": "CVE-2023-38408", "severity": "HIGH", "desc": "OpenSSH forwarding RCE vulnerability"},
+    {"id": "CVE-2018-15473", "severity": "MEDIUM", "desc": "OpenSSH username enumeration"}
+  ],
+  "HTTP": [
+    {"id": "CVE-2021-41773", "severity": "CRITICAL", "desc": "Apache path traversal & RCE"},
+    {"id": "CVE-2021-42013", "severity": "CRITICAL", "desc": "Apache path traversal bypass"}
+  ],
+  "HTTPS": [
+    {"id": "CVE-2021-44228", "severity": "CRITICAL", "desc": "Log4Shell - Log4j RCE"},
+    {"id": "CVE-2022-22965", "severity": "CRITICAL", "desc": "Spring4Shell - Spring RCE"}
+  ],
+  "FTP": [
+    {"id": "CVE-2019-12815", "severity": "CRITICAL", "desc": "ProFTPd arbitrary file copy"},
+    {"id": "CVE-2015-3306", "severity": "HIGH", "desc": "ProFTPd mod_copy unauthenticated access"}
+  ],
+  "SMTP": [
+    {"id": "CVE-2020-28017", "severity": "CRITICAL", "desc": "Exim RCE via integer overflow"},
+    {"id": "CVE-2019-10149", "severity": "CRITICAL", "desc": "Exim remote command execution"}
+  ],
+  "MySQL": [
+    {"id": "CVE-2021-2307", "severity": "HIGH", "desc": "MySQL privilege escalation"},
+    {"id": "CVE-2020-14878", "severity": "HIGH", "desc": "MySQL server vulnerability"}
+  ],
+  "Telnet": [
+    {"id": "CVE-2020-10188", "severity": "CRITICAL", "desc": "Telnet remote code execution"},
+    {"id": "CVE-1999-0015", "severity": "HIGH", "desc": "Telnet unencrypted credentials"}
+  ],
+  "Redis": [
+    {"id": "CVE-2022-0543", "severity": "CRITICAL", "desc": "Redis Lua sandbox escape RCE"},
+    {"id": "CVE-2021-32761", "severity": "HIGH", "desc": "Redis integer overflow"}
+  ],
+  "MongoDB": [
+    {"id": "CVE-2021-20328", "severity": "MEDIUM", "desc": "MongoDB client-side field injection"},
+    {"id": "CVE-2019-2386", "severity": "MEDIUM", "desc": "MongoDB unauthorized data access"}
+  ]
+}
