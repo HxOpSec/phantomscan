@@ -1,3 +1,5 @@
+#include "utils/progress.h"
+#include <chrono>
 #include "modules/threads.h"
 #include <iostream>
 #include <netdb.h>
@@ -38,11 +40,15 @@ int main(int argc, char* argv[]) {
     std::cout << "──────────────────────────────────────────────────────────\n";
 
     // Сканер портов
-    std::cout << Color::INFO << "Сканируем порты 1-1024..." << Color::RESET << std::endl;
+    auto scan_start = std::chrono::steady_clock::now();
+std::cout << Color::INFO << "Сканируем порты 1-1024..." << Color::RESET << std::endl;
 ThreadScanner scanner(target, 10);
 auto results = scanner.scan(1, 1024);
-    std::cout << Color::INFO << "Найдено открытых портов: "
-              << Color::GREEN << results.size() << Color::RESET << std::endl;
+auto scan_end = std::chrono::steady_clock::now();
+int scan_sec = std::chrono::duration_cast<std::chrono::seconds>(scan_end - scan_start).count();
+
+// Таблица результатов
+print_table(results);
     std::cout << "──────────────────────────────────────────────────────────\n";
 
     // Firewall Detection
@@ -68,6 +74,8 @@ auto results = scanner.scan(1, 1024);
     std::cout << Color::INFO << "Захват пакетов..." << Color::RESET << std::endl;
     PacketCapture capture("lo");
     capture.start(10);
+    // Итог
+print_summary(argv[1], os, results.size(), scan_sec);
 
     return 0;
 }
