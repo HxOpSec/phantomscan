@@ -218,3 +218,81 @@ void Menu::run() {
         }
     }
 }
+
+void Menu::run_cli(const std::string& t, int p_start, int p_end,
+                   const std::string& output) {
+    print_banner();
+
+    original_target = t;
+    struct hostent* host = gethostbyname(t.c_str());
+    if (!host) {
+        std::cout << Color::FAIL << "[-] Не удалось разрезолвить: " 
+                  << t << Color::RESET << std::endl;
+        return;
+    }
+    target = inet_ntoa(*(struct in_addr*)host->h_addr_list[0]);
+    if (target != t) {
+        std::cout << Color::INFO << "Резолвинг: " << Color::YELLOW
+                  << t << " -> " << target << Color::RESET << std::endl;
+    }
+
+    std::cout << Color::INFO << "Порты: " << Color::CYAN 
+              << p_start << "-" << p_end << Color::RESET << std::endl;
+    std::cout << "──────────────────────────────────────────\n";
+
+    auto scan_start = std::chrono::steady_clock::now();
+
+    Whois whois;
+    WhoisResult wi = whois.lookup(target);
+    std::cout << Color::INFO << "Страна: " << Color::YELLOW 
+              << wi.country << Color::RESET << std::endl;
+    std::cout << "──────────────────────────────────────────\n";
+
+    OSDetector os_det;
+    std::string os = os_det.detect(target);
+    std::cout << Color::INFO << "ОС: " << Color::YELLOW 
+              << os << Color::RESET << std::endl;
+    std::cout << "──────────────────────────────────────────\n";
+
+    ThreadScanner scanner(target, 10);
+    auto results = scanner.scan(p_start, p_end);
+    print_table(results);
+
+    CVEScanner cve;
+    for (const auto& r : results) {
+        auto cves = cve.search(r.service);
+        if (!cves.empty()) cve.print_results(r.service, cves);
+    }
+
+    FirewallDetector fw;
+    FirewallResult fw_result = fw.detect(target);
+    std::cout << (fw_result.detected ? Color::WARN : Color::OK)
+              << fw_result.status << Color::RESET << std::endl;
+
+    SubdomainEnum sub;
+    auto subs = sub.enumerate(original_target);
+
+    auto scan_end = std::chrono::steady_clock::now();
+    int scan_sec = std::chrono::duration_cast<std::chrono::seconds>
+                   (scan_end - scan_start).count();
+
+    print_summary(target, os, results.size(), scan_sec);
+
+    ScanReport report;
+    report.target = original_target;
+    report.ip = target;
+    report.os = os;
+    report.country = wi.country;
+    report.city = wi.city;
+    report.isp = wi.isp;
+    report.firewall_detected = fw_result.detected;
+    report.ports = results;
+    report.scan_time = scan_sec;
+    for (const auto& s : subs)
+        report.subdomains.push_back(s.subdomain + " → " + s.ip);
+
+    Reporter reporter;
+    if (output == "txt" || output == "all") reporter.save_txt(report);
+    if (output == "json" || output == "all") reporter.save_json(report);
+    if (output == "html" || output == "all") reporter.save_html(report);
+}

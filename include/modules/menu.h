@@ -4,6 +4,8 @@
 class Menu {
 public:
     void run();
+    void run_cli(const std::string& t, int p_start, int p_end, 
+                 const std::string& output);
 
 private:
     std::string target;
