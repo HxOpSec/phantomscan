@@ -1,3 +1,4 @@
+#include "modules/whois.h"
 #include "utils/progress.h"
 #include <chrono>
 #include "modules/threads.h"
@@ -30,7 +31,16 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << Color::INFO << "Цель     : " << Color::CYAN << argv[1] << Color::RESET << std::endl;
-    std::cout << Color::INFO << "IP адрес : " << Color::CYAN << target << Color::RESET << std::endl;
+std::cout << Color::INFO << "IP адрес : " << Color::CYAN << target << Color::RESET << std::endl;
+
+// WHOIS
+Whois whois;
+WhoisResult wi = whois.lookup(target);
+std::cout << Color::INFO << "Страна   : " << Color::YELLOW << wi.country << Color::RESET << std::endl;
+std::cout << Color::INFO << "Город    : " << Color::YELLOW << wi.city << Color::RESET << std::endl;
+std::cout << Color::INFO << "Провайдер: " << Color::YELLOW << wi.isp << Color::RESET << std::endl;
+std::cout << Color::INFO << "Организац: " << Color::YELLOW << wi.org << Color::RESET << std::endl;
+std::cout << "──────────────────────────────────────────────────────────\n";
     std::cout << "──────────────────────────────────────────────────────────\n";
 
     // OS Detection
