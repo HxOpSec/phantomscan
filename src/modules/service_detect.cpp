@@ -7,12 +7,10 @@
 #include <cstring>
 #include <sys/select.h>
 
-// Конструктор — сразу загружаем таблицу
 ServiceDetector::ServiceDetector() {
     load_port_table();
 }
 
-// Таблица известных портов
 void ServiceDetector::load_port_table() {
     port_table[21]   = "FTP";
     port_table[22]   = "SSH";
@@ -31,20 +29,16 @@ void ServiceDetector::load_port_table() {
     port_table[27017]= "MongoDB";
 }
 
-// Пробуем получить баннер от сервера
 std::string ServiceDetector::grab_banner(const std::string& ip, int port) {
-    // Создаём сокет
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) return "";
 
-    // Таймаут 2 секунды
     struct timeval tv;
     tv.tv_sec = 2;
     tv.tv_usec = 0;
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
 
-    // Подключаемся
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
@@ -55,34 +49,90 @@ std::string ServiceDetector::grab_banner(const std::string& ip, int port) {
         return "";
     }
 
-    // Читаем баннер (первые 256 байт)
-    char buffer[256] = {0};
+    // Для HTTP отправляем запрос
+    if (port == 80 || port == 8080) {
+        std::string req = "HEAD / HTTP/1.0\r\nHost: " + ip + "\r\n\r\n";
+        send(sock, req.c_str(), req.size(), 0);
+    }
+
+    char buffer[512] = {0};
     recv(sock, buffer, sizeof(buffer) - 1, 0);
     close(sock);
 
-    // Убираем переносы строк
     std::string banner(buffer);
-    if (!banner.empty() && banner.back() == '\n')
+    // Убираем лишние символы
+    while (!banner.empty() && (banner.back() == '\n' || banner.back() == '\r'))
         banner.pop_back();
 
     return banner;
 }
 
-// Главная функция — определяем службу
-std::string ServiceDetector::detect(const std::string& ip, int port) {
-    // Сначала пробуем получить баннер
-    std::string banner = grab_banner(ip, port);
+// Парсим версию из баннера
+std::string ServiceDetector::parse_version(const std::string& banner, const std::string& service) {
+    if (banner.empty()) return service;
 
-    if (!banner.empty()) {
-        // Баннер есть — возвращаем его
-        return banner.substr(0, 50); // Первые 50 символов
+    // SSH: "SSH-2.0-OpenSSH_8.4p1"
+    if (service == "SSH") {
+        size_t pos = banner.find("SSH-");
+        if (pos != std::string::npos) {
+            std::string ver = banner.substr(pos, 30);
+            // Убираем лишнее после пробела
+            size_t space = ver.find(' ');
+            if (space != std::string::npos) ver = ver.substr(0, space);
+            return "SSH " + ver;
+        }
     }
 
-    // Баннера нет — смотрим в таблице
+    // FTP: "220 FileZilla Server 1.2"
+    if (service == "FTP") {
+        if (banner.size() > 4) {
+            return "FTP " + banner.substr(4, 30);
+        }
+    }
+
+    // HTTP: ищем Server: Apache/2.4
+    if (service == "HTTP" || service == "HTTP-Alt") {
+        size_t pos = banner.find("Server:");
+        if (pos != std::string::npos) {
+            std::string ver = banner.substr(pos + 8, 30);
+            size_t nl = ver.find('\n');
+            if (nl != std::string::npos) ver = ver.substr(0, nl);
+            return "HTTP " + ver;
+        }
+        return "HTTP";
+    }
+
+    // SMTP: "220 mail.example.com ESMTP"
+    if (service == "SMTP") {
+        if (banner.size() > 4) {
+            return "SMTP " + banner.substr(4, 25);
+        }
+    }
+
+    // Если не распознали — возвращаем первые 40 символов баннера
+    if (banner.size() > 0) {
+        return service + " [" + banner.substr(0, 40) + "]";
+    }
+
+    return service;
+}
+
+std::string ServiceDetector::get_version(const std::string& ip, int port) {
+    std::string service = "unknown";
     if (port_table.count(port)) {
-        return port_table[port];
+        service = port_table[port];
     }
 
-    // Не знаем — неизвестная служба
-    return "unknown";
+    std::string banner = grab_banner(ip, port);
+    return parse_version(banner, service);
+}
+
+std::string ServiceDetector::detect(const std::string& ip, int port) {
+    std::string service = "unknown";
+    if (port_table.count(port)) {
+        service = port_table[port];
+    }
+
+    std::string banner = grab_banner(ip, port);
+    return parse_version(banner, service);
 }
