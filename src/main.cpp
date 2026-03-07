@@ -1,6 +1,9 @@
+#include "modules/subdomain.h"
 #include "modules/firewall.h"
 #include "modules/packet_capture.h"
 #include <iostream>
+#include <netdb.h>
+#include <arpa/inet.h>
 #include "core/scanner.h"
 #include "modules/os_detect.h"
 
@@ -12,7 +15,15 @@ int main(int argc, char* argv[]) {
     }
 
     std::string target = argv[1];
-    std::cout << "=== PhantomScan v0.1 ===" << std::endl;
+
+// Резолвинг домена в IP
+struct hostent* host = gethostbyname(target.c_str());
+if (host) {
+    target = inet_ntoa(*(struct in_addr*)host->h_addr_list[0]);
+}
+
+std::cout << "=== PhantomScan v0.1 ===" << std::endl;
+std::cout << "[*] IP адрес: " << target << std::endl;
     std::cout << "[*] Цель: " << target << std::endl;// Определяем ОС
 OSDetector os_detector;
 std::string os = os_detector.detect(target);
@@ -30,6 +41,11 @@ std::cout << "\n[*] Проверяем фаервол..." << std::endl;
 FirewallDetector fw_detector;
 FirewallResult fw_result = fw_detector.detect(target);
 std::cout << "[*] Результат: " << fw_result.status << std::endl;
+// Поиск поддоменов
+std::cout << "\n[*] Запускаем поиск поддоменов..." << std::endl;
+SubdomainEnum subdomain;
+auto subdomains = subdomain.enumerate(target);
+std::cout << "[*] Найдено поддоменов: " << subdomains.size() << std::endl;
 PacketCapture capture("lo"); // lo = localhost, eth0 для реальной сети
 capture.start(10);           // Ловим 10 пакетов
 

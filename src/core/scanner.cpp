@@ -7,6 +7,7 @@
 #include <unistd.h>        // Для close()
 #include <fcntl.h>         // Для неблокирующего режима
 #include <sys/select.h>    // Для select() — таймаут
+#include <chrono>
 
 // Конструктор — сохраняем IP адрес цели
 Scanner::Scanner(const std::string& target_ip) 
@@ -36,8 +37,8 @@ bool Scanner::check_port(int port) {
     FD_SET(sock, &fdset);
 
     struct timeval tv;     
-    tv.tv_sec = 1;   // 1 секунда
-    tv.tv_usec = 0;
+    tv.tv_sec = 0; 
+    tv.tv_usec = 300000; // 0.3 секунды
 
     bool is_open = false;
 
@@ -57,8 +58,21 @@ bool Scanner::check_port(int port) {
 // Сканируем диапазон портов
 std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
     std::vector<PortResult> results;
+    auto start_time = std::chrono::steady_clock::now();
+    int total = end_port - start_port + 1;
 
     for (int port = start_port; port <= end_port; port++) {
+
+        if (port % 100 == 0) {
+            int done = port - start_port;
+            int percent = (done * 100) / total;
+            auto now = std::chrono::steady_clock::now();
+            int elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
+            std::cout << "[~] Прогресс: " << percent << "% | "
+                      << "Порт: " << port << "/" << end_port << " | "
+                      << "Время: " << elapsed << "с" << std::endl;
+        }
+
         bool open = check_port(port);
 
         if (open) {
@@ -66,14 +80,19 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
             result.port = port;
             result.is_open = true;
             ServiceDetector detector;
-result.service = detector.detect(target_ip, port);
+            result.service = detector.detect(target_ip, port);
             results.push_back(result);
 
-            std::cout << "[+] Port " << result.port 
-          << " is OPEN | Service: " << result.service 
-          << std::endl;
+            std::cout << "[+] Port " << result.port
+                      << " is OPEN | Service: " << result.service
+                      << std::endl;
         }
-    }
+
+    }  // ← закрывает for
+
+    auto end_time = std::chrono::steady_clock::now();
+    int total_sec = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time).count();
+    std::cout << "[*] Сканирование завершено за " << total_sec << " секунд" << std::endl;
 
     return results;
-}
+}  // ← закрывает функцию scan()
