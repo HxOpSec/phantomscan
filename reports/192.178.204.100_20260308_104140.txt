@@ -1,0 +1,28 @@
+=== PhantomScan Report ===
+
+Цель     : 192.178.204.100
+IP       : 192.178.204.100
+ОС       : Windows (TTL=105)
+Страна   : United States
+Город    : Mountain View
+Провайдер: Google LLC
+Фаервол  : ОБНАРУЖЕН
+Время    : 51 сек
+
+=== ОТКРЫТЫЕ ПОРТЫ ===
+
+=== ПОДДОМЕНЫ ===
+  [+] www.google.com → 108.177.122.99
+  [+] mail.google.com → 192.178.203.17
+  [+] admin.google.com → 142.250.203.206
+  [+] api.google.com → 142.251.143.4
+  [+] blog.google.com → 142.251.143.9
+  [+] shop.google.com → 142.250.27.92
+  [+] vpn.google.com → 64.9.224.68
+  [+] smtp.google.com → 142.250.27.26
+  [+] ns1.google.com → 216.239.32.10
+  [+] ns2.google.com → 216.239.34.10
+  [+] mobile.google.com → 142.251.141.43
+  [+] m.google.com → 142.251.141.43
+
+=== CVE УЯЗВИМОСТИ ===
