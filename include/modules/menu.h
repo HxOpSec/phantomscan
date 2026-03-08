@@ -25,7 +25,8 @@ private:
     void vuln_scan();       
     void wordlist_scan();   
     void shodan_lookup();
-    void exploit_search();    // ← новое
-    void topology_scan();     // ← новое
+    void exploit_search();   
+    void topology_scan();
+    void udp_scan();          // ← новое
         
 };

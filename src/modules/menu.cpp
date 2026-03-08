@@ -1,3 +1,4 @@
+#include "modules/udp_scan.h"
 #include "modules/exploit.h"
 #include "modules/topology.h"
 #include "modules/vuln_scan.h"
@@ -289,6 +290,25 @@ void Menu::topology_scan() {
     topo.build(nodes, original_target);
 }
 
+void Menu::udp_scan() {
+    std::cout << Color::INFO << "Порты для UDP скана (например 1-1024): "
+              << Color::CYAN;
+    std::string range;
+    std::cin >> range;
+    std::cout << Color::RESET;
+
+    int p_start = 1, p_end = 1024;
+    size_t dash = range.find('-');
+    if (dash != std::string::npos) {
+        p_start = std::stoi(range.substr(0, dash));
+        p_end   = std::stoi(range.substr(dash + 1));
+    }
+
+    UDPScanner udp;
+    auto results = udp.scan(target, p_start, p_end);
+    udp.print_results(results);
+}
+
 void Menu::run() {
     print_banner();
 
@@ -319,7 +339,8 @@ void Menu::run() {
         std::cout << "│  [12] Shodan поиск                      │\n";
         std::cout << "│  [13] Exploit Suggester                 │\n";
         std::cout << "│  [14] Топология сети                    │\n";
-        std::cout << "│  [15] Сменить цель                      │\n";
+        std::cout << "│  [15] UDP скан                          │\n";
+        std::cout << "│  [16] Сменить цель                      │\n";
         std::cout << "│  [0]  Выход                             │\n";
         std::cout << Color::RESET;
 
@@ -342,7 +363,8 @@ void Menu::run() {
     case 12: shodan_lookup();     break;
     case 13: exploit_search();    break;
     case 14: topology_scan();     break;
-    case 15: get_target();        break;
+    case 15: udp_scan();          break;
+    case 16: get_target();        break;
     case 0:
         std::cout << Color::INFO << "До свидания! "
                   << Color::RESET << std::endl;
