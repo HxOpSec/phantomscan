@@ -60,17 +60,6 @@ ShodanResult ShodanAPI::lookup(const std::string& ip) {
         return response.substr(pos, end - pos);
     };
 
-    auto extract_num = [&](const std::string& key) 
-                           -> std::string {
-        std::string search = "\"" + key + "\":";
-        size_t pos = response.find(search);
-        if (pos == std::string::npos) return "";
-        pos += search.size();
-        size_t end = response.find_first_of(",}", pos);
-        if (end == std::string::npos) return "";
-        return response.substr(pos, end - pos);
-    };
-
     result.org     = extract("org");
     result.country = extract("country_name");
     result.os      = extract("os");

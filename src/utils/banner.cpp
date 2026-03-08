@@ -14,7 +14,7 @@ void print_banner() {
 )" << Color::RESET;
 
     std::cout << Color::YELLOW << Color::BOLD;
-    std::cout << "              Network Scanner v0.2  |  by Umedjon\n";
+    std::cout << "              Network Scanner v1.0  |  by UMEDJON\n";
     std::cout << Color::RESET;
     std::cout << Color::WHITE;
     std::cout << "──────────────────────────────────────────────────────────\n";

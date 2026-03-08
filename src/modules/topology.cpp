@@ -12,7 +12,7 @@ void NetworkTopology::build(const std::vector<TopoNode>& nodes,
 }
 
 void NetworkTopology::print_ascii(const std::vector<TopoNode>& nodes,
-                                   const std::string& target) {
+                                   const std::string& /*target*/) {
     if (nodes.empty()) {
         std::cout << Color::FAIL << "Нет данных для топологии!"
                   << Color::RESET << std::endl;

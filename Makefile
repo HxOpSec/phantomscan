@@ -1,5 +1,5 @@
 CXX      = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -I./include
+CXXFLAGS = -std=c++17 -Wall -Wextra -Wno-ignored-attributes -I./include
 LDFLAGS  = -lpcap -lpthread
 TARGET   = builds/phantomscan
 SRC      = $(shell find src -name "*.cpp")
