@@ -1,3 +1,6 @@
+#include "modules/vuln_scan.h"
+#include "modules/wordlist.h"
+#include "modules/shodan.h"
 #include "modules/syn_scan.h"
 #include "modules/ssl_scan.h"
 #include "modules/waf_detect.h"
@@ -226,6 +229,37 @@ void Menu::waf_detect() {
     waf.print_results(result);
 }
 
+void Menu::vuln_scan() {
+    VulnScanner vuln;
+    auto results = vuln.scan(target, 1, 9999);
+    vuln.print_results(results);
+}
+
+void Menu::wordlist_scan() {
+    WordlistGenerator wl;
+    auto found = wl.generate(original_target);
+    wl.print_results(found);
+
+    if (!found.empty()) {
+        std::string filename = "reports/" + original_target
+                             + "_wordlist.txt";
+        wl.save_to_file(found, filename);
+    }
+}
+
+void Menu::shodan_lookup() {
+    std::cout << Color::INFO << "Введите Shodan API ключ: "
+              << Color::CYAN;
+    std::string key;
+    std::cin >> key;
+    std::cout << Color::RESET;
+
+    ShodanAPI shodan;
+    shodan.set_api_key(key);
+    auto result = shodan.lookup(target);
+    shodan.print_results(result);
+}
+
 void Menu::run() {
     print_banner();
 
@@ -242,17 +276,20 @@ void Menu::run() {
         if (t.size() > 15) t = t.substr(0, 15);
         while (t.size() < 15) t += " ";
         std::cout << t << "  │\n";
-        std::cout << "│  [1] Полное сканирование                │\n";
-        std::cout << "│  [2] Быстрый скан                       │\n";
-        std::cout << "│  [3] Поиск поддоменов                   │\n";
-        std::cout << "│  [4] Мониторинг пакетов                 │\n";
-        std::cout << "│  [5] ARP скан сети                      │\n";
-        std::cout << "│  [6] Трассировка маршрута               │\n";
-        std::cout << "│  [7] SYN Stealth скан                   │\n";
-        std::cout << "│  [8] SSL/TLS анализ                     │\n";
-        std::cout << "│  [9] Определение WAF                    │\n";
-        std::cout << "│  [10] Сменить цель                      │\n";
-        std::cout << "│  [0] Выход                              │\n";
+        std::cout << "│  [1]  Полное сканирование               │\n";
+        std::cout << "│  [2]  Быстрый скан                      │\n";
+        std::cout << "│  [3]  Поиск поддоменов                  │\n";
+        std::cout << "│  [4]  Мониторинг пакетов                │\n";
+        std::cout << "│  [5]  ARP скан сети                     │\n";
+        std::cout << "│  [6]  Трассировка маршрута              │\n";
+        std::cout << "│  [7]  SYN Stealth скан                  │\n";
+        std::cout << "│  [8]  SSL/TLS анализ                    │\n";
+        std::cout << "│  [9]  Определение WAF                   │\n";
+        std::cout << "│  [10] Сканер уязвимых версий            │\n";
+        std::cout << "│  [11] Генератор wordlist                │\n";
+        std::cout << "│  [12] Shodan поиск                      │\n";
+        std::cout << "│  [13] Сменить цель                      │\n";
+        std::cout << "│  [0]  Выход                             │\n";
         std::cout << Color::RESET;
 
         std::cout << Color::YELLOW << "Выбор: " << Color::RESET;
@@ -269,7 +306,10 @@ void Menu::run() {
     case 7:  syn_scan();          break;
     case 8:  ssl_scan();          break;
     case 9:  waf_detect();        break;
-    case 10: get_target();        break;
+    case 10: vuln_scan();         break;
+    case 11: wordlist_scan();     break;
+    case 12: shodan_lookup();     break;
+    case 13: get_target();        break;
     case 0:
         std::cout << Color::INFO << "До свидания! "
                   << Color::RESET << std::endl;

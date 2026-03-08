@@ -1,0 +1,4 @@
+www.ddmit.tj
+mail.ddmit.tj
+ftp.ddmit.tj
+portal.ddmit.tj

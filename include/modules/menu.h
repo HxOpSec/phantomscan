@@ -19,7 +19,11 @@ private:
     void show_help();
     void arp_scan();
     void traceroute_scan();
-    void syn_scan();        // ← новое
-    void ssl_scan();        // ← новое
-    void waf_detect();      // ← новое
+    void syn_scan();        
+    void ssl_scan();        
+    void waf_detect();
+    void vuln_scan();       // ← новое
+    void wordlist_scan();   // ← новое
+    void shodan_lookup();   // ← новое
+        
 };
