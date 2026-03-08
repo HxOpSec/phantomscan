@@ -17,4 +17,9 @@ private:
     void subdomain_scan();
     void packet_monitor();
     void show_help();
+    void arp_scan();
+    void traceroute_scan();
+    void syn_scan();        // ← новое
+    void ssl_scan();        // ← новое
+    void waf_detect();      // ← новое
 };

@@ -1,3 +1,8 @@
+#include "modules/syn_scan.h"
+#include "modules/ssl_scan.h"
+#include "modules/waf_detect.h"
+#include "modules/arp_scan.h"
+#include "modules/traceroute.h"
 #include "modules/menu.h"
 #include "modules/threads.h"
 #include "modules/os_detect.h"
@@ -172,6 +177,55 @@ void Menu::packet_monitor() {
     capture.start(20);
 }
 
+void Menu::arp_scan() {
+    std::cout << Color::INFO << "Введите подсеть (например 192.168.1.0/24): " 
+              << Color::CYAN;
+    std::string subnet;
+    std::cin >> subnet;
+    std::cout << Color::RESET;
+
+    ARPScanner arp;
+    auto hosts = arp.scan(subnet);
+    arp.print_results(hosts);
+}
+
+void Menu::traceroute_scan() {
+    Traceroute tr;
+    auto hops = tr.trace(original_target);
+    tr.print_results(hops);
+}
+
+void Menu::syn_scan() {
+    std::cout << Color::INFO << "Порты для SYN скана (например 1-1024): "
+              << Color::CYAN;
+    std::string range;
+    std::cin >> range;
+    std::cout << Color::RESET;
+
+    int p_start = 1, p_end = 1024;
+    size_t dash = range.find('-');
+    if (dash != std::string::npos) {
+        p_start = std::stoi(range.substr(0, dash));
+        p_end   = std::stoi(range.substr(dash + 1));
+    }
+
+    SYNScanner syn;
+    auto results = syn.scan(target, p_start, p_end);
+    syn.print_results(results);
+}
+
+void Menu::ssl_scan() {
+    SSLScanner ssl;
+    auto info = ssl.scan(original_target);
+    ssl.print_results(info);
+}
+
+void Menu::waf_detect() {
+    WAFDetector waf;
+    auto result = waf.detect(original_target);
+    waf.print_results(result);
+}
+
 void Menu::run() {
     print_banner();
 
@@ -188,14 +242,17 @@ void Menu::run() {
         if (t.size() > 15) t = t.substr(0, 15);
         while (t.size() < 15) t += " ";
         std::cout << t << "  │\n";
-        std::cout << "├─────────────────────────────────────────┤\n";
         std::cout << "│  [1] Полное сканирование                │\n";
         std::cout << "│  [2] Быстрый скан                       │\n";
         std::cout << "│  [3] Поиск поддоменов                   │\n";
         std::cout << "│  [4] Мониторинг пакетов                 │\n";
-        std::cout << "│  [5] Сменить цель                       │\n";
+        std::cout << "│  [5] ARP скан сети                      │\n";
+        std::cout << "│  [6] Трассировка маршрута               │\n";
+        std::cout << "│  [7] SYN Stealth скан                   │\n";
+        std::cout << "│  [8] SSL/TLS анализ                     │\n";
+        std::cout << "│  [9] Определение WAF                    │\n";
+        std::cout << "│  [10] Сменить цель                      │\n";
         std::cout << "│  [0] Выход                              │\n";
-        std::cout << "└─────────────────────────────────────────┘\n";
         std::cout << Color::RESET;
 
         std::cout << Color::YELLOW << "Выбор: " << Color::RESET;
@@ -203,19 +260,24 @@ void Menu::run() {
         std::cin >> choice;
 
         switch (choice) {
-            case 1: full_scan();      break;
-            case 2: quick_scan();     break;
-            case 3: subdomain_scan(); break;
-            case 4: packet_monitor(); break;
-            case 5: get_target();     break;
-            case 0:
-                std::cout << Color::INFO << "До свидания! " 
-                          << Color::RESET << std::endl;
-                return;
-            default:
-                std::cout << Color::FAIL << "Неверный выбор!" 
-                          << Color::RESET << std::endl;
-        }
+    case 1:  full_scan();         break;
+    case 2:  quick_scan();        break;
+    case 3:  subdomain_scan();    break;
+    case 4:  packet_monitor();    break;
+    case 5:  arp_scan();          break;
+    case 6:  traceroute_scan();   break;
+    case 7:  syn_scan();          break;
+    case 8:  ssl_scan();          break;
+    case 9:  waf_detect();        break;
+    case 10: get_target();        break;
+    case 0:
+        std::cout << Color::INFO << "До свидания! "
+                  << Color::RESET << std::endl;
+        return;
+    default:
+        std::cout << Color::FAIL << "Неверный выбор!"
+                  << Color::RESET << std::endl;
+}
     }
 }
 
