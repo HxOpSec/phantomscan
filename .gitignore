@@ -1,0 +1,3 @@
+reports/*
+builds/*
+src/**/*.o
