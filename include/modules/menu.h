@@ -22,8 +22,10 @@ private:
     void syn_scan();        
     void ssl_scan();        
     void waf_detect();
-    void vuln_scan();       // ← новое
-    void wordlist_scan();   // ← новое
-    void shodan_lookup();   // ← новое
+    void vuln_scan();       
+    void wordlist_scan();   
+    void shodan_lookup();
+    void exploit_search();    // ← новое
+    void topology_scan();     // ← новое
         
 };

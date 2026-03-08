@@ -1,3 +1,5 @@
+#include "modules/exploit.h"
+#include "modules/topology.h"
 #include "modules/vuln_scan.h"
 #include "modules/wordlist.h"
 #include "modules/shodan.h"
@@ -260,6 +262,41 @@ void Menu::shodan_lookup() {
     shodan.print_results(result);
 }
 
+void Menu::exploit_search() {
+    std::cout << Color::INFO << "Введите сервис (SSH/HTTP/FTP/MySQL): "
+              << Color::CYAN;
+    std::string service;
+    std::cin >> service;
+    std::cout << Color::RESET;
+
+    ExploitSuggester es;
+    auto results = es.search(service, "");
+    es.print_results(results);
+}
+
+void Menu::topology_scan() {
+    std::cout << Color::INFO << "Запускаем трассировку для топологии..."
+              << Color::RESET << std::endl;
+
+    Traceroute tr;
+    auto hops = tr.trace(original_target);
+
+    // Конвертируем TraceHop в TopoNode
+    std::vector<TopoNode> nodes;
+    for (const auto& h : hops) {
+        TopoNode n;
+        n.hop      = h.hop;
+        n.ip       = h.ip;
+        n.hostname = h.hostname;
+        n.rtt_ms   = h.rtt_ms;
+        n.timeout  = h.timeout;
+        nodes.push_back(n);
+    }
+
+    NetworkTopology topo;
+    topo.build(nodes, original_target);
+}
+
 void Menu::run() {
     print_banner();
 
@@ -288,7 +325,9 @@ void Menu::run() {
         std::cout << "│  [10] Сканер уязвимых версий            │\n";
         std::cout << "│  [11] Генератор wordlist                │\n";
         std::cout << "│  [12] Shodan поиск                      │\n";
-        std::cout << "│  [13] Сменить цель                      │\n";
+        std::cout << "│  [13] Exploit Suggester                 │\n";
+        std::cout << "│  [14] Топология сети                    │\n";
+        std::cout << "│  [15] Сменить цель                      │\n";
         std::cout << "│  [0]  Выход                             │\n";
         std::cout << Color::RESET;
 
@@ -309,7 +348,9 @@ void Menu::run() {
     case 10: vuln_scan();         break;
     case 11: wordlist_scan();     break;
     case 12: shodan_lookup();     break;
-    case 13: get_target();        break;
+    case 13: exploit_search();    break;
+    case 14: topology_scan();     break;
+    case 15: get_target();        break;
     case 0:
         std::cout << Color::INFO << "До свидания! "
                   << Color::RESET << std::endl;
