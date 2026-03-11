@@ -27,6 +27,7 @@ private:
     void shodan_lookup();
     void exploit_search();   
     void topology_scan();
-    void udp_scan();          // ← новое
+    void udp_scan();
+    void scorecard_scan();
         
 };

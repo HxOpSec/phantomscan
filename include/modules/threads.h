@@ -6,7 +6,7 @@
 
 class ThreadScanner {
 public:
-    ThreadScanner(const std::string& target_ip, int num_threads = 10);
+    ThreadScanner(const std::string& target_ip, int num_threads = 50);
 
     // Сканируем с потоками
     std::vector<PortResult> scan(int start_port, int end_port);

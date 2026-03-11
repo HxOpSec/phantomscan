@@ -25,6 +25,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <chrono>
+#include "modules/scorecard.h"
 
 void Menu::show_help() {
     std::cout << Color::CYAN << Color::BOLD;
@@ -89,7 +90,7 @@ void Menu::full_scan() {
 
     // Порты
     std::cout << Color::INFO << "Сканируем порты 1-1024..." << Color::RESET << std::endl;
-    ThreadScanner scanner(target, 10);
+    ThreadScanner scanner(target, 50);
     auto results = scanner.scan(1, 1024);
     print_table(results);
 
@@ -154,7 +155,7 @@ void Menu::quick_scan() {
     std::cout << "\n" << Color::INFO << "Быстрый скан топ 100 портов..." 
               << Color::RESET << std::endl;
 
-    ThreadScanner scanner(target, 10);
+    ThreadScanner scanner(target, 50);
     auto results = scanner.scan(1, 1024);
     print_table(results);
 }
@@ -341,6 +342,7 @@ void Menu::run() {
         std::cout << "│  [14] Топология сети                    │\n";
         std::cout << "│  [15] UDP скан                          │\n";
         std::cout << "│  [16] Сменить цель                      │\n";
+        std::cout << "│  [17] Scorecard безопасности            │\n";
         std::cout << "│  [0]  Выход                             │\n";
         std::cout << Color::RESET;
 
@@ -365,6 +367,7 @@ void Menu::run() {
     case 14: topology_scan();     break;
     case 15: udp_scan();          break;
     case 16: get_target();        break;
+    case 17: scorecard_scan();    break;
     case 0:
         std::cout << Color::INFO << "До свидания! "
                   << Color::RESET << std::endl;
@@ -411,7 +414,7 @@ void Menu::run_cli(const std::string& t, int p_start, int p_end,
               << os << Color::RESET << std::endl;
     std::cout << "──────────────────────────────────────────\n";
 
-    ThreadScanner scanner(target, 10);
+    ThreadScanner scanner(target, 50);
     auto results = scanner.scan(p_start, p_end);
     print_table(results);
 
@@ -453,3 +456,46 @@ void Menu::run_cli(const std::string& t, int p_start, int p_end,
     if (output == "json" || output == "all") reporter.save_json(report);
     if (output == "html" || output == "all") reporter.save_html(report);
 }
+
+void Menu::scorecard_scan() {
+    std::cout << Color::INFO << "Анализируем безопасность цели..." 
+              << Color::RESET << std::endl;
+
+    ScanResult sr;
+
+    ThreadScanner scanner(target, 50);
+    auto ports = scanner.scan(1, 1024);
+    sr.open_port_count = ports.size();
+
+    CVEScanner cve;
+    for (const auto& r : ports) {
+        auto cves = cve.search(r.service);
+        for (const auto& c : cves)
+            sr.cve_severities.push_back(c.severity);
+        if (r.service == "Telnet") sr.has_telnet = true;
+        if (r.service == "FTP")    sr.has_ftp    = true;
+        if (r.service == "RDP")    sr.has_rdp    = true;
+    }
+
+    SSLScanner ssl;
+    auto ssl_info = ssl.scan(original_target);
+    sr.has_ssl     = !ssl_info.subject.empty();
+    sr.ssl_valid   = !ssl_info.expired && !ssl_info.self_signed;
+    sr.ssl_expired = ssl_info.expired;
+
+    WAFDetector waf;
+    auto waf_result = waf.detect(original_target);
+    sr.waf_detected = waf_result.detected;
+
+    FirewallDetector fw;
+    auto fw_result = fw.detect(target);
+    sr.firewall_detected = fw_result.detected;
+
+    Scorecard sc;
+    auto card = sc.calculate(sr);
+    sc.print(card, original_target);
+}
+    
+
+
+

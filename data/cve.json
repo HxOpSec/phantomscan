@@ -1,38 +1,234 @@
 {
   "SSH": [
-    {"id": "CVE-2023-38408", "severity": "HIGH", "desc": "OpenSSH forwarding RCE vulnerability"},
-    {"id": "CVE-2018-15473", "severity": "MEDIUM", "desc": "OpenSSH username enumeration"}
+    {"id": "CVE-2023-38408", "severity": "CRITICAL", "cvss": 9.8, "desc": "OpenSSH forwarding RCE vulnerability"},
+    {"id": "CVE-2023-28531", "severity": "HIGH",     "cvss": 8.1, "desc": "OpenSSH smartcard key addition flaw"},
+    {"id": "CVE-2021-41617", "severity": "HIGH",     "cvss": 7.0, "desc": "OpenSSH privilege escalation via AuthorizedKeysCommand"},
+    {"id": "CVE-2020-15778", "severity": "HIGH",     "cvss": 7.8, "desc": "OpenSSH scp command injection"},
+    {"id": "CVE-2019-6111",  "severity": "MEDIUM",   "cvss": 5.9, "desc": "OpenSSH scp client arbitrary file write"},
+    {"id": "CVE-2018-15473", "severity": "MEDIUM",   "cvss": 5.3, "desc": "OpenSSH username enumeration"},
+    {"id": "CVE-2018-15919", "severity": "MEDIUM",   "cvss": 5.3, "desc": "OpenSSH username enumeration via auth-req"},
+    {"id": "CVE-2016-20012", "severity": "MEDIUM",   "cvss": 5.3, "desc": "OpenSSH observable discrepancy username enum"},
+    {"id": "CVE-2016-10009", "severity": "HIGH",     "cvss": 7.3, "desc": "OpenSSH agent privilege separation PKCS11"},
+    {"id": "CVE-2015-5600",  "severity": "HIGH",     "cvss": 8.5, "desc": "OpenSSH KbdInteractiveAuthentication brute force"}
   ],
   "HTTP": [
-    {"id": "CVE-2021-41773", "severity": "CRITICAL", "desc": "Apache path traversal & RCE"},
-    {"id": "CVE-2021-42013", "severity": "CRITICAL", "desc": "Apache path traversal bypass"}
+    {"id": "CVE-2021-41773", "severity": "CRITICAL", "cvss": 9.8, "desc": "Apache 2.4.49 path traversal and RCE"},
+    {"id": "CVE-2021-42013", "severity": "CRITICAL", "cvss": 9.8, "desc": "Apache 2.4.50 path traversal bypass"},
+    {"id": "CVE-2022-31813", "severity": "CRITICAL", "cvss": 9.8, "desc": "Apache mod_proxy forward request smuggling"},
+    {"id": "CVE-2022-23943", "severity": "CRITICAL", "cvss": 9.8, "desc": "Apache mod_sed buffer overflow RCE"},
+    {"id": "CVE-2021-40438", "severity": "CRITICAL", "cvss": 9.0, "desc": "Apache mod_proxy SSRF vulnerability"},
+    {"id": "CVE-2020-11984", "severity": "CRITICAL", "cvss": 9.8, "desc": "Apache mod_uwsgi buffer overflow RCE"},
+    {"id": "CVE-2019-0211",  "severity": "HIGH",     "cvss": 7.8, "desc": "Apache privilege escalation via graceful restart"},
+    {"id": "CVE-2017-9798",  "severity": "HIGH",     "cvss": 7.5, "desc": "Apache Optionsbleed memory disclosure"},
+    {"id": "CVE-2017-7679",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Apache mod_mime buffer overread"},
+    {"id": "CVE-2015-3185",  "severity": "MEDIUM",   "cvss": 5.9, "desc": "Apache ap_some_auth_required API flaw"}
   ],
   "HTTPS": [
-    {"id": "CVE-2021-44228", "severity": "CRITICAL", "desc": "Log4Shell - Log4j RCE"},
-    {"id": "CVE-2022-22965", "severity": "CRITICAL", "desc": "Spring4Shell - Spring RCE"}
+    {"id": "CVE-2021-44228", "severity": "CRITICAL", "cvss": 10.0, "desc": "Log4Shell - Log4j JNDI RCE (критично!)"},
+    {"id": "CVE-2022-22965", "severity": "CRITICAL", "cvss": 9.8,  "desc": "Spring4Shell - Spring Framework RCE"},
+    {"id": "CVE-2022-22947", "severity": "CRITICAL", "cvss": 10.0, "desc": "Spring Cloud Gateway RCE via SpEL"},
+    {"id": "CVE-2021-44832", "severity": "HIGH",     "cvss": 6.6,  "desc": "Log4j2 RCE via JDBC Appender"},
+    {"id": "CVE-2021-45046", "severity": "CRITICAL", "cvss": 9.0,  "desc": "Log4j2 DoS and RCE bypass"},
+    {"id": "CVE-2020-1938",  "severity": "CRITICAL", "cvss": 9.8,  "desc": "Apache Tomcat AJP file inclusion (Ghostcat)"},
+    {"id": "CVE-2019-0232",  "severity": "CRITICAL", "cvss": 8.1,  "desc": "Apache Tomcat CGI RCE on Windows"},
+    {"id": "CVE-2017-12617", "severity": "HIGH",     "cvss": 8.1,  "desc": "Apache Tomcat JSP upload bypass RCE"},
+    {"id": "CVE-2016-8735",  "severity": "CRITICAL", "cvss": 9.8,  "desc": "Apache Tomcat JmxRemoteLifecycleListener RCE"},
+    {"id": "CVE-2014-0160",  "severity": "HIGH",     "cvss": 7.5,  "desc": "Heartbleed - OpenSSL memory disclosure"}
   ],
   "FTP": [
-    {"id": "CVE-2019-12815", "severity": "CRITICAL", "desc": "ProFTPd arbitrary file copy"},
-    {"id": "CVE-2015-3306", "severity": "HIGH", "desc": "ProFTPd mod_copy unauthenticated access"}
+    {"id": "CVE-2019-12815", "severity": "CRITICAL", "cvss": 9.8, "desc": "ProFTPd mod_copy arbitrary file copy without auth"},
+    {"id": "CVE-2015-3306",  "severity": "HIGH",     "cvss": 7.5, "desc": "ProFTPd mod_copy unauthenticated file access"},
+    {"id": "CVE-2010-4221",  "severity": "HIGH",     "cvss": 7.5, "desc": "ProFTPd Telnet IAC stack overflow"},
+    {"id": "CVE-2020-9273",  "severity": "HIGH",     "cvss": 8.8, "desc": "ProFTPd use-after-free memory corruption"},
+    {"id": "CVE-2020-9272",  "severity": "HIGH",     "cvss": 7.5, "desc": "ProFTPd out-of-bounds read in mod_cap"},
+    {"id": "CVE-2011-4130",  "severity": "CRITICAL", "cvss": 9.0, "desc": "ProFTPd response pool use-after-free RCE"},
+    {"id": "CVE-2010-3867",  "severity": "HIGH",     "cvss": 8.5, "desc": "ProFTPd controls buffer overflow"},
+    {"id": "CVE-2021-46903", "severity": "HIGH",     "cvss": 7.5, "desc": "vsftpd improper input validation"},
+    {"id": "CVE-2011-2523",  "severity": "CRITICAL", "cvss": 10.0,"desc": "vsftpd 2.3.4 backdoor - порт 6200"},
+    {"id": "CVE-2009-3023",  "severity": "HIGH",     "cvss": 8.5, "desc": "FileZilla Server buffer overflow"}
   ],
   "SMTP": [
-    {"id": "CVE-2020-28017", "severity": "CRITICAL", "desc": "Exim RCE via integer overflow"},
-    {"id": "CVE-2019-10149", "severity": "CRITICAL", "desc": "Exim remote command execution"}
+    {"id": "CVE-2020-28017", "severity": "CRITICAL", "cvss": 9.8, "desc": "Exim integer overflow in receive_add_recipient"},
+    {"id": "CVE-2020-28018", "severity": "CRITICAL", "cvss": 9.8, "desc": "Exim use-after-free in tls-openssl"},
+    {"id": "CVE-2020-28020", "severity": "CRITICAL", "cvss": 9.8, "desc": "Exim integer overflow in receive_msg"},
+    {"id": "CVE-2019-10149", "severity": "CRITICAL", "cvss": 9.8, "desc": "Exim remote command execution via deliver_message"},
+    {"id": "CVE-2018-6789",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Exim base64 decoder buffer overflow RCE"},
+    {"id": "CVE-2020-7247",  "severity": "CRITICAL", "cvss": 9.8, "desc": "OpenSMTPD remote code execution"},
+    {"id": "CVE-2020-8794",  "severity": "CRITICAL", "cvss": 9.8, "desc": "OpenSMTPD out-of-bounds read RCE"},
+    {"id": "CVE-2021-38371", "severity": "MEDIUM",   "cvss": 5.3, "desc": "Exim STARTTLS negotiation plain text injection"},
+    {"id": "CVE-2016-10033", "severity": "CRITICAL", "cvss": 9.8, "desc": "PHPMailer remote code execution"},
+    {"id": "CVE-2016-10045", "severity": "CRITICAL", "cvss": 9.8, "desc": "PHPMailer escapeshellarg bypass RCE"}
   ],
   "MySQL": [
-    {"id": "CVE-2021-2307", "severity": "HIGH", "desc": "MySQL privilege escalation"},
-    {"id": "CVE-2020-14878", "severity": "HIGH", "desc": "MySQL server vulnerability"}
+    {"id": "CVE-2022-21417", "severity": "HIGH",     "cvss": 7.5, "desc": "MySQL InnoDB uncontrolled resource consumption"},
+    {"id": "CVE-2022-21444", "severity": "HIGH",     "cvss": 7.5, "desc": "MySQL Server DDL uncontrolled resource consumption"},
+    {"id": "CVE-2021-2307",  "severity": "HIGH",     "cvss": 7.2, "desc": "MySQL Server privilege escalation"},
+    {"id": "CVE-2021-35604", "severity": "HIGH",     "cvss": 7.1, "desc": "MySQL InnoDB denial of service"},
+    {"id": "CVE-2020-14878", "severity": "HIGH",     "cvss": 7.2, "desc": "MySQL Server vulnerability via multiple protocols"},
+    {"id": "CVE-2020-2812",  "severity": "MEDIUM",   "cvss": 4.9, "desc": "MySQL Server stored procedure DoS"},
+    {"id": "CVE-2019-2503",  "severity": "HIGH",     "cvss": 7.4, "desc": "MySQL Server connection handling vulnerability"},
+    {"id": "CVE-2016-6662",  "severity": "CRITICAL", "cvss": 9.8, "desc": "MySQL remote root code execution via config"},
+    {"id": "CVE-2016-6663",  "severity": "HIGH",     "cvss": 7.0, "desc": "MySQL race condition privilege escalation"},
+    {"id": "CVE-2012-2122",  "severity": "HIGH",     "cvss": 7.5, "desc": "MySQL authentication bypass with specific memory layout"}
   ],
-  "Telnet": [
-    {"id": "CVE-2020-10188", "severity": "CRITICAL", "desc": "Telnet remote code execution"},
-    {"id": "CVE-1999-0015", "severity": "HIGH", "desc": "Telnet unencrypted credentials"}
+  "PostgreSQL": [
+    {"id": "CVE-2022-1552",  "severity": "HIGH",     "cvss": 8.8, "desc": "PostgreSQL autovacuum SECURITY DEFINER bypass"},
+    {"id": "CVE-2021-23222", "severity": "MEDIUM",   "cvss": 5.9, "desc": "PostgreSQL libpq man-in-the-middle attack"},
+    {"id": "CVE-2021-3677",  "severity": "MEDIUM",   "cvss": 6.5, "desc": "PostgreSQL unexpected query results from non-pg_catalog functions"},
+    {"id": "CVE-2020-25695", "severity": "HIGH",     "cvss": 8.8, "desc": "PostgreSQL multiple features allow SQL injection"},
+    {"id": "CVE-2019-10208", "severity": "HIGH",     "cvss": 8.8, "desc": "PostgreSQL TYPE in pg_temp executes arbitrary SQL"},
+    {"id": "CVE-2018-10915", "severity": "HIGH",     "cvss": 8.3, "desc": "PostgreSQL libpq client-side disconnection flaw"},
+    {"id": "CVE-2016-5423",  "severity": "HIGH",     "cvss": 8.3, "desc": "PostgreSQL nested CASE/WHEN expression crash"},
+    {"id": "CVE-2016-0766",  "severity": "HIGH",     "cvss": 8.8, "desc": "PostgreSQL privilege escalation via PL/Java"}
   ],
   "Redis": [
-    {"id": "CVE-2022-0543", "severity": "CRITICAL", "desc": "Redis Lua sandbox escape RCE"},
-    {"id": "CVE-2021-32761", "severity": "HIGH", "desc": "Redis integer overflow"}
+    {"id": "CVE-2022-0543",  "severity": "CRITICAL", "cvss": 10.0,"desc": "Redis Lua sandbox escape RCE (Debian/Ubuntu)"},
+    {"id": "CVE-2021-32761", "severity": "HIGH",     "cvss": 8.8, "desc": "Redis BITFIELD integer overflow"},
+    {"id": "CVE-2021-32687", "severity": "HIGH",     "cvss": 8.8, "desc": "Redis integer overflow with intsets"},
+    {"id": "CVE-2021-32675", "severity": "HIGH",     "cvss": 7.5, "desc": "Redis unauthenticated client DoS"},
+    {"id": "CVE-2021-32626", "severity": "HIGH",     "cvss": 8.8, "desc": "Redis Lua scripts heap overflow"},
+    {"id": "CVE-2021-29478", "severity": "HIGH",     "cvss": 8.8, "desc": "Redis integer overflow with STRALGO LCS"},
+    {"id": "CVE-2020-14147", "severity": "HIGH",     "cvss": 7.7, "desc": "Redis integer overflow via ZADD"},
+    {"id": "CVE-2015-8080",  "severity": "HIGH",     "cvss": 7.5, "desc": "Redis integer overflow in getnum function"},
+    {"id": "CVE-2013-7458",  "severity": "MEDIUM",   "cvss": 5.5, "desc": "Redis insecure permissions on history file"}
   ],
   "MongoDB": [
-    {"id": "CVE-2021-20328", "severity": "MEDIUM", "desc": "MongoDB client-side field injection"},
-    {"id": "CVE-2019-2386", "severity": "MEDIUM", "desc": "MongoDB unauthorized data access"}
+    {"id": "CVE-2021-20328", "severity": "MEDIUM",   "cvss": 6.8, "desc": "MongoDB client-side field injection"},
+    {"id": "CVE-2019-2386",  "severity": "MEDIUM",   "cvss": 5.3, "desc": "MongoDB unauthorized data access on 32-bit"},
+    {"id": "CVE-2019-20925", "severity": "HIGH",     "cvss": 7.5, "desc": "MongoDB null pointer dereference DoS"},
+    {"id": "CVE-2017-15535", "severity": "CRITICAL", "cvss": 9.8, "desc": "MongoDB BSON buffer overflow"},
+    {"id": "CVE-2015-7882",  "severity": "CRITICAL", "cvss": 9.8, "desc": "MongoDB LDAP authentication bypass"},
+    {"id": "CVE-2013-4650",  "severity": "MEDIUM",   "cvss": 6.5, "desc": "MongoDB improper privilege management"},
+    {"id": "CVE-2013-3969",  "severity": "MEDIUM",   "cvss": 5.5, "desc": "MongoDB V8 JavaScript engine DoS"}
+  ],
+  "Telnet": [
+    {"id": "CVE-2020-10188", "severity": "CRITICAL", "cvss": 9.8, "desc": "Telnet remote code execution via environment variables"},
+    {"id": "CVE-2011-4862",  "severity": "CRITICAL", "cvss": 10.0,"desc": "FreeBSD telnetd encrypt_keyid heap overflow RCE"},
+    {"id": "CVE-1999-0015",  "severity": "HIGH",     "cvss": 7.5, "desc": "Telnet transmits credentials in plaintext"},
+    {"id": "CVE-1999-0019",  "severity": "HIGH",     "cvss": 7.5, "desc": "Telnet allows unauthenticated access in some configs"}
+  ],
+  "SMB": [
+    {"id": "CVE-2017-0144",  "severity": "CRITICAL", "cvss": 9.8, "desc": "EternalBlue - SMBv1 RCE (WannaCry/NotPetya)"},
+    {"id": "CVE-2017-0145",  "severity": "CRITICAL", "cvss": 9.8, "desc": "EternalRomance - SMBv1 RCE"},
+    {"id": "CVE-2017-0146",  "severity": "CRITICAL", "cvss": 9.8, "desc": "EternalSynergy - SMBv1 RCE"},
+    {"id": "CVE-2020-0796",  "severity": "CRITICAL", "cvss": 10.0,"desc": "SMBGhost - SMBv3 RCE (CVE-2020-0796)"},
+    {"id": "CVE-2021-36942", "severity": "HIGH",     "cvss": 7.5, "desc": "Windows LSA PetitPotam NTLM relay"},
+    {"id": "CVE-2021-34527", "severity": "CRITICAL", "cvss": 8.8, "desc": "PrintNightmare - Windows Print Spooler RCE"},
+    {"id": "CVE-2020-1472",  "severity": "CRITICAL", "cvss": 10.0,"desc": "Zerologon - Netlogon privilege escalation"},
+    {"id": "CVE-2019-0708",  "severity": "CRITICAL", "cvss": 9.8, "desc": "BlueKeep - RDP RCE (CVE-2019-0708)"}
+  ],
+  "RDP": [
+    {"id": "CVE-2019-0708",  "severity": "CRITICAL", "cvss": 9.8, "desc": "BlueKeep - RDP use-after-free RCE"},
+    {"id": "CVE-2020-0609",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Windows RDP Gateway RCE"},
+    {"id": "CVE-2020-0610",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Windows RDP Gateway pre-auth RCE"},
+    {"id": "CVE-2019-1181",  "severity": "CRITICAL", "cvss": 9.8, "desc": "DejaBlue - RDP RCE vulnerability"},
+    {"id": "CVE-2019-1182",  "severity": "CRITICAL", "cvss": 9.8, "desc": "DejaBlue - RDP RCE second variant"},
+    {"id": "CVE-2018-0886",  "severity": "HIGH",     "cvss": 7.5, "desc": "CredSSP MitM attack via RDP"},
+    {"id": "CVE-2012-0002",  "severity": "CRITICAL", "cvss": 9.3, "desc": "MS12-020 RDP remote code execution"}
+  ],
+  "DNS": [
+    {"id": "CVE-2020-1350",  "severity": "CRITICAL", "cvss": 10.0,"desc": "SIGRed - Windows DNS Server RCE (17 лет)"},
+    {"id": "CVE-2021-25216", "severity": "CRITICAL", "cvss": 9.4, "desc": "BIND9 TKEY buffer overflow RCE"},
+    {"id": "CVE-2020-8617",  "severity": "HIGH",     "cvss": 7.5, "desc": "BIND9 TSIG denial of service"},
+    {"id": "CVE-2020-8616",  "severity": "HIGH",     "cvss": 8.6, "desc": "BIND9 NXNS attack amplification"},
+    {"id": "CVE-2016-2776",  "severity": "HIGH",     "cvss": 7.5, "desc": "BIND9 buffer handling assertion failure DoS"},
+    {"id": "CVE-2015-5722",  "severity": "HIGH",     "cvss": 7.8, "desc": "BIND9 malformed DNSSEC key DoS"},
+    {"id": "CVE-2008-1447",  "severity": "HIGH",     "cvss": 6.8, "desc": "Kaminsky DNS cache poisoning attack"}
+  ],
+  "SNMP": [
+    {"id": "CVE-2017-6736",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Cisco IOS SNMP remote code execution"},
+    {"id": "CVE-2017-6737",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Cisco IOS SNMP buffer overflow RCE"},
+    {"id": "CVE-2002-0013",  "severity": "HIGH",     "cvss": 7.5, "desc": "Multiple SNMP implementations buffer overflow"},
+    {"id": "CVE-2002-0012",  "severity": "HIGH",     "cvss": 7.5, "desc": "SNMP v1 trap handling buffer overflow"}
+  ],
+  "VNC": [
+    {"id": "CVE-2019-15681", "severity": "CRITICAL", "cvss": 9.8, "desc": "LibVNCServer memory leak password disclosure"},
+    {"id": "CVE-2019-15694", "severity": "CRITICAL", "cvss": 9.8, "desc": "LibVNCServer heap buffer overflow RCE"},
+    {"id": "CVE-2019-15695", "severity": "CRITICAL", "cvss": 9.8, "desc": "LibVNCServer stack buffer overflow RCE"},
+    {"id": "CVE-2018-7225",  "severity": "CRITICAL", "cvss": 9.8, "desc": "LibVNCServer improper handling info disclosure"},
+    {"id": "CVE-2017-7392",  "severity": "HIGH",     "cvss": 7.5, "desc": "TigerVNC memory leak in HandleSecTypeVeNCrypt"}
+  ],
+  "Nginx": [
+    {"id": "CVE-2021-23017", "severity": "HIGH",     "cvss": 7.7, "desc": "Nginx resolver off-by-one heap write"},
+    {"id": "CVE-2019-9511",  "severity": "HIGH",     "cvss": 7.5, "desc": "HTTP/2 Data Dribble DoS (NGINX)"},
+    {"id": "CVE-2019-9513",  "severity": "HIGH",     "cvss": 7.5, "desc": "HTTP/2 Resource Loop DoS (NGINX)"},
+    {"id": "CVE-2017-7529",  "severity": "MEDIUM",   "cvss": 5.3, "desc": "Nginx integer overflow in range filter"},
+    {"id": "CVE-2016-1247",  "severity": "HIGH",     "cvss": 7.8, "desc": "Nginx log file privilege escalation"},
+    {"id": "CVE-2013-2028",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Nginx stack buffer overflow RCE"}
+  ],
+  "IIS": [
+    {"id": "CVE-2022-21907", "severity": "CRITICAL", "cvss": 9.8, "desc": "IIS HTTP Protocol Stack RCE"},
+    {"id": "CVE-2021-31166", "severity": "CRITICAL", "cvss": 9.8, "desc": "IIS HTTP Protocol Stack DoS/RCE"},
+    {"id": "CVE-2020-0645",  "severity": "MEDIUM",   "cvss": 6.5, "desc": "IIS tampering vulnerability"},
+    {"id": "CVE-2017-7269",  "severity": "CRITICAL", "cvss": 10.0,"desc": "IIS 6.0 WebDAV buffer overflow RCE"},
+    {"id": "CVE-2015-1635", "severity": "CRITICAL",  "cvss": 10.0,"desc": "MS15-034 IIS HTTP.sys RCE"},
+    {"id": "CVE-2010-2730",  "severity": "CRITICAL", "cvss": 9.3, "desc": "IIS FastCGI extension buffer overflow"}
+  ],
+  "Tomcat": [
+    {"id": "CVE-2020-1938",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Ghostcat - AJP file inclusion/RCE"},
+    {"id": "CVE-2019-0232",  "severity": "CRITICAL", "cvss": 8.1, "desc": "Tomcat CGI servlet RCE on Windows"},
+    {"id": "CVE-2017-12617", "severity": "HIGH",     "cvss": 8.1, "desc": "Tomcat PUT method JSP upload RCE"},
+    {"id": "CVE-2016-8735",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Tomcat JmxRemoteLifecycleListener deserialization RCE"},
+    {"id": "CVE-2016-4438",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Tomcat REST plugin RCE via OGNL injection"},
+    {"id": "CVE-2014-0094",  "severity": "CRITICAL", "cvss": 7.5, "desc": "Struts2 ClassLoader manipulation"}
+  ],
+  "PHP": [
+    {"id": "CVE-2021-21705", "severity": "MEDIUM",   "cvss": 5.3, "desc": "PHP SSRF bypass in filter_var"},
+    {"id": "CVE-2021-21704", "severity": "MEDIUM",   "cvss": 5.3, "desc": "PHP pdo_firebase null dereference"},
+    {"id": "CVE-2019-11043",  "severity": "CRITICAL", "cvss": 9.8, "desc": "PHP-FPM buffer underflow RCE (Nginx config)"},
+    {"id": "CVE-2018-19518",  "severity": "HIGH",     "cvss": 8.8, "desc": "PHP imap_open remote command injection"},
+    {"id": "CVE-2012-1823",   "severity": "CRITICAL", "cvss": 10.0,"desc": "PHP CGI query string parameter injection RCE"},
+    {"id": "CVE-2012-2311",   "severity": "CRITICAL", "cvss": 10.0,"desc": "PHP sapi/cgi/cgi_main.c query string RCE"}
+  ],
+  "WordPress": [
+    {"id": "CVE-2022-21661", "severity": "HIGH",     "cvss": 8.0, "desc": "WordPress SQL injection via WP_Query"},
+    {"id": "CVE-2022-21664", "severity": "HIGH",     "cvss": 8.0, "desc": "WordPress SQL injection via WP_Meta_Query"},
+    {"id": "CVE-2021-29447", "severity": "HIGH",     "cvss": 7.1, "desc": "WordPress XXE via media upload (admin)"},
+    {"id": "CVE-2019-17671", "severity": "HIGH",     "cvss": 7.5, "desc": "WordPress unauthenticated view private posts"},
+    {"id": "CVE-2019-9787",  "severity": "MEDIUM",   "cvss": 6.5, "desc": "WordPress CSRF leading to stored XSS"},
+    {"id": "CVE-2017-9061",  "severity": "MEDIUM",   "cvss": 6.1, "desc": "WordPress XSS via file upload name"}
+  ],
+  "ElasticSearch": [
+    {"id": "CVE-2021-22145", "severity": "MEDIUM",   "cvss": 6.5, "desc": "Elasticsearch memory disclosure in error messages"},
+    {"id": "CVE-2021-22144", "severity": "MEDIUM",   "cvss": 6.5, "desc": "Elasticsearch DoS via malformed query"},
+    {"id": "CVE-2019-7614",  "severity": "MEDIUM",   "cvss": 6.8, "desc": "Elasticsearch race condition privilege escalation"},
+    {"id": "CVE-2015-3337",  "severity": "HIGH",     "cvss": 7.5, "desc": "Elasticsearch Kibana directory traversal"},
+    {"id": "CVE-2014-3120",  "severity": "CRITICAL", "cvss": 9.0, "desc": "Elasticsearch dynamic script RCE"},
+    {"id": "CVE-2014-6439",  "severity": "MEDIUM",   "cvss": 5.0, "desc": "Elasticsearch CORS misconfiguration"}
+  ],
+  "Docker": [
+    {"id": "CVE-2022-0811",  "severity": "HIGH",     "cvss": 8.8, "desc": "CRI-O container escape via kernel parameter"},
+    {"id": "CVE-2021-41092", "severity": "MEDIUM",   "cvss": 5.4, "desc": "Docker CLI config file credential exposure"},
+    {"id": "CVE-2020-15257", "severity": "HIGH",     "cvss": 7.2, "desc": "containerd abstract Unix domain socket access"},
+    {"id": "CVE-2019-5736",  "severity": "HIGH",     "cvss": 8.6, "desc": "runc container escape via /proc/self/exe"},
+    {"id": "CVE-2019-14271", "severity": "CRITICAL", "cvss": 9.8, "desc": "Docker cp command container escape"},
+    {"id": "CVE-2018-15664", "severity": "HIGH",     "cvss": 7.5, "desc": "Docker symlink-race container escape"}
+  ],
+  "Kubernetes": [
+    {"id": "CVE-2022-3294",  "severity": "HIGH",     "cvss": 8.8, "desc": "Kubernetes node address auth bypass"},
+    {"id": "CVE-2021-25741", "severity": "HIGH",     "cvss": 8.1, "desc": "Kubernetes symlink exchange directory traversal"},
+    {"id": "CVE-2020-8554",  "severity": "MEDIUM",   "cvss": 6.3, "desc": "Kubernetes MitM using LoadBalancer or ExternalIPs"},
+    {"id": "CVE-2019-11247", "severity": "HIGH",     "cvss": 8.1, "desc": "Kubernetes API server path traversal"},
+    {"id": "CVE-2019-9512",  "severity": "HIGH",     "cvss": 7.5, "desc": "HTTP/2 Ping Flood DoS (Kubernetes)"},
+    {"id": "CVE-2018-1002105","severity": "CRITICAL", "cvss": 9.8, "desc": "Kubernetes API server privilege escalation"}
+  ],
+  "Memcached": [
+    {"id": "CVE-2022-48571", "severity": "HIGH",     "cvss": 7.5, "desc": "Memcached NULL pointer dereference DoS"},
+    {"id": "CVE-2021-37519", "severity": "HIGH",     "cvss": 7.5, "desc": "Memcached buffer overflow in SASL auth"},
+    {"id": "CVE-2019-15026", "severity": "HIGH",     "cvss": 7.5, "desc": "Memcached stack-based buffer over-read"},
+    {"id": "CVE-2018-1000115","severity": "HIGH",    "cvss": 7.5, "desc": "Memcached UDP amplification DDoS"}
+  ],
+  "Samba": [
+    {"id": "CVE-2017-7494",  "severity": "CRITICAL", "cvss": 9.8, "desc": "SambaCry - Samba remote code execution"},
+    {"id": "CVE-2021-44142", "severity": "CRITICAL", "cvss": 9.9, "desc": "Samba vfs_fruit out-of-bounds heap RCE"},
+    {"id": "CVE-2020-1472",  "severity": "CRITICAL", "cvss": 10.0,"desc": "Zerologon via Samba Netlogon"},
+    {"id": "CVE-2019-14907", "severity": "MEDIUM",   "cvss": 6.5, "desc": "Samba denial of service in ldb_parse_filter"},
+    {"id": "CVE-2018-10858", "severity": "HIGH",     "cvss": 8.8, "desc": "Samba heap buffer overflow in client code"}
+  ],
+  "OpenVPN": [
+    {"id": "CVE-2020-11810", "severity": "MEDIUM",   "cvss": 3.7, "desc": "OpenVPN race condition in client instance"},
+    {"id": "CVE-2020-11462", "severity": "HIGH",     "cvss": 7.5, "desc": "OpenVPN DoS via malformed packet"},
+    {"id": "CVE-2017-7521",  "severity": "HIGH",     "cvss": 7.5, "desc": "OpenVPN server-side use-after-free with mbedTLS"},
+    {"id": "CVE-2017-7520",  "severity": "MEDIUM",   "cvss": 5.9, "desc": "OpenVPN pre-auth credential disclosure"}
   ]
 }
