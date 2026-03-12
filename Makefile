@@ -55,6 +55,13 @@ install: all
 	@sudo chmod 755 /usr/local/bin/phantomscan
 	@echo "$(GREEN)[+] Установлено. Теперь можно запускать: sudo phantomscan$(RESET)"
 
+update-cve:
+	@echo "[*] Обновляем CVE базу с NVD..."
+	@python3 scripts/update_cve.py
+
+update-cve-service:
+	@python3 scripts/update_cve.py --service $(SERVICE)
+
 # FIX: добавили uninstall
 uninstall:
 	@sudo rm -f /usr/local/bin/phantomscan

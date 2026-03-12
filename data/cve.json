@@ -1,234 +1,5090 @@
 {
   "SSH": [
-    {"id": "CVE-2023-38408", "severity": "CRITICAL", "cvss": 9.8, "desc": "OpenSSH forwarding RCE vulnerability"},
-    {"id": "CVE-2023-28531", "severity": "HIGH",     "cvss": 8.1, "desc": "OpenSSH smartcard key addition flaw"},
-    {"id": "CVE-2021-41617", "severity": "HIGH",     "cvss": 7.0, "desc": "OpenSSH privilege escalation via AuthorizedKeysCommand"},
-    {"id": "CVE-2020-15778", "severity": "HIGH",     "cvss": 7.8, "desc": "OpenSSH scp command injection"},
-    {"id": "CVE-2019-6111",  "severity": "MEDIUM",   "cvss": 5.9, "desc": "OpenSSH scp client arbitrary file write"},
-    {"id": "CVE-2018-15473", "severity": "MEDIUM",   "cvss": 5.3, "desc": "OpenSSH username enumeration"},
-    {"id": "CVE-2018-15919", "severity": "MEDIUM",   "cvss": 5.3, "desc": "OpenSSH username enumeration via auth-req"},
-    {"id": "CVE-2016-20012", "severity": "MEDIUM",   "cvss": 5.3, "desc": "OpenSSH observable discrepancy username enum"},
-    {"id": "CVE-2016-10009", "severity": "HIGH",     "cvss": 7.3, "desc": "OpenSSH agent privilege separation PKCS11"},
-    {"id": "CVE-2015-5600",  "severity": "HIGH",     "cvss": 8.5, "desc": "OpenSSH KbdInteractiveAuthentication brute force"}
+    {
+      "id": "CVE-2023-38408",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "OpenSSH forwarding RCE vulnerability"
+    },
+    {
+      "id": "CVE-2023-28531",
+      "severity": "HIGH",
+      "cvss": 8.1,
+      "desc": "OpenSSH smartcard key addition flaw"
+    },
+    {
+      "id": "CVE-2021-41617",
+      "severity": "HIGH",
+      "cvss": 7.0,
+      "desc": "OpenSSH privilege escalation via AuthorizedKeysCommand"
+    },
+    {
+      "id": "CVE-2020-15778",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "OpenSSH scp command injection"
+    },
+    {
+      "id": "CVE-2019-6111",
+      "severity": "MEDIUM",
+      "cvss": 5.9,
+      "desc": "OpenSSH scp client arbitrary file write"
+    },
+    {
+      "id": "CVE-2018-15473",
+      "severity": "MEDIUM",
+      "cvss": 5.3,
+      "desc": "OpenSSH username enumeration"
+    },
+    {
+      "id": "CVE-2018-15919",
+      "severity": "MEDIUM",
+      "cvss": 5.3,
+      "desc": "OpenSSH username enumeration via auth-req"
+    },
+    {
+      "id": "CVE-2016-20012",
+      "severity": "MEDIUM",
+      "cvss": 5.3,
+      "desc": "OpenSSH observable discrepancy username enum"
+    },
+    {
+      "id": "CVE-2016-10009",
+      "severity": "HIGH",
+      "cvss": 7.3,
+      "desc": "OpenSSH agent privilege separation PKCS11"
+    },
+    {
+      "id": "CVE-2015-5600",
+      "severity": "HIGH",
+      "cvss": 8.5,
+      "desc": "OpenSSH KbdInteractiveAuthentication brute force"
+    },
+    {
+      "id": "CVE-1999-0661",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "A system is running a version of software that was replaced with a Trojan Hor..."
+    },
+    {
+      "id": "CVE-2000-0525",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "OpenSSH does not properly drop privileges when the UseLogin option is enabled..."
+    },
+    {
+      "id": "CVE-2000-0535",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "OpenSSL 0.9.4 and OpenSSH for FreeBSD do not properly check for the existence..."
+    },
+    {
+      "id": "CVE-2000-1169",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "OpenSSH SSH client before 2.3.0 does not properly disable X11 or agent forwar..."
+    },
+    {
+      "id": "CVE-2001-1459",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "OpenSSH 2.9 and earlier does not initiate a Pluggable Authentication Module (..."
+    },
+    {
+      "id": "CVE-2001-0361",
+      "severity": "MEDIUM",
+      "cvss": 4.0,
+      "desc": "Implementations of SSH version 1.5, including (1) OpenSSH up to version 2.3.0..."
+    },
+    {
+      "id": "CVE-2001-0529",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "OpenSSH version 2.9 and earlier, with X forwarding enabled, allows a local at..."
+    },
+    {
+      "id": "CVE-2001-0572",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The SSH protocols 1 and 2 (aka SSH-2) as implemented in OpenSSH and other pac..."
+    },
+    {
+      "id": "CVE-2001-1029",
+      "severity": "LOW",
+      "cvss": 2.1,
+      "desc": "libutil in OpenSSH on FreeBSD 4.4 and earlier does not drop privileges before..."
+    },
+    {
+      "id": "CVE-2001-1382",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The \"echo simulation\" traffic analysis countermeasure in OpenSSH before 2.9.9..."
+    },
+    {
+      "id": "CVE-2001-1380",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "OpenSSH before 2.9.9, while using keypairs and multiple keys of different typ..."
+    },
+    {
+      "id": "CVE-2001-0816",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "OpenSSH before 2.9.9, when running sftp using sftp-server and using restricte..."
+    },
+    {
+      "id": "CVE-2001-0872",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "OpenSSH 3.0.1 and earlier with UseLogin enabled does not properly cleanse cri..."
+    },
+    {
+      "id": "CVE-2001-1507",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "OpenSSH before 3.0.1 with Kerberos V enabled does not properly authenticate u..."
+    },
+    {
+      "id": "CVE-2001-1585",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "SSH protocol 2 (aka SSH-2) public key authentication in the development snaps..."
+    },
+    {
+      "id": "CVE-2002-0083",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Off-by-one error in the channel code of OpenSSH 2.0 through 3.0.2 allows loca..."
+    },
+    {
+      "id": "CVE-2002-0575",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Buffer overflow in OpenSSH before 2.9.9, and 3.x before 3.2.1, with Kerberos/..."
+    },
+    {
+      "id": "CVE-2002-0639",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Integer overflow in sshd in OpenSSH 2.9.9 through 3.3 allows remote attackers..."
+    },
+    {
+      "id": "CVE-2002-0640",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Buffer overflow in sshd in OpenSSH 2.3.1 through 3.3 may allow remote attacke..."
+    },
+    {
+      "id": "CVE-2002-0765",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "sshd in OpenSSH 3.2.2, when using YP with netgroups and under certain conditi..."
+    }
   ],
   "HTTP": [
-    {"id": "CVE-2021-41773", "severity": "CRITICAL", "cvss": 9.8, "desc": "Apache 2.4.49 path traversal and RCE"},
-    {"id": "CVE-2021-42013", "severity": "CRITICAL", "cvss": 9.8, "desc": "Apache 2.4.50 path traversal bypass"},
-    {"id": "CVE-2022-31813", "severity": "CRITICAL", "cvss": 9.8, "desc": "Apache mod_proxy forward request smuggling"},
-    {"id": "CVE-2022-23943", "severity": "CRITICAL", "cvss": 9.8, "desc": "Apache mod_sed buffer overflow RCE"},
-    {"id": "CVE-2021-40438", "severity": "CRITICAL", "cvss": 9.0, "desc": "Apache mod_proxy SSRF vulnerability"},
-    {"id": "CVE-2020-11984", "severity": "CRITICAL", "cvss": 9.8, "desc": "Apache mod_uwsgi buffer overflow RCE"},
-    {"id": "CVE-2019-0211",  "severity": "HIGH",     "cvss": 7.8, "desc": "Apache privilege escalation via graceful restart"},
-    {"id": "CVE-2017-9798",  "severity": "HIGH",     "cvss": 7.5, "desc": "Apache Optionsbleed memory disclosure"},
-    {"id": "CVE-2017-7679",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Apache mod_mime buffer overread"},
-    {"id": "CVE-2015-3185",  "severity": "MEDIUM",   "cvss": 5.9, "desc": "Apache ap_some_auth_required API flaw"}
+    {
+      "id": "CVE-2021-41773",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Apache 2.4.49 path traversal and RCE"
+    },
+    {
+      "id": "CVE-2021-42013",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Apache 2.4.50 path traversal bypass"
+    },
+    {
+      "id": "CVE-2022-31813",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Apache mod_proxy forward request smuggling"
+    },
+    {
+      "id": "CVE-2022-23943",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Apache mod_sed buffer overflow RCE"
+    },
+    {
+      "id": "CVE-2021-40438",
+      "severity": "CRITICAL",
+      "cvss": 9.0,
+      "desc": "Apache mod_proxy SSRF vulnerability"
+    },
+    {
+      "id": "CVE-2020-11984",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Apache mod_uwsgi buffer overflow RCE"
+    },
+    {
+      "id": "CVE-2019-0211",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "Apache privilege escalation via graceful restart"
+    },
+    {
+      "id": "CVE-2017-9798",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Apache Optionsbleed memory disclosure"
+    },
+    {
+      "id": "CVE-2017-7679",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Apache mod_mime buffer overread"
+    },
+    {
+      "id": "CVE-2015-3185",
+      "severity": "MEDIUM",
+      "cvss": 5.9,
+      "desc": "Apache ap_some_auth_required API flaw"
+    },
+    {
+      "id": "CVE-1999-0236",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "ScriptAlias directory in NCSA and Apache httpd allowed attackers to read CGI ..."
+    },
+    {
+      "id": "CVE-1999-0071",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Apache httpd cookie buffer overflow for versions 1.1.1 and earlier."
+    },
+    {
+      "id": "CVE-1999-0448",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "IIS 4.0 and Apache log HTTP request methods, regardless of how long they are,..."
+    },
+    {
+      "id": "CVE-1999-1412",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "A possible interaction between Apple MacOS X release 1.0 and Apache HTTP serv..."
+    },
+    {
+      "id": "CVE-2000-1206",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Vulnerability in Apache httpd before 1.3.11, when configured for mass virtual..."
+    },
+    {
+      "id": "CVE-2000-0505",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The Apache 1.3.x HTTP server for Windows platforms allows remote attackers to..."
+    },
+    {
+      "id": "CVE-2000-0791",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "Trustix installs the httpsd program for Apache-SSL with world-writeable permi..."
+    },
+    {
+      "id": "CVE-2000-0869",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The default configuration of Apache 1.3.12 in SuSE Linux 6.4 enables WebDAV, ..."
+    },
+    {
+      "id": "CVE-2000-1016",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The default configuration of Apache (httpd.conf) on SuSE 6.4 includes an alia..."
+    },
+    {
+      "id": "CVE-2000-1168",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "IBM HTTP Server 1.3.6 (based on Apache) allows remote attackers to cause a de..."
+    },
+    {
+      "id": "CVE-2001-0108",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "PHP Apache module 4.0.4 and earlier allows remote attackers to bypass .htacce..."
+    },
+    {
+      "id": "CVE-2001-0925",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The default installation of Apache before 1.3.19 allows remote attackers to l..."
+    },
+    {
+      "id": "CVE-2001-1342",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Apache before 1.3.20 on Windows and OS/2 systems allows remote attackers to c..."
+    },
+    {
+      "id": "CVE-2001-0590",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Apache Software Foundation Tomcat Servlet prior to 3.2.2 allows a remote atta..."
+    },
+    {
+      "id": "CVE-2001-0730",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "split-logfile in Apache 1.3.20 allows remote attackers to overwrite arbitrary..."
+    },
+    {
+      "id": "CVE-2001-1556",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The log files in Apache web server contain information directly supplied by c..."
+    },
+    {
+      "id": "CVE-2002-0240",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "PHP, when installed with Apache and configured to search for index.php as a d..."
+    },
+    {
+      "id": "CVE-2002-0392",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Apache 1.3 through 1.3.24, and Apache 2.0 through 2.0.36, allows remote attac..."
+    },
+    {
+      "id": "CVE-2002-0839",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "The shared memory scoreboard in the HTTP daemon for Apache 1.3.x before 1.3.2..."
+    },
+    {
+      "id": "CVE-2002-1157",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Cross-site scripting vulnerability in the mod_ssl Apache module 2.8.9 and ear..."
+    }
   ],
   "HTTPS": [
-    {"id": "CVE-2021-44228", "severity": "CRITICAL", "cvss": 10.0, "desc": "Log4Shell - Log4j JNDI RCE (критично!)"},
-    {"id": "CVE-2022-22965", "severity": "CRITICAL", "cvss": 9.8,  "desc": "Spring4Shell - Spring Framework RCE"},
-    {"id": "CVE-2022-22947", "severity": "CRITICAL", "cvss": 10.0, "desc": "Spring Cloud Gateway RCE via SpEL"},
-    {"id": "CVE-2021-44832", "severity": "HIGH",     "cvss": 6.6,  "desc": "Log4j2 RCE via JDBC Appender"},
-    {"id": "CVE-2021-45046", "severity": "CRITICAL", "cvss": 9.0,  "desc": "Log4j2 DoS and RCE bypass"},
-    {"id": "CVE-2020-1938",  "severity": "CRITICAL", "cvss": 9.8,  "desc": "Apache Tomcat AJP file inclusion (Ghostcat)"},
-    {"id": "CVE-2019-0232",  "severity": "CRITICAL", "cvss": 8.1,  "desc": "Apache Tomcat CGI RCE on Windows"},
-    {"id": "CVE-2017-12617", "severity": "HIGH",     "cvss": 8.1,  "desc": "Apache Tomcat JSP upload bypass RCE"},
-    {"id": "CVE-2016-8735",  "severity": "CRITICAL", "cvss": 9.8,  "desc": "Apache Tomcat JmxRemoteLifecycleListener RCE"},
-    {"id": "CVE-2014-0160",  "severity": "HIGH",     "cvss": 7.5,  "desc": "Heartbleed - OpenSSL memory disclosure"}
+    {
+      "id": "CVE-2021-44228",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Log4Shell - Log4j JNDI RCE"
+    },
+    {
+      "id": "CVE-2022-22965",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Spring4Shell - Spring Framework RCE"
+    },
+    {
+      "id": "CVE-2022-22947",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Spring Cloud Gateway RCE via SpEL"
+    },
+    {
+      "id": "CVE-2021-44832",
+      "severity": "HIGH",
+      "cvss": 6.6,
+      "desc": "Log4j2 RCE via JDBC Appender"
+    },
+    {
+      "id": "CVE-2021-45046",
+      "severity": "CRITICAL",
+      "cvss": 9.0,
+      "desc": "Log4j2 DoS and RCE bypass"
+    },
+    {
+      "id": "CVE-2020-1938",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Apache Tomcat AJP file inclusion Ghostcat"
+    },
+    {
+      "id": "CVE-2019-0232",
+      "severity": "CRITICAL",
+      "cvss": 8.1,
+      "desc": "Apache Tomcat CGI RCE on Windows"
+    },
+    {
+      "id": "CVE-2017-12617",
+      "severity": "HIGH",
+      "cvss": 8.1,
+      "desc": "Apache Tomcat JSP upload bypass RCE"
+    },
+    {
+      "id": "CVE-2016-8735",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Apache Tomcat JmxRemoteLifecycleListener RCE"
+    },
+    {
+      "id": "CVE-2014-0160",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Heartbleed - OpenSSL memory disclosure"
+    },
+    {
+      "id": "CVE-2000-0759",
+      "severity": "MEDIUM",
+      "cvss": 6.4,
+      "desc": "Jakarta Tomcat 3.1 under Apache reveals physical path information when a remo..."
+    },
+    {
+      "id": "CVE-2000-0760",
+      "severity": "MEDIUM",
+      "cvss": 6.4,
+      "desc": "The Snoop servlet in Jakarta Tomcat 3.1 and 3.0 under Apache reveals sensitiv..."
+    },
+    {
+      "id": "CVE-2001-0590",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Apache Software Foundation Tomcat Servlet prior to 3.2.2 allows a remote atta..."
+    },
+    {
+      "id": "CVE-2001-0829",
+      "severity": "MEDIUM",
+      "cvss": 5.1,
+      "desc": "A cross-site scripting vulnerability in Apache Tomcat 3.2.1 allows a maliciou..."
+    },
+    {
+      "id": "CVE-2000-1210",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Directory traversal vulnerability in source.jsp of Apache Tomcat before 3.1 a..."
+    },
+    {
+      "id": "CVE-2002-0682",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Cross-site scripting vulnerability in Apache Tomcat 4.0.3 allows remote attac..."
+    },
+    {
+      "id": "CVE-2002-0493",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Apache Tomcat may be started without proper security settings if errors are e..."
+    },
+    {
+      "id": "CVE-2002-0935",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Apache Tomcat 4.0.3, and possibly other versions before 4.1.3 beta, allows re..."
+    },
+    {
+      "id": "CVE-2002-1895",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The servlet engine in Jakarta Apache Tomcat 3.3 and 4.0.4, when using IIS and..."
+    },
+    {
+      "id": "CVE-2002-2006",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The default installation of Apache Tomcat 4.0 through 4.1 and 3.0 through 3.3..."
+    },
+    {
+      "id": "CVE-2002-2007",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The default installations of Apache Tomcat 3.2.3 and 3.2.4 allows remote atta..."
+    },
+    {
+      "id": "CVE-2002-2008",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Apache Tomcat 4.0.3 for Windows allows remote attackers to obtain the web roo..."
+    },
+    {
+      "id": "CVE-2002-2009",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Apache Tomcat 4.0.1 allows remote attackers to obtain the web root path via H..."
+    },
+    {
+      "id": "CVE-2002-2272",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "Tomcat 4.0 through 4.1.12, using mod_jk 1.2.1 module on Apache 1.3 through 1...."
+    },
+    {
+      "id": "CVE-2002-1394",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Apache Tomcat 4.0.5 and earlier, when using both the invoker servlet and the ..."
+    },
+    {
+      "id": "CVE-2002-1567",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "Cross-site scripting (XSS) vulnerability in Apache Tomcat 4.1 allows remote a..."
+    },
+    {
+      "id": "CVE-2005-0808",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Apache Tomcat before 5.x allows remote attackers to cause a denial of service..."
+    },
+    {
+      "id": "CVE-2005-3164",
+      "severity": "LOW",
+      "cvss": 2.6,
+      "desc": "The AJP connector in Apache Tomcat 4.0.1 through 4.0.6 and 4.1.0 through 4.1...."
+    },
+    {
+      "id": "CVE-2005-3510",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Apache Tomcat 5.5.0 to 5.5.11 allows remote attackers to cause a denial of se..."
+    },
+    {
+      "id": "CVE-2005-1753",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "ReadMessage.jsp in JavaMail API 1.1.3 through 1.3, as used by Apache Tomcat 5..."
+    }
   ],
   "FTP": [
-    {"id": "CVE-2019-12815", "severity": "CRITICAL", "cvss": 9.8, "desc": "ProFTPd mod_copy arbitrary file copy without auth"},
-    {"id": "CVE-2015-3306",  "severity": "HIGH",     "cvss": 7.5, "desc": "ProFTPd mod_copy unauthenticated file access"},
-    {"id": "CVE-2010-4221",  "severity": "HIGH",     "cvss": 7.5, "desc": "ProFTPd Telnet IAC stack overflow"},
-    {"id": "CVE-2020-9273",  "severity": "HIGH",     "cvss": 8.8, "desc": "ProFTPd use-after-free memory corruption"},
-    {"id": "CVE-2020-9272",  "severity": "HIGH",     "cvss": 7.5, "desc": "ProFTPd out-of-bounds read in mod_cap"},
-    {"id": "CVE-2011-4130",  "severity": "CRITICAL", "cvss": 9.0, "desc": "ProFTPd response pool use-after-free RCE"},
-    {"id": "CVE-2010-3867",  "severity": "HIGH",     "cvss": 8.5, "desc": "ProFTPd controls buffer overflow"},
-    {"id": "CVE-2021-46903", "severity": "HIGH",     "cvss": 7.5, "desc": "vsftpd improper input validation"},
-    {"id": "CVE-2011-2523",  "severity": "CRITICAL", "cvss": 10.0,"desc": "vsftpd 2.3.4 backdoor - порт 6200"},
-    {"id": "CVE-2009-3023",  "severity": "HIGH",     "cvss": 8.5, "desc": "FileZilla Server buffer overflow"}
+    {
+      "id": "CVE-2019-12815",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "ProFTPd mod_copy arbitrary file copy without auth"
+    },
+    {
+      "id": "CVE-2015-3306",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "ProFTPd mod_copy unauthenticated file access"
+    },
+    {
+      "id": "CVE-2010-4221",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "ProFTPd Telnet IAC stack overflow"
+    },
+    {
+      "id": "CVE-2020-9273",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "ProFTPd use-after-free memory corruption"
+    },
+    {
+      "id": "CVE-2020-9272",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "ProFTPd out-of-bounds read in mod_cap"
+    },
+    {
+      "id": "CVE-2011-4130",
+      "severity": "CRITICAL",
+      "cvss": 9.0,
+      "desc": "ProFTPd response pool use-after-free RCE"
+    },
+    {
+      "id": "CVE-2010-3867",
+      "severity": "HIGH",
+      "cvss": 8.5,
+      "desc": "ProFTPd controls buffer overflow"
+    },
+    {
+      "id": "CVE-2021-46903",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "vsftpd improper input validation"
+    },
+    {
+      "id": "CVE-2011-2523",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "vsftpd 2.3.4 backdoor - port 6200"
+    },
+    {
+      "id": "CVE-2009-3023",
+      "severity": "HIGH",
+      "cvss": 8.5,
+      "desc": "FileZilla Server buffer overflow"
+    },
+    {
+      "id": "CVE-1999-0368",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Buffer overflows in wuarchive ftpd (wu-ftpd) and ProFTPD lead to remote root ..."
+    },
+    {
+      "id": "CVE-1999-0911",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Buffer overflow in ProFTPD, wu-ftpd, and beroftpd allows remote attackers to ..."
+    },
+    {
+      "id": "CVE-1999-1475",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "ProFTPd 1.2 compiled with the mod_sqlpw module records user passwords in the ..."
+    },
+    {
+      "id": "CVE-2000-0574",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "FTP servers such as OpenBSD ftpd, NetBSD ftpd, ProFTPd and Opieftpd do not pr..."
+    },
+    {
+      "id": "CVE-2001-0027",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "mod_sqlpw module in ProFTPD does not reset a cached password when a user uses..."
+    },
+    {
+      "id": "CVE-2001-0136",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Memory leak in ProFTPd 1.2.0rc2 allows remote attackers to cause a denial of ..."
+    },
+    {
+      "id": "CVE-2001-0318",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Format string vulnerability in ProFTPD 1.2.0rc2 may allow attackers to execut..."
+    },
+    {
+      "id": "CVE-2001-0456",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "postinst installation script for Proftpd in Debian 2.2 does not properly chan..."
+    },
+    {
+      "id": "CVE-2001-1500",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "ProFTPD 1.2.2rc2, and possibly other versions, does not properly verify rever..."
+    },
+    {
+      "id": "CVE-2001-1501",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The glob functionality in ProFTPD 1.2.1, and possibly other versions allows r..."
+    },
+    {
+      "id": "CVE-2003-0500",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "SQL injection vulnerability in the PostgreSQL authentication module (mod_sql_..."
+    },
+    {
+      "id": "CVE-2003-0831",
+      "severity": "CRITICAL",
+      "cvss": 9.0,
+      "desc": "ProFTPD 1.2.7 through 1.2.9rc2 does not properly translate newline characters..."
+    },
+    {
+      "id": "CVE-2004-0529",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "The modified suexec program in cPanel, when configured for mod_php and compil..."
+    },
+    {
+      "id": "CVE-2004-0432",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "ProFTPD 1.2.9 treats the Allow and Deny directives for CIDR based ACL entries..."
+    },
+    {
+      "id": "CVE-2004-1602",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "ProFTPD 1.2.x, including 1.2.8 and 1.2.10, responds in a different amount of ..."
+    },
+    {
+      "id": "CVE-2004-0346",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "Off-by-one buffer overflow in _xlate_ascii_write() in ProFTPD 1.2.7 through 1..."
+    },
+    {
+      "id": "CVE-2005-0484",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Format string vulnerability in gprostats for GProFTPD before 8.1.9 may allow ..."
+    },
+    {
+      "id": "CVE-2005-2390",
+      "severity": "MEDIUM",
+      "cvss": 6.4,
+      "desc": "Multiple format string vulnerabilities in ProFTPD before 1.3.0rc2 allow attac..."
+    },
+    {
+      "id": "CVE-2005-4816",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Buffer overflow in mod_radius in ProFTPD before 1.3.0rc2 allows remote attack..."
+    },
+    {
+      "id": "CVE-2006-5815",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Stack-based buffer overflow in the sreplace function in ProFTPD 1.3.0 and ear..."
+    }
   ],
   "SMTP": [
-    {"id": "CVE-2020-28017", "severity": "CRITICAL", "cvss": 9.8, "desc": "Exim integer overflow in receive_add_recipient"},
-    {"id": "CVE-2020-28018", "severity": "CRITICAL", "cvss": 9.8, "desc": "Exim use-after-free in tls-openssl"},
-    {"id": "CVE-2020-28020", "severity": "CRITICAL", "cvss": 9.8, "desc": "Exim integer overflow in receive_msg"},
-    {"id": "CVE-2019-10149", "severity": "CRITICAL", "cvss": 9.8, "desc": "Exim remote command execution via deliver_message"},
-    {"id": "CVE-2018-6789",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Exim base64 decoder buffer overflow RCE"},
-    {"id": "CVE-2020-7247",  "severity": "CRITICAL", "cvss": 9.8, "desc": "OpenSMTPD remote code execution"},
-    {"id": "CVE-2020-8794",  "severity": "CRITICAL", "cvss": 9.8, "desc": "OpenSMTPD out-of-bounds read RCE"},
-    {"id": "CVE-2021-38371", "severity": "MEDIUM",   "cvss": 5.3, "desc": "Exim STARTTLS negotiation plain text injection"},
-    {"id": "CVE-2016-10033", "severity": "CRITICAL", "cvss": 9.8, "desc": "PHPMailer remote code execution"},
-    {"id": "CVE-2016-10045", "severity": "CRITICAL", "cvss": 9.8, "desc": "PHPMailer escapeshellarg bypass RCE"}
+    {
+      "id": "CVE-2020-28017",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Exim integer overflow in receive_add_recipient"
+    },
+    {
+      "id": "CVE-2020-28018",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Exim use-after-free in tls-openssl"
+    },
+    {
+      "id": "CVE-2020-28020",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Exim integer overflow in receive_msg"
+    },
+    {
+      "id": "CVE-2019-10149",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Exim remote command execution via deliver_message"
+    },
+    {
+      "id": "CVE-2018-6789",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Exim base64 decoder buffer overflow RCE"
+    },
+    {
+      "id": "CVE-2020-7247",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "OpenSMTPD remote code execution"
+    },
+    {
+      "id": "CVE-2020-8794",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "OpenSMTPD out-of-bounds read RCE"
+    },
+    {
+      "id": "CVE-2021-38371",
+      "severity": "MEDIUM",
+      "cvss": 5.3,
+      "desc": "Exim STARTTLS plain text injection"
+    },
+    {
+      "id": "CVE-2016-10033",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "PHPMailer remote code execution"
+    },
+    {
+      "id": "CVE-2016-10045",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "PHPMailer escapeshellarg bypass RCE"
+    },
+    {
+      "id": "CVE-1999-0971",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "Buffer overflow in Exim allows local users to gain root privileges via a long..."
+    },
+    {
+      "id": "CVE-2001-0690",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Format string vulnerability in exim (3.22-10 in Red Hat, 3.12 in Debian and 3..."
+    },
+    {
+      "id": "CVE-2001-0889",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Exim 3.22 and earlier, in some configurations, does not properly verify the l..."
+    },
+    {
+      "id": "CVE-2002-0274",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "Exim 3.34 and earlier may allow local users to gain privileges via a buffer o..."
+    },
+    {
+      "id": "CVE-2002-1381",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "Format string vulnerability in daemon.c for Exim 4.x through 4.10, and 3.x th..."
+    },
+    {
+      "id": "CVE-2003-0743",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Heap-based buffer overflow in smtp_in.c for Exim 3 (exim3) before 3.36 and Ex..."
+    },
+    {
+      "id": "CVE-2004-0399",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Stack-based buffer overflow in Exim 3.35, and other versions before 4, when t..."
+    },
+    {
+      "id": "CVE-2004-0400",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Stack-based buffer overflow in Exim 4 before 4.33, when the headers_check_syn..."
+    },
+    {
+      "id": "CVE-2005-0021",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "Multiple buffer overflows in Exim before 4.43 may allow attackers to execute ..."
+    },
+    {
+      "id": "CVE-2005-0022",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "Buffer overflow in the spa_base64_to_bits function in Exim before 4.43, as or..."
+    },
+    {
+      "id": "CVE-2009-1417",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "gnutls-cli in GnuTLS before 2.6.6 does not verify the activation and expirati..."
+    },
+    {
+      "id": "CVE-2010-2023",
+      "severity": "MEDIUM",
+      "cvss": 4.4,
+      "desc": "transports/appendfile.c in Exim before 4.72, when a world-writable sticky-bit..."
+    },
+    {
+      "id": "CVE-2010-2024",
+      "severity": "MEDIUM",
+      "cvss": 4.4,
+      "desc": "transports/appendfile.c in Exim before 4.72, when MBX locking is enabled, all..."
+    },
+    {
+      "id": "CVE-2010-4344",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Heap-based buffer overflow in the string_vformat function in string.c in Exim..."
+    },
+    {
+      "id": "CVE-2010-4345",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "Exim 4.72 and earlier allows local users to gain privileges by leveraging the..."
+    },
+    {
+      "id": "CVE-2011-0017",
+      "severity": "MEDIUM",
+      "cvss": 6.9,
+      "desc": "The open_log function in log.c in Exim 4.72 and earlier does not check the re..."
+    },
+    {
+      "id": "CVE-2011-1407",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The DKIM implementation in Exim 4.7x before 4.76 permits matching for DKIM id..."
+    },
+    {
+      "id": "CVE-2011-1764",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Format string vulnerability in the dkim_exim_verify_finish function in src/dk..."
+    },
+    {
+      "id": "CVE-2012-2140",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The Mail gem before 2.4.3 for Ruby allows remote attackers to execute arbitra..."
+    },
+    {
+      "id": "CVE-2012-5671",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "Heap-based buffer overflow in the dkim_exim_query_dns_txt function in dkim.c ..."
+    }
   ],
   "MySQL": [
-    {"id": "CVE-2022-21417", "severity": "HIGH",     "cvss": 7.5, "desc": "MySQL InnoDB uncontrolled resource consumption"},
-    {"id": "CVE-2022-21444", "severity": "HIGH",     "cvss": 7.5, "desc": "MySQL Server DDL uncontrolled resource consumption"},
-    {"id": "CVE-2021-2307",  "severity": "HIGH",     "cvss": 7.2, "desc": "MySQL Server privilege escalation"},
-    {"id": "CVE-2021-35604", "severity": "HIGH",     "cvss": 7.1, "desc": "MySQL InnoDB denial of service"},
-    {"id": "CVE-2020-14878", "severity": "HIGH",     "cvss": 7.2, "desc": "MySQL Server vulnerability via multiple protocols"},
-    {"id": "CVE-2020-2812",  "severity": "MEDIUM",   "cvss": 4.9, "desc": "MySQL Server stored procedure DoS"},
-    {"id": "CVE-2019-2503",  "severity": "HIGH",     "cvss": 7.4, "desc": "MySQL Server connection handling vulnerability"},
-    {"id": "CVE-2016-6662",  "severity": "CRITICAL", "cvss": 9.8, "desc": "MySQL remote root code execution via config"},
-    {"id": "CVE-2016-6663",  "severity": "HIGH",     "cvss": 7.0, "desc": "MySQL race condition privilege escalation"},
-    {"id": "CVE-2012-2122",  "severity": "HIGH",     "cvss": 7.5, "desc": "MySQL authentication bypass with specific memory layout"}
+    {
+      "id": "CVE-2022-21417",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "MySQL InnoDB uncontrolled resource consumption"
+    },
+    {
+      "id": "CVE-2022-21444",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "MySQL Server DDL uncontrolled resource consumption"
+    },
+    {
+      "id": "CVE-2021-2307",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "MySQL Server privilege escalation"
+    },
+    {
+      "id": "CVE-2021-35604",
+      "severity": "HIGH",
+      "cvss": 7.1,
+      "desc": "MySQL InnoDB denial of service"
+    },
+    {
+      "id": "CVE-2020-14878",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "MySQL Server vulnerability via multiple protocols"
+    },
+    {
+      "id": "CVE-2020-2812",
+      "severity": "MEDIUM",
+      "cvss": 4.9,
+      "desc": "MySQL Server stored procedure DoS"
+    },
+    {
+      "id": "CVE-2019-2503",
+      "severity": "HIGH",
+      "cvss": 7.4,
+      "desc": "MySQL Server connection handling vulnerability"
+    },
+    {
+      "id": "CVE-2016-6662",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "MySQL remote root code execution via config"
+    },
+    {
+      "id": "CVE-2016-6663",
+      "severity": "HIGH",
+      "cvss": 7.0,
+      "desc": "MySQL race condition privilege escalation"
+    },
+    {
+      "id": "CVE-2012-2122",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "MySQL authentication bypass"
+    },
+    {
+      "id": "CVE-1999-1188",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "mysqld in MySQL 3.21 creates log files with world-readable permissions, which..."
+    },
+    {
+      "id": "CVE-1999-0652",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Rejected reason: DO NOT USE THIS CANDIDATE NUMBER.  ConsultIDs: None.  Reason..."
+    },
+    {
+      "id": "CVE-2000-0045",
+      "severity": "MEDIUM",
+      "cvss": 6.4,
+      "desc": "MySQL allows local users to modify passwords for arbitrary MySQL users via th..."
+    },
+    {
+      "id": "CVE-2000-0148",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "MySQL 3.22 allows remote attackers to bypass password authentication and acce..."
+    },
+    {
+      "id": "CVE-2000-0707",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "PCCS MySQLDatabase Admin Tool Manager 1.2.4 and earlier installs the file dbc..."
+    },
+    {
+      "id": "CVE-2000-0957",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The pluggable authentication module for mysql (pam_mysql) before 0.4.7 does n..."
+    },
+    {
+      "id": "CVE-2000-0981",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "MySQL Database Engine uses a weak authentication method which leaks informati..."
+    },
+    {
+      "id": "CVE-2001-1044",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Basilix Webmail 0.9.7beta, and possibly other versions, stores *.class and *...."
+    },
+    {
+      "id": "CVE-2001-1275",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "MySQL before 3.23.31 allows users with a MySQL account to use the SHOW GRANTS..."
+    },
+    {
+      "id": "CVE-2001-1274",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Buffer overflow in MySQL before 3.23.31 allows attackers to cause a denial of..."
+    },
+    {
+      "id": "CVE-2001-1453",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Buffer overflow in libmysqlclient.so in MySQL 3.23.33 and earlier allows remo..."
+    },
+    {
+      "id": "CVE-2001-1454",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Buffer overflow in MySQL before 3.23.33 allows remote attackers to execute ar..."
+    },
+    {
+      "id": "CVE-2001-0407",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "Directory traversal vulnerability in MySQL before 3.23.36 allows local users ..."
+    },
+    {
+      "id": "CVE-2001-0990",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "Inter7 vpopmail 4.10.35 and earlier, when using the MySQL module, compiles au..."
+    },
+    {
+      "id": "CVE-2001-0645",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Symantec/AXENT NetProwler 3.5.x contains several default passwords, which cou..."
+    },
+    {
+      "id": "CVE-2001-1255",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "WinMySQLadmin 1.1 stores the MySQL password in plain text in the my.ini file,..."
+    },
+    {
+      "id": "CVE-2001-1226",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "AdCycle 1.17 and earlier allow remote attackers to modify SQL queries, which ..."
+    },
+    {
+      "id": "CVE-2002-0229",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Safe Mode feature (safe_mode) in PHP 3.0 through 4.1.0 allows attackers with ..."
+    },
+    {
+      "id": "CVE-2002-0969",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "Buffer overflow in MySQL daemon (mysqld) before 3.23.50, and 4.0 beta before ..."
+    },
+    {
+      "id": "CVE-2002-1373",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Signed integer vulnerability in the COM_TABLE_DUMP package for MySQL 3.23.x b..."
+    }
   ],
   "PostgreSQL": [
-    {"id": "CVE-2022-1552",  "severity": "HIGH",     "cvss": 8.8, "desc": "PostgreSQL autovacuum SECURITY DEFINER bypass"},
-    {"id": "CVE-2021-23222", "severity": "MEDIUM",   "cvss": 5.9, "desc": "PostgreSQL libpq man-in-the-middle attack"},
-    {"id": "CVE-2021-3677",  "severity": "MEDIUM",   "cvss": 6.5, "desc": "PostgreSQL unexpected query results from non-pg_catalog functions"},
-    {"id": "CVE-2020-25695", "severity": "HIGH",     "cvss": 8.8, "desc": "PostgreSQL multiple features allow SQL injection"},
-    {"id": "CVE-2019-10208", "severity": "HIGH",     "cvss": 8.8, "desc": "PostgreSQL TYPE in pg_temp executes arbitrary SQL"},
-    {"id": "CVE-2018-10915", "severity": "HIGH",     "cvss": 8.3, "desc": "PostgreSQL libpq client-side disconnection flaw"},
-    {"id": "CVE-2016-5423",  "severity": "HIGH",     "cvss": 8.3, "desc": "PostgreSQL nested CASE/WHEN expression crash"},
-    {"id": "CVE-2016-0766",  "severity": "HIGH",     "cvss": 8.8, "desc": "PostgreSQL privilege escalation via PL/Java"}
+    {
+      "id": "CVE-2022-1552",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "PostgreSQL autovacuum SECURITY DEFINER bypass"
+    },
+    {
+      "id": "CVE-2021-23222",
+      "severity": "MEDIUM",
+      "cvss": 5.9,
+      "desc": "PostgreSQL libpq man-in-the-middle attack"
+    },
+    {
+      "id": "CVE-2021-3677",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "PostgreSQL unexpected results from non-pg_catalog"
+    },
+    {
+      "id": "CVE-2020-25695",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "PostgreSQL multiple features allow SQL injection"
+    },
+    {
+      "id": "CVE-2019-10208",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "PostgreSQL TYPE in pg_temp executes SQL"
+    },
+    {
+      "id": "CVE-2018-10915",
+      "severity": "HIGH",
+      "cvss": 8.3,
+      "desc": "PostgreSQL libpq client-side disconnection flaw"
+    },
+    {
+      "id": "CVE-2016-5423",
+      "severity": "HIGH",
+      "cvss": 8.3,
+      "desc": "PostgreSQL nested CASE/WHEN expression crash"
+    },
+    {
+      "id": "CVE-2016-0766",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "PostgreSQL privilege escalation via PL/Java"
+    },
+    {
+      "id": "CVE-1999-0862",
+      "severity": "LOW",
+      "cvss": 2.1,
+      "desc": "Insecure directory permissions in RPM distribution for PostgreSQL allows loca..."
+    },
+    {
+      "id": "CVE-2001-0201",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The Postaci frontend for PostgreSQL does not properly filter characters such ..."
+    },
+    {
+      "id": "CVE-2001-1379",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The PostgreSQL authentication modules (1) mod_auth_pgsql 0.9.5, and (2) mod_a..."
+    },
+    {
+      "id": "CVE-2000-1199",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "PostgreSQL stores usernames and passwords in plaintext in (1) pg_shadow and (..."
+    },
+    {
+      "id": "CVE-2002-0802",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The multibyte support in PostgreSQL 6.5.x with SQL_ASCII encoding consumes an..."
+    },
+    {
+      "id": "CVE-2002-0972",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "Buffer overflows in PostgreSQL 7.2 allow attackers to cause a denial of servi..."
+    },
+    {
+      "id": "CVE-2002-1642",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "PostgreSQL 7.2.1 and 7.2.2 allows local users to delete transaction log (pg_c..."
+    },
+    {
+      "id": "CVE-2002-1657",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "PostgreSQL uses the username for a salt when generating passwords, which make..."
+    },
+    {
+      "id": "CVE-2002-1397",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Vulnerability in the cash_words() function for PostgreSQL 7.2 and earlier all..."
+    },
+    {
+      "id": "CVE-2002-1398",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "Buffer overflow in the date parser for PostgreSQL before 7.2.2 allows attacke..."
+    },
+    {
+      "id": "CVE-2002-1399",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Unknown vulnerability in cash_out and possibly other functions in PostgreSQL ..."
+    },
+    {
+      "id": "CVE-2002-1400",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Heap-based buffer overflow in the repeat() function for PostgreSQL before 7.2..."
+    },
+    {
+      "id": "CVE-2002-1401",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "Buffer overflows in (1) circle_poly, (2) path_encode and (3) path_add (also i..."
+    },
+    {
+      "id": "CVE-2002-1402",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "Buffer overflows in the (1) TZ and (2) SET TIME ZONE enivronment variables fo..."
+    },
+    {
+      "id": "CVE-2003-0040",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "SQL injection vulnerability in the PostgreSQL auth module for courier 0.40 an..."
+    },
+    {
+      "id": "CVE-2003-0500",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "SQL injection vulnerability in the PostgreSQL authentication module (mod_sql_..."
+    },
+    {
+      "id": "CVE-2003-0515",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "SQL injection vulnerabilities in the (1) PostgreSQL or (2) MySQL authenticati..."
+    },
+    {
+      "id": "CVE-2003-0901",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Buffer overflow in to_ascii for PostgreSQL 7.2.x, and 7.3.x before 7.3.4, all..."
+    },
+    {
+      "id": "CVE-2004-0547",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Buffer overflow in the ODBC driver for PostgreSQL before 7.2.1 allows remote ..."
+    },
+    {
+      "id": "CVE-2005-0245",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Buffer overflow in gram.y for PostgreSQL 8.0.0 and earlier may allow attacker..."
+    }
   ],
   "Redis": [
-    {"id": "CVE-2022-0543",  "severity": "CRITICAL", "cvss": 10.0,"desc": "Redis Lua sandbox escape RCE (Debian/Ubuntu)"},
-    {"id": "CVE-2021-32761", "severity": "HIGH",     "cvss": 8.8, "desc": "Redis BITFIELD integer overflow"},
-    {"id": "CVE-2021-32687", "severity": "HIGH",     "cvss": 8.8, "desc": "Redis integer overflow with intsets"},
-    {"id": "CVE-2021-32675", "severity": "HIGH",     "cvss": 7.5, "desc": "Redis unauthenticated client DoS"},
-    {"id": "CVE-2021-32626", "severity": "HIGH",     "cvss": 8.8, "desc": "Redis Lua scripts heap overflow"},
-    {"id": "CVE-2021-29478", "severity": "HIGH",     "cvss": 8.8, "desc": "Redis integer overflow with STRALGO LCS"},
-    {"id": "CVE-2020-14147", "severity": "HIGH",     "cvss": 7.7, "desc": "Redis integer overflow via ZADD"},
-    {"id": "CVE-2015-8080",  "severity": "HIGH",     "cvss": 7.5, "desc": "Redis integer overflow in getnum function"},
-    {"id": "CVE-2013-7458",  "severity": "MEDIUM",   "cvss": 5.5, "desc": "Redis insecure permissions on history file"}
+    {
+      "id": "CVE-2022-0543",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Redis Lua sandbox escape RCE (Debian/Ubuntu)"
+    },
+    {
+      "id": "CVE-2021-32761",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Redis BITFIELD integer overflow"
+    },
+    {
+      "id": "CVE-2021-32687",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Redis integer overflow with intsets"
+    },
+    {
+      "id": "CVE-2021-32675",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Redis unauthenticated client DoS"
+    },
+    {
+      "id": "CVE-2021-32626",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Redis Lua scripts heap overflow"
+    },
+    {
+      "id": "CVE-2021-29478",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Redis integer overflow with STRALGO LCS"
+    },
+    {
+      "id": "CVE-2020-14147",
+      "severity": "HIGH",
+      "cvss": 7.7,
+      "desc": "Redis integer overflow via ZADD"
+    },
+    {
+      "id": "CVE-2015-8080",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Redis integer overflow in getnum function"
+    },
+    {
+      "id": "CVE-2013-7458",
+      "severity": "MEDIUM",
+      "cvss": 5.5,
+      "desc": "Redis insecure permissions on history file"
+    },
+    {
+      "id": "CVE-2004-0175",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Directory traversal vulnerability in scp for OpenSSH before 3.4p1 allows remo..."
+    },
+    {
+      "id": "CVE-2005-4500",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "SQL injection vulnerability in MusicBox 2.3 allows remote attackers to execut..."
+    },
+    {
+      "id": "CVE-2005-4702",
+      "severity": "MEDIUM",
+      "cvss": 6.4,
+      "desc": "SQL injection vulnerability in the favorites module in index.php in IPBProArc..."
+    },
+    {
+      "id": "CVE-2015-4335",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Redis before 2.8.21 and 3.x before 3.0.2 allows remote attackers to execute a..."
+    },
+    {
+      "id": "CVE-2016-8339",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "A buffer overflow in Redis 3.2.x prior to 3.2.4 causes arbitrary code executi..."
+    },
+    {
+      "id": "CVE-2017-5169",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "An issue was discovered in Hanwha Techwin Smart Security Manager Versions 1.5..."
+    },
+    {
+      "id": "CVE-2017-7969",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "A cross-site request forgery vulnerability exists on the Secure Gateway compo..."
+    },
+    {
+      "id": "CVE-2017-7970",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "A vulnerability exists in Schneider Electric's PowerSCADA Anywhere v1.0 redis..."
+    },
+    {
+      "id": "CVE-2017-7971",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "A vulnerability exists in Schneider Electric's PowerSCADA Anywhere v1.0 redis..."
+    },
+    {
+      "id": "CVE-2017-7972",
+      "severity": "MEDIUM",
+      "cvss": 5.5,
+      "desc": "A vulnerability exists in Schneider Electric's PowerSCADA Anywhere v1.0 redis..."
+    },
+    {
+      "id": "CVE-2017-15047",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "The clusterLoadConfig function in cluster.c in Redis 4.0.2 allows attackers t..."
+    },
+    {
+      "id": "CVE-2016-10517",
+      "severity": "HIGH",
+      "cvss": 7.4,
+      "desc": "networking.c in Redis before 3.2.7 allows \"Cross Protocol Scripting\" because ..."
+    },
+    {
+      "id": "CVE-2017-1000248",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Redis-store <=v1.3.0 allows unsafe objects to be loaded from redis"
+    },
+    {
+      "id": "CVE-2017-9963",
+      "severity": "HIGH",
+      "cvss": 8.1,
+      "desc": "A cross-site request forgery vulnerability exists on the Secure Gateway compo..."
+    },
+    {
+      "id": "CVE-2018-8073",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Yii 2.x before 2.0.15 allows remote attackers to execute arbitrary LUA code v..."
+    },
+    {
+      "id": "CVE-2016-10639",
+      "severity": "HIGH",
+      "cvss": 8.1,
+      "desc": "redis-srvr is a npm wrapper for redis-server. redis-srvr downloads binary res..."
+    },
+    {
+      "id": "CVE-2016-10672",
+      "severity": "HIGH",
+      "cvss": 8.1,
+      "desc": "cloudpub-redis is a module for CloudPub: Redis Backend cloudpub-redis downloa..."
+    },
+    {
+      "id": "CVE-2018-12453",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Type confusion in the xgroupCommand function in t_stream.c in redis-server in..."
+    }
   ],
   "MongoDB": [
-    {"id": "CVE-2021-20328", "severity": "MEDIUM",   "cvss": 6.8, "desc": "MongoDB client-side field injection"},
-    {"id": "CVE-2019-2386",  "severity": "MEDIUM",   "cvss": 5.3, "desc": "MongoDB unauthorized data access on 32-bit"},
-    {"id": "CVE-2019-20925", "severity": "HIGH",     "cvss": 7.5, "desc": "MongoDB null pointer dereference DoS"},
-    {"id": "CVE-2017-15535", "severity": "CRITICAL", "cvss": 9.8, "desc": "MongoDB BSON buffer overflow"},
-    {"id": "CVE-2015-7882",  "severity": "CRITICAL", "cvss": 9.8, "desc": "MongoDB LDAP authentication bypass"},
-    {"id": "CVE-2013-4650",  "severity": "MEDIUM",   "cvss": 6.5, "desc": "MongoDB improper privilege management"},
-    {"id": "CVE-2013-3969",  "severity": "MEDIUM",   "cvss": 5.5, "desc": "MongoDB V8 JavaScript engine DoS"}
+    {
+      "id": "CVE-2021-20328",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "MongoDB client-side field injection"
+    },
+    {
+      "id": "CVE-2019-2386",
+      "severity": "MEDIUM",
+      "cvss": 5.3,
+      "desc": "MongoDB unauthorized data access on 32-bit"
+    },
+    {
+      "id": "CVE-2019-20925",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "MongoDB null pointer dereference DoS"
+    },
+    {
+      "id": "CVE-2017-15535",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "MongoDB BSON buffer overflow"
+    },
+    {
+      "id": "CVE-2015-7882",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "MongoDB LDAP authentication bypass"
+    },
+    {
+      "id": "CVE-2013-4650",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "MongoDB improper privilege management"
+    },
+    {
+      "id": "CVE-2013-3969",
+      "severity": "MEDIUM",
+      "cvss": 5.5,
+      "desc": "MongoDB V8 JavaScript engine DoS"
+    },
+    {
+      "id": "CVE-2012-4287",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "epan/dissectors/packet-mongo.c in the MongoDB dissector in Wireshark 1.8.x be..."
+    },
+    {
+      "id": "CVE-2013-2132",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "bson/_cbsonmodule.c in the mongo-python-driver (aka. pymongo) before 2.5.2, a..."
+    },
+    {
+      "id": "CVE-2013-1892",
+      "severity": "MEDIUM",
+      "cvss": 6.0,
+      "desc": "MongoDB before 2.0.9 and 2.2.x before 2.2.4 does not properly validate reques..."
+    },
+    {
+      "id": "CVE-2013-6384",
+      "severity": "LOW",
+      "cvss": 1.9,
+      "desc": "(1) impl_db2.py and (2) impl_mongodb.py in OpenStack Ceilometer 2013.2 and ea..."
+    },
+    {
+      "id": "CVE-2012-6619",
+      "severity": "MEDIUM",
+      "cvss": 6.4,
+      "desc": "The default configuration for MongoDB before 2.3.2 does not validate objects,..."
+    },
+    {
+      "id": "CVE-2014-3971",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The CmdAuthenticate::_authenticateX509 function in db/commands/authentication..."
+    },
+    {
+      "id": "CVE-2015-1609",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "MongoDB before 2.4.13 and 2.6.x before 2.6.8 allows remote attackers to cause..."
+    },
+    {
+      "id": "CVE-2015-5723",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "Doctrine Annotations before 1.2.7, Cache before 1.3.2 and 1.4.x before 1.4.2,..."
+    },
+    {
+      "id": "CVE-2016-6494",
+      "severity": "MEDIUM",
+      "cvss": 5.5,
+      "desc": "The client in MongoDB uses world-readable permissions on .dbshell history fil..."
+    },
+    {
+      "id": "CVE-2016-3104",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "mongod in MongoDB 2.6, when using 2.4-style users, and 2.4 allow remote attac..."
+    },
+    {
+      "id": "CVE-2014-8180",
+      "severity": "MEDIUM",
+      "cvss": 5.5,
+      "desc": "MongoDB on Red Hat Satellite 6 allows local users to bypass authentication by..."
+    },
+    {
+      "id": "CVE-2017-14227",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "In MongoDB libbson 1.7.0, the bson_iter_codewscope function in bson-iter.c mi..."
+    },
+    {
+      "id": "CVE-2018-9327",
+      "severity": "HIGH",
+      "cvss": 8.1,
+      "desc": "Etherpad 1.5.x and 1.6.x before 1.6.4 allows an attacker to execute arbitrary..."
+    },
+    {
+      "id": "CVE-2016-10572",
+      "severity": "HIGH",
+      "cvss": 8.1,
+      "desc": "mongodb-instance before 0.0.3 installs mongodb locally. mongodb-instance down..."
+    },
+    {
+      "id": "CVE-2017-2665",
+      "severity": "MEDIUM",
+      "cvss": 4.8,
+      "desc": "The skyring-setup command creates random password for mongodb skyring databas..."
+    },
+    {
+      "id": "CVE-2018-13863",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The MongoDB bson JavaScript module (also known as js-bson) versions 0.5.0 to ..."
+    },
+    {
+      "id": "CVE-2018-3783",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "A privilege escalation detected in flintcms versions <= 1.1.9 allows account ..."
+    }
   ],
   "Telnet": [
-    {"id": "CVE-2020-10188", "severity": "CRITICAL", "cvss": 9.8, "desc": "Telnet remote code execution via environment variables"},
-    {"id": "CVE-2011-4862",  "severity": "CRITICAL", "cvss": 10.0,"desc": "FreeBSD telnetd encrypt_keyid heap overflow RCE"},
-    {"id": "CVE-1999-0015",  "severity": "HIGH",     "cvss": 7.5, "desc": "Telnet transmits credentials in plaintext"},
-    {"id": "CVE-1999-0019",  "severity": "HIGH",     "cvss": 7.5, "desc": "Telnet allows unauthenticated access in some configs"}
+    {
+      "id": "CVE-2020-10188",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Telnet RCE via environment variables"
+    },
+    {
+      "id": "CVE-2011-4862",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "FreeBSD telnetd encrypt_keyid heap overflow RCE"
+    },
+    {
+      "id": "CVE-1999-0015",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Telnet transmits credentials in plaintext"
+    },
+    {
+      "id": "CVE-1999-0019",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Telnet allows unauthenticated access in some configs"
+    }
   ],
   "SMB": [
-    {"id": "CVE-2017-0144",  "severity": "CRITICAL", "cvss": 9.8, "desc": "EternalBlue - SMBv1 RCE (WannaCry/NotPetya)"},
-    {"id": "CVE-2017-0145",  "severity": "CRITICAL", "cvss": 9.8, "desc": "EternalRomance - SMBv1 RCE"},
-    {"id": "CVE-2017-0146",  "severity": "CRITICAL", "cvss": 9.8, "desc": "EternalSynergy - SMBv1 RCE"},
-    {"id": "CVE-2020-0796",  "severity": "CRITICAL", "cvss": 10.0,"desc": "SMBGhost - SMBv3 RCE (CVE-2020-0796)"},
-    {"id": "CVE-2021-36942", "severity": "HIGH",     "cvss": 7.5, "desc": "Windows LSA PetitPotam NTLM relay"},
-    {"id": "CVE-2021-34527", "severity": "CRITICAL", "cvss": 8.8, "desc": "PrintNightmare - Windows Print Spooler RCE"},
-    {"id": "CVE-2020-1472",  "severity": "CRITICAL", "cvss": 10.0,"desc": "Zerologon - Netlogon privilege escalation"},
-    {"id": "CVE-2019-0708",  "severity": "CRITICAL", "cvss": 9.8, "desc": "BlueKeep - RDP RCE (CVE-2019-0708)"}
+    {
+      "id": "CVE-2017-0144",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "EternalBlue - SMBv1 RCE (WannaCry/NotPetya)"
+    },
+    {
+      "id": "CVE-2017-0145",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "EternalRomance - SMBv1 RCE"
+    },
+    {
+      "id": "CVE-2017-0146",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "EternalSynergy - SMBv1 RCE"
+    },
+    {
+      "id": "CVE-2020-0796",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "SMBGhost - SMBv3 RCE"
+    },
+    {
+      "id": "CVE-2021-36942",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Windows LSA PetitPotam NTLM relay"
+    },
+    {
+      "id": "CVE-2021-34527",
+      "severity": "CRITICAL",
+      "cvss": 8.8,
+      "desc": "PrintNightmare - Windows Print Spooler RCE"
+    },
+    {
+      "id": "CVE-2020-1472",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Zerologon - Netlogon privilege escalation"
+    },
+    {
+      "id": "CVE-2019-0708",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "BlueKeep - RDP RCE"
+    }
   ],
   "RDP": [
-    {"id": "CVE-2019-0708",  "severity": "CRITICAL", "cvss": 9.8, "desc": "BlueKeep - RDP use-after-free RCE"},
-    {"id": "CVE-2020-0609",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Windows RDP Gateway RCE"},
-    {"id": "CVE-2020-0610",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Windows RDP Gateway pre-auth RCE"},
-    {"id": "CVE-2019-1181",  "severity": "CRITICAL", "cvss": 9.8, "desc": "DejaBlue - RDP RCE vulnerability"},
-    {"id": "CVE-2019-1182",  "severity": "CRITICAL", "cvss": 9.8, "desc": "DejaBlue - RDP RCE second variant"},
-    {"id": "CVE-2018-0886",  "severity": "HIGH",     "cvss": 7.5, "desc": "CredSSP MitM attack via RDP"},
-    {"id": "CVE-2012-0002",  "severity": "CRITICAL", "cvss": 9.3, "desc": "MS12-020 RDP remote code execution"}
+    {
+      "id": "CVE-2019-0708",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "BlueKeep - RDP use-after-free RCE"
+    },
+    {
+      "id": "CVE-2020-0609",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Windows RDP Gateway RCE"
+    },
+    {
+      "id": "CVE-2020-0610",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Windows RDP Gateway pre-auth RCE"
+    },
+    {
+      "id": "CVE-2019-1181",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "DejaBlue - RDP RCE vulnerability"
+    },
+    {
+      "id": "CVE-2019-1182",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "DejaBlue - RDP RCE second variant"
+    },
+    {
+      "id": "CVE-2018-0886",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "CredSSP MitM attack via RDP"
+    },
+    {
+      "id": "CVE-2012-0002",
+      "severity": "CRITICAL",
+      "cvss": 9.3,
+      "desc": "MS12-020 RDP remote code execution"
+    }
   ],
   "DNS": [
-    {"id": "CVE-2020-1350",  "severity": "CRITICAL", "cvss": 10.0,"desc": "SIGRed - Windows DNS Server RCE (17 лет)"},
-    {"id": "CVE-2021-25216", "severity": "CRITICAL", "cvss": 9.4, "desc": "BIND9 TKEY buffer overflow RCE"},
-    {"id": "CVE-2020-8617",  "severity": "HIGH",     "cvss": 7.5, "desc": "BIND9 TSIG denial of service"},
-    {"id": "CVE-2020-8616",  "severity": "HIGH",     "cvss": 8.6, "desc": "BIND9 NXNS attack amplification"},
-    {"id": "CVE-2016-2776",  "severity": "HIGH",     "cvss": 7.5, "desc": "BIND9 buffer handling assertion failure DoS"},
-    {"id": "CVE-2015-5722",  "severity": "HIGH",     "cvss": 7.8, "desc": "BIND9 malformed DNSSEC key DoS"},
-    {"id": "CVE-2008-1447",  "severity": "HIGH",     "cvss": 6.8, "desc": "Kaminsky DNS cache poisoning attack"}
+    {
+      "id": "CVE-2020-1350",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "SIGRed - Windows DNS Server RCE"
+    },
+    {
+      "id": "CVE-2021-25216",
+      "severity": "CRITICAL",
+      "cvss": 9.4,
+      "desc": "BIND9 TKEY buffer overflow RCE"
+    },
+    {
+      "id": "CVE-2020-8617",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "BIND9 TSIG denial of service"
+    },
+    {
+      "id": "CVE-2020-8616",
+      "severity": "HIGH",
+      "cvss": 8.6,
+      "desc": "BIND9 NXNS attack amplification"
+    },
+    {
+      "id": "CVE-2016-2776",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "BIND9 buffer handling assertion failure DoS"
+    },
+    {
+      "id": "CVE-2015-5722",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "BIND9 malformed DNSSEC key DoS"
+    },
+    {
+      "id": "CVE-2008-1447",
+      "severity": "HIGH",
+      "cvss": 6.8,
+      "desc": "Kaminsky DNS cache poisoning attack"
+    }
   ],
   "SNMP": [
-    {"id": "CVE-2017-6736",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Cisco IOS SNMP remote code execution"},
-    {"id": "CVE-2017-6737",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Cisco IOS SNMP buffer overflow RCE"},
-    {"id": "CVE-2002-0013",  "severity": "HIGH",     "cvss": 7.5, "desc": "Multiple SNMP implementations buffer overflow"},
-    {"id": "CVE-2002-0012",  "severity": "HIGH",     "cvss": 7.5, "desc": "SNMP v1 trap handling buffer overflow"}
+    {
+      "id": "CVE-2017-6736",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Cisco IOS SNMP remote code execution"
+    },
+    {
+      "id": "CVE-2017-6737",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Cisco IOS SNMP buffer overflow RCE"
+    },
+    {
+      "id": "CVE-2002-0013",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Multiple SNMP implementations buffer overflow"
+    },
+    {
+      "id": "CVE-2002-0012",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "SNMP v1 trap handling buffer overflow"
+    }
   ],
   "VNC": [
-    {"id": "CVE-2019-15681", "severity": "CRITICAL", "cvss": 9.8, "desc": "LibVNCServer memory leak password disclosure"},
-    {"id": "CVE-2019-15694", "severity": "CRITICAL", "cvss": 9.8, "desc": "LibVNCServer heap buffer overflow RCE"},
-    {"id": "CVE-2019-15695", "severity": "CRITICAL", "cvss": 9.8, "desc": "LibVNCServer stack buffer overflow RCE"},
-    {"id": "CVE-2018-7225",  "severity": "CRITICAL", "cvss": 9.8, "desc": "LibVNCServer improper handling info disclosure"},
-    {"id": "CVE-2017-7392",  "severity": "HIGH",     "cvss": 7.5, "desc": "TigerVNC memory leak in HandleSecTypeVeNCrypt"}
+    {
+      "id": "CVE-2019-15681",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "LibVNCServer memory leak password disclosure"
+    },
+    {
+      "id": "CVE-2019-15694",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "LibVNCServer heap buffer overflow RCE"
+    },
+    {
+      "id": "CVE-2019-15695",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "LibVNCServer stack buffer overflow RCE"
+    },
+    {
+      "id": "CVE-2018-7225",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "LibVNCServer improper handling info disclosure"
+    },
+    {
+      "id": "CVE-2017-7392",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "TigerVNC memory leak in HandleSecTypeVeNCrypt"
+    }
   ],
   "Nginx": [
-    {"id": "CVE-2021-23017", "severity": "HIGH",     "cvss": 7.7, "desc": "Nginx resolver off-by-one heap write"},
-    {"id": "CVE-2019-9511",  "severity": "HIGH",     "cvss": 7.5, "desc": "HTTP/2 Data Dribble DoS (NGINX)"},
-    {"id": "CVE-2019-9513",  "severity": "HIGH",     "cvss": 7.5, "desc": "HTTP/2 Resource Loop DoS (NGINX)"},
-    {"id": "CVE-2017-7529",  "severity": "MEDIUM",   "cvss": 5.3, "desc": "Nginx integer overflow in range filter"},
-    {"id": "CVE-2016-1247",  "severity": "HIGH",     "cvss": 7.8, "desc": "Nginx log file privilege escalation"},
-    {"id": "CVE-2013-2028",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Nginx stack buffer overflow RCE"}
+    {
+      "id": "CVE-2021-23017",
+      "severity": "HIGH",
+      "cvss": 7.7,
+      "desc": "Nginx resolver off-by-one heap write"
+    },
+    {
+      "id": "CVE-2019-9511",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "HTTP/2 Data Dribble DoS (NGINX)"
+    },
+    {
+      "id": "CVE-2019-9513",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "HTTP/2 Resource Loop DoS (NGINX)"
+    },
+    {
+      "id": "CVE-2017-7529",
+      "severity": "MEDIUM",
+      "cvss": 5.3,
+      "desc": "Nginx integer overflow in range filter"
+    },
+    {
+      "id": "CVE-2016-1247",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "Nginx log file privilege escalation"
+    },
+    {
+      "id": "CVE-2013-2028",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Nginx stack buffer overflow RCE"
+    },
+    {
+      "id": "CVE-2009-2629",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Buffer underflow in src/http/ngx_http_parse.c in nginx 0.1.0 through 0.5.37, ..."
+    },
+    {
+      "id": "CVE-2009-3896",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "src/http/ngx_http_parse.c in nginx (aka Engine X) 0.1.0 through 0.4.14, 0.5.x..."
+    },
+    {
+      "id": "CVE-2009-3898",
+      "severity": "MEDIUM",
+      "cvss": 4.9,
+      "desc": "Directory traversal vulnerability in src/http/modules/ngx_http_dav_module.c i..."
+    },
+    {
+      "id": "CVE-2009-4487",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "nginx 0.7.64 writes data to a log file without sanitizing non-printable chara..."
+    },
+    {
+      "id": "CVE-2010-2263",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "nginx 0.8 before 0.8.40 and 0.7 before 0.7.66, when running on Windows, allow..."
+    },
+    {
+      "id": "CVE-2010-2266",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "nginx 0.8.36 allows remote attackers to cause a denial of service (crash) via..."
+    },
+    {
+      "id": "CVE-2011-4315",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "Heap-based buffer overflow in compression-pointer processing in core/ngx_reso..."
+    },
+    {
+      "id": "CVE-2012-1180",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Use-after-free vulnerability in nginx before 1.0.14 and 1.1.x before 1.1.17 a..."
+    },
+    {
+      "id": "CVE-2012-2089",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "Buffer overflow in ngx_http_mp4_module.c in the ngx_http_mp4_module module in..."
+    },
+    {
+      "id": "CVE-2011-4963",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "nginx/Windows 1.3.x before 1.3.1 and 1.2.x before 1.2.1 allows remote attacke..."
+    },
+    {
+      "id": "CVE-2012-3380",
+      "severity": "LOW",
+      "cvss": 2.1,
+      "desc": "Directory traversal vulnerability in naxsi-ui/nx_extract.py in the Naxsi modu..."
+    },
+    {
+      "id": "CVE-2013-2070",
+      "severity": "MEDIUM",
+      "cvss": 5.8,
+      "desc": "http/modules/ngx_http_proxy_module.c in nginx 1.1.4 through 1.2.8 and 1.3.0 t..."
+    },
+    {
+      "id": "CVE-2013-0337",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The default configuration of nginx, possibly 1.3.13 and earlier, uses world-r..."
+    },
+    {
+      "id": "CVE-2013-4547",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "nginx 0.8.41 through 1.4.3 and 1.5.x before 1.5.7 allows remote attackers to ..."
+    },
+    {
+      "id": "CVE-2014-0133",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Heap-based buffer overflow in the SPDY implementation in nginx 1.3.15 before ..."
+    },
+    {
+      "id": "CVE-2014-0088",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The SPDY implementation in the ngx_http_spdy_module module in nginx 1.5.10 be..."
+    },
+    {
+      "id": "CVE-2014-3616",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "nginx 0.5.6 through 1.7.4, when using the same shared ssl_session_cache or ss..."
+    },
+    {
+      "id": "CVE-2014-3556",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "The STARTTLS implementation in mail/ngx_mail_smtp_handler.c in the SMTP proxy..."
+    },
+    {
+      "id": "CVE-2016-0742",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The resolver in nginx before 1.8.1 and 1.9.x before 1.9.10 allows remote atta..."
+    }
   ],
   "IIS": [
-    {"id": "CVE-2022-21907", "severity": "CRITICAL", "cvss": 9.8, "desc": "IIS HTTP Protocol Stack RCE"},
-    {"id": "CVE-2021-31166", "severity": "CRITICAL", "cvss": 9.8, "desc": "IIS HTTP Protocol Stack DoS/RCE"},
-    {"id": "CVE-2020-0645",  "severity": "MEDIUM",   "cvss": 6.5, "desc": "IIS tampering vulnerability"},
-    {"id": "CVE-2017-7269",  "severity": "CRITICAL", "cvss": 10.0,"desc": "IIS 6.0 WebDAV buffer overflow RCE"},
-    {"id": "CVE-2015-1635", "severity": "CRITICAL",  "cvss": 10.0,"desc": "MS15-034 IIS HTTP.sys RCE"},
-    {"id": "CVE-2010-2730",  "severity": "CRITICAL", "cvss": 9.3, "desc": "IIS FastCGI extension buffer overflow"}
+    {
+      "id": "CVE-2022-21907",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "IIS HTTP Protocol Stack RCE"
+    },
+    {
+      "id": "CVE-2021-31166",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "IIS HTTP Protocol Stack DoS/RCE"
+    },
+    {
+      "id": "CVE-2020-0645",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "IIS tampering vulnerability"
+    },
+    {
+      "id": "CVE-2017-7269",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "IIS 6.0 WebDAV buffer overflow RCE"
+    },
+    {
+      "id": "CVE-2015-1635",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "MS15-034 IIS HTTP.sys RCE"
+    },
+    {
+      "id": "CVE-2010-2730",
+      "severity": "CRITICAL",
+      "cvss": 9.3,
+      "desc": "IIS FastCGI extension buffer overflow"
+    },
+    {
+      "id": "CVE-1999-1544",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Buffer overflow in FTP server in Microsoft IIS 3.0 and 4.0 allows local and s..."
+    },
+    {
+      "id": "CVE-1999-1011",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "The Remote Data Service (RDS) DataFactory component of Microsoft Data Access ..."
+    },
+    {
+      "id": "CVE-2000-0304",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Microsoft IIS 4.0 and 5.0 with the IISADMPWD virtual directory installed allo..."
+    },
+    {
+      "id": "CVE-2000-0858",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Vulnerability in Microsoft Windows NT 4.0 allows remote attackers to cause a ..."
+    },
+    {
+      "id": "CVE-2000-1090",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Microsoft IIS for Far East editions 4.0 and 5.0 allows remote attackers to re..."
+    },
+    {
+      "id": "CVE-2001-0146",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "IIS 5.0 and Microsoft Exchange 2000 allow remote attackers to cause a denial ..."
+    },
+    {
+      "id": "CVE-2001-0336",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The Microsoft MS00-060 patch for IIS 5.0 and earlier introduces an error whic..."
+    },
+    {
+      "id": "CVE-2001-0337",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The Microsoft MS01-014 and MS01-016 patches for IIS 5.0 and earlier introduce..."
+    },
+    {
+      "id": "CVE-2001-1243",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Scripting.FileSystemObject in asp.dll for Microsoft IIS 4.0 and 5.0 allows lo..."
+    },
+    {
+      "id": "CVE-2001-0709",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Microsoft IIS 4.0 and before, when installed on a FAT partition, allows a rem..."
+    },
+    {
+      "id": "CVE-2001-0902",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Microsoft IIS 5.0 allows remote attackers to spoof web log entries via an HTT..."
+    },
+    {
+      "id": "CVE-2001-1186",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Microsoft IIS 5.0 allows remote attackers to cause a denial of service via an..."
+    },
+    {
+      "id": "CVE-2002-0224",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The MSDTC (Microsoft Distributed Transaction Service Coordinator) for Microso..."
+    },
+    {
+      "id": "CVE-2002-0862",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "The (1) CertGetCertificateChain, (2) CertVerifyCertificateChainPolicy, and (3..."
+    },
+    {
+      "id": "CVE-2002-1181",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "Multiple cross-site scripting (XSS) vulnerabilities in the administrative web..."
+    },
+    {
+      "id": "CVE-2002-1694",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Microsoft Internet Information Server (IIS) 4.0 opens log files with FILE_SHA..."
+    },
+    {
+      "id": "CVE-2002-1744",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Directory traversal vulnerability in CodeBrws.asp in Microsoft IIS 5.0 allows..."
+    },
+    {
+      "id": "CVE-2002-1745",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Off-by-one error in the CodeBrws.asp sample script in Microsoft IIS 5.0 allow..."
+    },
+    {
+      "id": "CVE-2002-1876",
+      "severity": "LOW",
+      "cvss": 2.1,
+      "desc": "Microsoft Exchange 2000 allows remote authenticated attackers to cause a deni..."
+    },
+    {
+      "id": "CVE-2002-1908",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Microsoft IIS 5.0 and 5.1 allows remote attackers to cause a denial of servic..."
+    }
   ],
   "Tomcat": [
-    {"id": "CVE-2020-1938",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Ghostcat - AJP file inclusion/RCE"},
-    {"id": "CVE-2019-0232",  "severity": "CRITICAL", "cvss": 8.1, "desc": "Tomcat CGI servlet RCE on Windows"},
-    {"id": "CVE-2017-12617", "severity": "HIGH",     "cvss": 8.1, "desc": "Tomcat PUT method JSP upload RCE"},
-    {"id": "CVE-2016-8735",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Tomcat JmxRemoteLifecycleListener deserialization RCE"},
-    {"id": "CVE-2016-4438",  "severity": "CRITICAL", "cvss": 9.8, "desc": "Tomcat REST plugin RCE via OGNL injection"},
-    {"id": "CVE-2014-0094",  "severity": "CRITICAL", "cvss": 7.5, "desc": "Struts2 ClassLoader manipulation"}
+    {
+      "id": "CVE-2020-1938",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Ghostcat - AJP file inclusion/RCE"
+    },
+    {
+      "id": "CVE-2019-0232",
+      "severity": "CRITICAL",
+      "cvss": 8.1,
+      "desc": "Tomcat CGI servlet RCE on Windows"
+    },
+    {
+      "id": "CVE-2017-12617",
+      "severity": "HIGH",
+      "cvss": 8.1,
+      "desc": "Tomcat PUT method JSP upload RCE"
+    },
+    {
+      "id": "CVE-2016-8735",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Tomcat JmxRemoteLifecycleListener deserialization RCE"
+    },
+    {
+      "id": "CVE-2016-4438",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Tomcat REST plugin RCE via OGNL injection"
+    },
+    {
+      "id": "CVE-2014-0094",
+      "severity": "CRITICAL",
+      "cvss": 7.5,
+      "desc": "Struts2 ClassLoader manipulation"
+    }
   ],
   "PHP": [
-    {"id": "CVE-2021-21705", "severity": "MEDIUM",   "cvss": 5.3, "desc": "PHP SSRF bypass in filter_var"},
-    {"id": "CVE-2021-21704", "severity": "MEDIUM",   "cvss": 5.3, "desc": "PHP pdo_firebase null dereference"},
-    {"id": "CVE-2019-11043",  "severity": "CRITICAL", "cvss": 9.8, "desc": "PHP-FPM buffer underflow RCE (Nginx config)"},
-    {"id": "CVE-2018-19518",  "severity": "HIGH",     "cvss": 8.8, "desc": "PHP imap_open remote command injection"},
-    {"id": "CVE-2012-1823",   "severity": "CRITICAL", "cvss": 10.0,"desc": "PHP CGI query string parameter injection RCE"},
-    {"id": "CVE-2012-2311",   "severity": "CRITICAL", "cvss": 10.0,"desc": "PHP sapi/cgi/cgi_main.c query string RCE"}
+    {
+      "id": "CVE-2021-21705",
+      "severity": "MEDIUM",
+      "cvss": 5.3,
+      "desc": "PHP SSRF bypass in filter_var"
+    },
+    {
+      "id": "CVE-2021-21704",
+      "severity": "MEDIUM",
+      "cvss": 5.3,
+      "desc": "PHP pdo_firebase null dereference"
+    },
+    {
+      "id": "CVE-2019-11043",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "PHP-FPM buffer underflow RCE (Nginx config)"
+    },
+    {
+      "id": "CVE-2018-19518",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "PHP imap_open remote command injection"
+    },
+    {
+      "id": "CVE-2012-1823",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "PHP CGI query string parameter injection RCE"
+    },
+    {
+      "id": "CVE-2012-2311",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "PHP sapi/cgi/cgi_main.c query string RCE"
+    }
   ],
   "WordPress": [
-    {"id": "CVE-2022-21661", "severity": "HIGH",     "cvss": 8.0, "desc": "WordPress SQL injection via WP_Query"},
-    {"id": "CVE-2022-21664", "severity": "HIGH",     "cvss": 8.0, "desc": "WordPress SQL injection via WP_Meta_Query"},
-    {"id": "CVE-2021-29447", "severity": "HIGH",     "cvss": 7.1, "desc": "WordPress XXE via media upload (admin)"},
-    {"id": "CVE-2019-17671", "severity": "HIGH",     "cvss": 7.5, "desc": "WordPress unauthenticated view private posts"},
-    {"id": "CVE-2019-9787",  "severity": "MEDIUM",   "cvss": 6.5, "desc": "WordPress CSRF leading to stored XSS"},
-    {"id": "CVE-2017-9061",  "severity": "MEDIUM",   "cvss": 6.1, "desc": "WordPress XSS via file upload name"}
+    {
+      "id": "CVE-2022-21661",
+      "severity": "HIGH",
+      "cvss": 8.0,
+      "desc": "WordPress SQL injection via WP_Query"
+    },
+    {
+      "id": "CVE-2022-21664",
+      "severity": "HIGH",
+      "cvss": 8.0,
+      "desc": "WordPress SQL injection via WP_Meta_Query"
+    },
+    {
+      "id": "CVE-2021-29447",
+      "severity": "HIGH",
+      "cvss": 7.1,
+      "desc": "WordPress XXE via media upload (admin)"
+    },
+    {
+      "id": "CVE-2019-17671",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "WordPress unauthenticated view private posts"
+    },
+    {
+      "id": "CVE-2019-9787",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "WordPress CSRF leading to stored XSS"
+    },
+    {
+      "id": "CVE-2017-9061",
+      "severity": "MEDIUM",
+      "cvss": 6.1,
+      "desc": "WordPress XSS via file upload name"
+    },
+    {
+      "id": "CVE-2004-1559",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Multiple cross-site scripting (XSS) vulnerabilities in Wordpress 1.2 allow re..."
+    },
+    {
+      "id": "CVE-2004-1584",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "CRLF injection vulnerability in wp-login.php in WordPress 1.2 allows remote a..."
+    },
+    {
+      "id": "CVE-2005-1102",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "Multiple cross-site scripting (XSS) vulnerabilities in template-functions-pos..."
+    },
+    {
+      "id": "CVE-2005-1687",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "SQL injection vulnerability in wp-trackback.php in Wordpress 1.5 and earlier ..."
+    },
+    {
+      "id": "CVE-2005-1688",
+      "severity": "MEDIUM",
+      "cvss": 5.3,
+      "desc": "Wordpress 1.5 and earlier allows remote attackers to obtain sensitive informa..."
+    },
+    {
+      "id": "CVE-2005-1810",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "SQL injection vulnerability in template-functions-category.php in WordPress 1..."
+    },
+    {
+      "id": "CVE-2005-1921",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Eval injection vulnerability in PEAR XML_RPC 1.3.0 and earlier (aka XML-RPC o..."
+    },
+    {
+      "id": "CVE-2005-2107",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Multiple cross-site scripting (XSS) vulnerabilities in post.php in WordPress ..."
+    },
+    {
+      "id": "CVE-2005-2108",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "SQL injection vulnerability in XMLRPC server in WordPress 1.5.1.2 and earlier..."
+    },
+    {
+      "id": "CVE-2005-2109",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "wp-login.php in WordPress 1.5.1.2 and earlier allows remote attackers to chan..."
+    },
+    {
+      "id": "CVE-2005-2110",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "WordPress 1.5.1.2 and earlier allows remote attackers to obtain sensitive inf..."
+    },
+    {
+      "id": "CVE-2005-2612",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Direct code injection vulnerability in WordPress 1.5.1.3 and earlier allows r..."
+    },
+    {
+      "id": "CVE-2005-3330",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The _httpsrequest function in Snoopy 1.2, as used in products such as (1) Mag..."
+    },
+    {
+      "id": "CVE-2005-4463",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "WordPress before 1.5.2 allows remote attackers to obtain sensitive informatio..."
+    },
+    {
+      "id": "CVE-2006-0733",
+      "severity": "LOW",
+      "cvss": 2.6,
+      "desc": "Cross-site scripting (XSS) vulnerability in WordPress 2.0.0 allows remote att..."
+    },
+    {
+      "id": "CVE-2006-0985",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Multiple cross-site scripting (XSS) vulnerabilities in the \"post comment\" fun..."
+    },
+    {
+      "id": "CVE-2006-0986",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "WordPress 2.0.1 and earlier allows remote attackers to obtain sensitive infor..."
+    },
+    {
+      "id": "CVE-2006-1012",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "SQL injection vulnerability in WordPress 1.5.2, and possibly other versions b..."
+    },
+    {
+      "id": "CVE-2006-1263",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Multiple \"unannounced\" cross-site scripting (XSS) vulnerabilities in WordPres..."
+    },
+    {
+      "id": "CVE-2006-1796",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "Cross-site scripting (XSS) vulnerability in the paging links functionality in..."
+    }
   ],
   "ElasticSearch": [
-    {"id": "CVE-2021-22145", "severity": "MEDIUM",   "cvss": 6.5, "desc": "Elasticsearch memory disclosure in error messages"},
-    {"id": "CVE-2021-22144", "severity": "MEDIUM",   "cvss": 6.5, "desc": "Elasticsearch DoS via malformed query"},
-    {"id": "CVE-2019-7614",  "severity": "MEDIUM",   "cvss": 6.8, "desc": "Elasticsearch race condition privilege escalation"},
-    {"id": "CVE-2015-3337",  "severity": "HIGH",     "cvss": 7.5, "desc": "Elasticsearch Kibana directory traversal"},
-    {"id": "CVE-2014-3120",  "severity": "CRITICAL", "cvss": 9.0, "desc": "Elasticsearch dynamic script RCE"},
-    {"id": "CVE-2014-6439",  "severity": "MEDIUM",   "cvss": 5.0, "desc": "Elasticsearch CORS misconfiguration"}
+    {
+      "id": "CVE-2021-22145",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "Elasticsearch memory disclosure in error messages"
+    },
+    {
+      "id": "CVE-2021-22144",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "Elasticsearch DoS via malformed query"
+    },
+    {
+      "id": "CVE-2019-7614",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "Elasticsearch race condition privilege escalation"
+    },
+    {
+      "id": "CVE-2015-3337",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Elasticsearch Kibana directory traversal"
+    },
+    {
+      "id": "CVE-2014-3120",
+      "severity": "CRITICAL",
+      "cvss": 9.0,
+      "desc": "Elasticsearch dynamic script RCE"
+    },
+    {
+      "id": "CVE-2014-6439",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Elasticsearch CORS misconfiguration"
+    },
+    {
+      "id": "CVE-2013-4758",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "Double free vulnerability in the writeDataError function in the ElasticSearch..."
+    },
+    {
+      "id": "CVE-2014-4326",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Elasticsearch Logstash 1.0.14 through 1.4.x before 1.4.2 allows remote attack..."
+    },
+    {
+      "id": "CVE-2015-1427",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "The Groovy scripting engine in Elasticsearch before 1.3.8 and 1.4.x before 1...."
+    },
+    {
+      "id": "CVE-2015-4093",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in Elasticsearch Kibana 4.x before 4..."
+    },
+    {
+      "id": "CVE-2015-4152",
+      "severity": "MEDIUM",
+      "cvss": 6.4,
+      "desc": "Directory traversal vulnerability in the file output plugin in Elasticsearch ..."
+    },
+    {
+      "id": "CVE-2015-5531",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Directory traversal vulnerability in Elasticsearch before 1.6.1 allows remote..."
+    },
+    {
+      "id": "CVE-2015-8131",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "Cross-site request forgery (CSRF) vulnerability in Elasticsearch Kibana befor..."
+    },
+    {
+      "id": "CVE-2016-1000221",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Logstash prior to version 2.3.4, Elasticsearch Output plugin would log to fil..."
+    },
+    {
+      "id": "CVE-2016-10362",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "Prior to Logstash version 5.0.1, Elasticsearch Output plugin when updating co..."
+    },
+    {
+      "id": "CVE-2017-8442",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "Elasticsearch X-Pack Security versions 5.0.0 to 5.4.3, when enabled, can resu..."
+    },
+    {
+      "id": "CVE-2015-4165",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The snapshot API in Elasticsearch before 1.6.0 when another application exist..."
+    },
+    {
+      "id": "CVE-2017-12629",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Remote code execution occurs in Apache Solr before 7.1 with Apache Lucene bef..."
+    },
+    {
+      "id": "CVE-2015-5377",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Elasticsearch before 1.6.1 allows remote attackers to execute arbitrary code ..."
+    },
+    {
+      "id": "CVE-2018-8074",
+      "severity": "HIGH",
+      "cvss": 8.1,
+      "desc": "Yii 2.x before 2.0.15 allows remote attackers to inject unintended search con..."
+    },
+    {
+      "id": "CVE-2017-12195",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "A flaw was found in all Openshift Enterprise versions using the openshift ela..."
+    },
+    {
+      "id": "CVE-2018-3825",
+      "severity": "MEDIUM",
+      "cvss": 5.9,
+      "desc": "In Elastic Cloud Enterprise (ECE) versions prior to 1.1.4 a default master en..."
+    },
+    {
+      "id": "CVE-2018-3826",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "In Elasticsearch versions 6.0.0-beta1 to 6.2.4 a disclosure flaw was found in..."
+    }
   ],
   "Docker": [
-    {"id": "CVE-2022-0811",  "severity": "HIGH",     "cvss": 8.8, "desc": "CRI-O container escape via kernel parameter"},
-    {"id": "CVE-2021-41092", "severity": "MEDIUM",   "cvss": 5.4, "desc": "Docker CLI config file credential exposure"},
-    {"id": "CVE-2020-15257", "severity": "HIGH",     "cvss": 7.2, "desc": "containerd abstract Unix domain socket access"},
-    {"id": "CVE-2019-5736",  "severity": "HIGH",     "cvss": 8.6, "desc": "runc container escape via /proc/self/exe"},
-    {"id": "CVE-2019-14271", "severity": "CRITICAL", "cvss": 9.8, "desc": "Docker cp command container escape"},
-    {"id": "CVE-2018-15664", "severity": "HIGH",     "cvss": 7.5, "desc": "Docker symlink-race container escape"}
+    {
+      "id": "CVE-2022-0811",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "CRI-O container escape via kernel parameter"
+    },
+    {
+      "id": "CVE-2021-41092",
+      "severity": "MEDIUM",
+      "cvss": 5.4,
+      "desc": "Docker CLI config file credential exposure"
+    },
+    {
+      "id": "CVE-2020-15257",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "containerd abstract Unix domain socket access"
+    },
+    {
+      "id": "CVE-2019-5736",
+      "severity": "HIGH",
+      "cvss": 8.6,
+      "desc": "runc container escape via /proc/self/exe"
+    },
+    {
+      "id": "CVE-2019-14271",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Docker cp command container escape"
+    },
+    {
+      "id": "CVE-2018-15664",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Docker symlink-race container escape"
+    },
+    {
+      "id": "CVE-2014-3499",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "Docker 1.0.0 uses world-readable and world-writable permissions on the manage..."
+    },
+    {
+      "id": "CVE-2014-5277",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Docker before 1.3.1 and docker-py before 0.5.3 fall back to HTTP when the HTT..."
+    },
+    {
+      "id": "CVE-2014-6407",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Docker before 1.3.2 allows remote attackers to write to arbitrary files and e..."
+    },
+    {
+      "id": "CVE-2014-6408",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Docker 1.3.0 through 1.3.1 allows remote attackers to modify the default run ..."
+    },
+    {
+      "id": "CVE-2014-9357",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Docker 1.3.2 allows remote attackers to execute arbitrary code with root priv..."
+    },
+    {
+      "id": "CVE-2014-9358",
+      "severity": "MEDIUM",
+      "cvss": 6.4,
+      "desc": "Docker before 1.3.3 does not properly validate image IDs, which allows remote..."
+    },
+    {
+      "id": "CVE-2015-1843",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "The Red Hat docker package before 1.5.0-28, when using the --add-registry opt..."
+    },
+    {
+      "id": "CVE-2015-3627",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "Libcontainer and Docker Engine before 1.6.1 opens the file-descriptor passed ..."
+    },
+    {
+      "id": "CVE-2015-3629",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "Libcontainer 1.6.0, as used in Docker Engine, allows local users to escape co..."
+    },
+    {
+      "id": "CVE-2015-3630",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "Docker Engine before 1.6.1 uses weak permissions for (1) /proc/asound, (2) /p..."
+    },
+    {
+      "id": "CVE-2015-3631",
+      "severity": "LOW",
+      "cvss": 3.6,
+      "desc": "Docker Engine before 1.6.1 allows local users to set arbitrary Linux Security..."
+    },
+    {
+      "id": "CVE-2016-3697",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "libcontainer/user/user.go in runC before 0.1.0, as used in Docker before 1.11..."
+    },
+    {
+      "id": "CVE-2016-3738",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Red Hat OpenShift Enterprise 3.2 does not properly restrict access to STI bui..."
+    },
+    {
+      "id": "CVE-2016-8579",
+      "severity": "MEDIUM",
+      "cvss": 4.0,
+      "desc": "docker2aci <= 0.12.3 has an infinite loop when handling local images with cyc..."
+    },
+    {
+      "id": "CVE-2016-8867",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Docker Engine 1.12.2 enabled ambient capabilities with misconfigured capabili..."
+    },
+    {
+      "id": "CVE-2016-9223",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "A vulnerability in the Docker Engine configuration of Cisco CloudCenter Orche..."
+    },
+    {
+      "id": "CVE-2016-6595",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "The SwarmKit toolkit 1.12.0 for Docker allows remote authenticated users to c..."
+    },
+    {
+      "id": "CVE-2016-7569",
+      "severity": "MEDIUM",
+      "cvss": 5.5,
+      "desc": "Directory traversal vulnerability in docker2aci before 0.13.0 allows remote a..."
+    },
+    {
+      "id": "CVE-2016-8954",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "IBM dashDB Local uses hard-coded credentials that could allow a remote attack..."
+    },
+    {
+      "id": "CVE-2017-6507",
+      "severity": "MEDIUM",
+      "cvss": 5.9,
+      "desc": "An issue was discovered in AppArmor before 2.12. Incorrect handling of unknow..."
+    }
   ],
   "Kubernetes": [
-    {"id": "CVE-2022-3294",  "severity": "HIGH",     "cvss": 8.8, "desc": "Kubernetes node address auth bypass"},
-    {"id": "CVE-2021-25741", "severity": "HIGH",     "cvss": 8.1, "desc": "Kubernetes symlink exchange directory traversal"},
-    {"id": "CVE-2020-8554",  "severity": "MEDIUM",   "cvss": 6.3, "desc": "Kubernetes MitM using LoadBalancer or ExternalIPs"},
-    {"id": "CVE-2019-11247", "severity": "HIGH",     "cvss": 8.1, "desc": "Kubernetes API server path traversal"},
-    {"id": "CVE-2019-9512",  "severity": "HIGH",     "cvss": 7.5, "desc": "HTTP/2 Ping Flood DoS (Kubernetes)"},
-    {"id": "CVE-2018-1002105","severity": "CRITICAL", "cvss": 9.8, "desc": "Kubernetes API server privilege escalation"}
+    {
+      "id": "CVE-2022-3294",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Kubernetes node address auth bypass"
+    },
+    {
+      "id": "CVE-2021-25741",
+      "severity": "HIGH",
+      "cvss": 8.1,
+      "desc": "Kubernetes symlink exchange directory traversal"
+    },
+    {
+      "id": "CVE-2020-8554",
+      "severity": "MEDIUM",
+      "cvss": 6.3,
+      "desc": "Kubernetes MitM using LoadBalancer or ExternalIPs"
+    },
+    {
+      "id": "CVE-2019-11247",
+      "severity": "HIGH",
+      "cvss": 8.1,
+      "desc": "Kubernetes API server path traversal"
+    },
+    {
+      "id": "CVE-2019-9512",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "HTTP/2 Ping Flood DoS (Kubernetes)"
+    },
+    {
+      "id": "CVE-2018-1002105",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Kubernetes API server privilege escalation"
+    },
+    {
+      "id": "CVE-2015-5305",
+      "severity": "MEDIUM",
+      "cvss": 6.4,
+      "desc": "Directory traversal vulnerability in Kubernetes, as used in Red Hat OpenShift..."
+    },
+    {
+      "id": "CVE-2016-1905",
+      "severity": "HIGH",
+      "cvss": 7.7,
+      "desc": "The API server in Kubernetes does not properly check admission control, which..."
+    },
+    {
+      "id": "CVE-2015-7528",
+      "severity": "MEDIUM",
+      "cvss": 5.3,
+      "desc": "Kubernetes before 1.2.0-alpha.5 allows remote attackers to read arbitrary pod..."
+    },
+    {
+      "id": "CVE-2016-5392",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "The API server in Kubernetes, as used in Red Hat OpenShift Enterprise 3.2, in..."
+    },
+    {
+      "id": "CVE-2017-1000056",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Kubernetes version 1.5.0-1.5.4 is vulnerable to a privilege escalation in the..."
+    },
+    {
+      "id": "CVE-2015-7561",
+      "severity": "LOW",
+      "cvss": 3.1,
+      "desc": "Kubernetes in OpenShift3 allows remote authenticated users to use the private..."
+    },
+    {
+      "id": "CVE-2017-1002100",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "Default access permissions for Persistent Volumes (PVs) created by the Kubern..."
+    },
+    {
+      "id": "CVE-2017-1002101",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "In Kubernetes versions 1.3.x, 1.4.x, 1.5.x, 1.6.x and prior to versions 1.7.1..."
+    },
+    {
+      "id": "CVE-2017-1002102",
+      "severity": "HIGH",
+      "cvss": 7.1,
+      "desc": "In Kubernetes versions 1.3.x, 1.4.x, 1.5.x, 1.6.x and prior to versions 1.7.1..."
+    },
+    {
+      "id": "CVE-2018-0268",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "A vulnerability in the container management subsystem of Cisco Digital Networ..."
+    },
+    {
+      "id": "CVE-2018-5256",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "CoreOS Tectonic 1.7.x before 1.7.9-tectonic.4 and 1.8.x before 1.8.4-tectonic..."
+    },
+    {
+      "id": "CVE-2018-1000400",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Kubernetes CRI-O version prior to 1.9 contains a Privilege Context Switching ..."
+    },
+    {
+      "id": "CVE-2018-1002100",
+      "severity": "MEDIUM",
+      "cvss": 4.2,
+      "desc": "In Kubernetes versions 1.5.x, 1.6.x, 1.7.x, 1.8.x, and prior to version 1.9.6..."
+    },
+    {
+      "id": "CVE-2018-1000187",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "A exposure of sensitive information vulnerability exists in Jenkins Kubernete..."
+    },
+    {
+      "id": "CVE-2018-5543",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "The F5 BIG-IP Controller for Kubernetes 1.0.0-1.5.0 (k8s-bigip-crtl) passes B..."
+    },
+    {
+      "id": "CVE-2018-1999040",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "An exposure of sensitive information vulnerability exists in Jenkins Kubernet..."
+    },
+    {
+      "id": "CVE-2016-7075",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "It was found that Kubernetes as used by Openshift Enterprise 3 did not correc..."
+    },
+    {
+      "id": "CVE-2018-2475",
+      "severity": "HIGH",
+      "cvss": 8.5,
+      "desc": "Following the Gardener architecture, the Kubernetes apiserver of a Gardener m..."
+    },
+    {
+      "id": "CVE-2018-18843",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "The Kubernetes integration in GitLab Enterprise Edition 11.x before 11.2.8, 1..."
+    },
+    {
+      "id": "CVE-2018-1002101",
+      "severity": "MEDIUM",
+      "cvss": 5.9,
+      "desc": "In Kubernetes versions 1.9.0-1.9.9, 1.10.0-1.10.5, and 1.11.0-1.11.1, user in..."
+    }
   ],
   "Memcached": [
-    {"id": "CVE-2022-48571", "severity": "HIGH",     "cvss": 7.5, "desc": "Memcached NULL pointer dereference DoS"},
-    {"id": "CVE-2021-37519", "severity": "HIGH",     "cvss": 7.5, "desc": "Memcached buffer overflow in SASL auth"},
-    {"id": "CVE-2019-15026", "severity": "HIGH",     "cvss": 7.5, "desc": "Memcached stack-based buffer over-read"},
-    {"id": "CVE-2018-1000115","severity": "HIGH",    "cvss": 7.5, "desc": "Memcached UDP amplification DDoS"}
+    {
+      "id": "CVE-2022-48571",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Memcached NULL pointer dereference DoS"
+    },
+    {
+      "id": "CVE-2021-37519",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Memcached buffer overflow in SASL auth"
+    },
+    {
+      "id": "CVE-2019-15026",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Memcached stack-based buffer over-read"
+    },
+    {
+      "id": "CVE-2018-1000115",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Memcached UDP amplification DDoS"
+    },
+    {
+      "id": "CVE-2008-4529",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Multiple PHP remote file inclusion vulnerabilities in asiCMS alpha 0.208 allo..."
+    },
+    {
+      "id": "CVE-2009-1255",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The process_stat function in (1) Memcached before 1.2.8 and (2) MemcacheDB 1...."
+    },
+    {
+      "id": "CVE-2009-1494",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The process_stat function in Memcached 1.2.8 discloses memory-allocation stat..."
+    },
+    {
+      "id": "CVE-2009-2415",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Multiple integer overflows in memcached 1.1.12 and 1.2.2 allow remote attacke..."
+    },
+    {
+      "id": "CVE-2010-1152",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "memcached.c in memcached before 1.4.3 allows remote attackers to cause a deni..."
+    },
+    {
+      "id": "CVE-2012-4406",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "OpenStack Object Storage (swift) before 1.7.0 uses the loads function in the ..."
+    },
+    {
+      "id": "CVE-2013-1570",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Unspecified vulnerability in Oracle MySQL 5.6.10 and earlier allows remote at..."
+    },
+    {
+      "id": "CVE-2013-3798",
+      "severity": "MEDIUM",
+      "cvss": 5.8,
+      "desc": "Unspecified vulnerability in the MySQL Server component in Oracle MySQL 5.6.1..."
+    },
+    {
+      "id": "CVE-2011-4971",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Multiple integer signedness errors in the (1) process_bin_sasl_auth, (2) proc..."
+    },
+    {
+      "id": "CVE-2013-0179",
+      "severity": "LOW",
+      "cvss": 1.8,
+      "desc": "The process_bin_delete function in memcached.c in memcached 1.4.4 and other v..."
+    },
+    {
+      "id": "CVE-2013-7239",
+      "severity": "MEDIUM",
+      "cvss": 4.8,
+      "desc": "memcached before 1.4.17 allows remote attackers to bypass authentication by s..."
+    },
+    {
+      "id": "CVE-2013-7290",
+      "severity": "LOW",
+      "cvss": 1.8,
+      "desc": "The do_item_get function in items.c in memcached 1.4.4 and other versions bef..."
+    },
+    {
+      "id": "CVE-2013-7291",
+      "severity": "LOW",
+      "cvss": 1.8,
+      "desc": "memcached before 1.4.17, when running in verbose mode, allows remote attacker..."
+    },
+    {
+      "id": "CVE-2014-8124",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "OpenStack Dashboard (Horizon) before 2014.1.3 and 2014.2.x before 2014.2.1 do..."
+    },
+    {
+      "id": "CVE-2015-0507",
+      "severity": "LOW",
+      "cvss": 3.5,
+      "desc": "Unspecified vulnerability in Oracle MySQL Server 5.6.23 and earlier allows re..."
+    },
+    {
+      "id": "CVE-2015-4761",
+      "severity": "LOW",
+      "cvss": 3.5,
+      "desc": "Unspecified vulnerability in Oracle MySQL Server 5.6.24 and earlier allows re..."
+    },
+    {
+      "id": "CVE-2015-4910",
+      "severity": "LOW",
+      "cvss": 2.1,
+      "desc": "Unspecified vulnerability in Oracle MySQL Server 5.6.26 and earlier allows re..."
+    },
+    {
+      "id": "CVE-2016-5631",
+      "severity": "MEDIUM",
+      "cvss": 4.9,
+      "desc": "Unspecified vulnerability in Oracle MySQL 5.7.13 and earlier allows remote ad..."
+    },
+    {
+      "id": "CVE-2016-8704",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "An integer overflow in the process_bin_append_prepend function in Memcached, ..."
+    },
+    {
+      "id": "CVE-2016-8705",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Multiple integer overflows in process_bin_update function in Memcached, which..."
+    }
   ],
   "Samba": [
-    {"id": "CVE-2017-7494",  "severity": "CRITICAL", "cvss": 9.8, "desc": "SambaCry - Samba remote code execution"},
-    {"id": "CVE-2021-44142", "severity": "CRITICAL", "cvss": 9.9, "desc": "Samba vfs_fruit out-of-bounds heap RCE"},
-    {"id": "CVE-2020-1472",  "severity": "CRITICAL", "cvss": 10.0,"desc": "Zerologon via Samba Netlogon"},
-    {"id": "CVE-2019-14907", "severity": "MEDIUM",   "cvss": 6.5, "desc": "Samba denial of service in ldb_parse_filter"},
-    {"id": "CVE-2018-10858", "severity": "HIGH",     "cvss": 8.8, "desc": "Samba heap buffer overflow in client code"}
+    {
+      "id": "CVE-2017-7494",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "SambaCry - Samba remote code execution"
+    },
+    {
+      "id": "CVE-2021-44142",
+      "severity": "CRITICAL",
+      "cvss": 9.9,
+      "desc": "Samba vfs_fruit out-of-bounds heap RCE"
+    },
+    {
+      "id": "CVE-2020-1472",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Zerologon via Samba Netlogon"
+    },
+    {
+      "id": "CVE-2019-14907",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "Samba denial of service in ldb_parse_filter"
+    },
+    {
+      "id": "CVE-2018-10858",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Samba heap buffer overflow in client code"
+    },
+    {
+      "id": "CVE-1999-0179",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Windows NT crashes or locks up when a Samba client executes a \"cd ..\" command..."
+    },
+    {
+      "id": "CVE-1999-0182",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Samba has a buffer overflow which allows a remote attacker to obtain root acc..."
+    },
+    {
+      "id": "CVE-1999-1178",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Sambar Server 4.1 beta allows remote attackers to obtain sensitive informatio..."
+    },
+    {
+      "id": "CVE-1999-1288",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "Samba 1.9.18 inadvertently includes a prototype application, wsmbconf, which ..."
+    },
+    {
+      "id": "CVE-1999-0810",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Denial of service in Samba NETBIOS name service daemon (nmbd)."
+    },
+    {
+      "id": "CVE-1999-0811",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Buffer overflow in Samba smbd program via a malformed message command."
+    },
+    {
+      "id": "CVE-1999-1523",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Buffer overflow in Sambar Web Server 4.2.1 allows remote attackers to cause a..."
+    },
+    {
+      "id": "CVE-2000-0213",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The Sambar server includes batch files ECHO.BAT and HELLO.BAT in the CGI dire..."
+    },
+    {
+      "id": "CVE-2000-0509",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Buffer overflows in the finger and whois demonstration scripts in Sambar Serv..."
+    },
+    {
+      "id": "CVE-1999-0812",
+      "severity": "HIGH",
+      "cvss": 7.6,
+      "desc": "Race condition in Samba smbmnt allows local users to mount file systems in ar..."
+    },
+    {
+      "id": "CVE-2000-0835",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "search.dll Sambar ISAPI Search utility in Sambar Server 4.4 Beta 3 allows rem..."
+    },
+    {
+      "id": "CVE-2000-0935",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "Samba Web Administration Tool (SWAT) in Samba 2.0.7 allows local users to ove..."
+    },
+    {
+      "id": "CVE-2000-0936",
+      "severity": "LOW",
+      "cvss": 2.1,
+      "desc": "Samba Web Administration Tool (SWAT) in Samba 2.0.7 installs the cgi.log logg..."
+    },
+    {
+      "id": "CVE-2000-0937",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Samba Web Administration Tool (SWAT) in Samba 2.0.7 does not log login attemp..."
+    },
+    {
+      "id": "CVE-2000-0938",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Samba Web Administration Tool (SWAT) in Samba 2.0.7 supplies a different erro..."
+    },
+    {
+      "id": "CVE-2000-0939",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Samba Web Administration Tool (SWAT) in Samba 2.0.7 allows remote attackers t..."
+    },
+    {
+      "id": "CVE-2001-1162",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Directory traversal vulnerability in the %m macro in the smb.conf configurati..."
+    },
+    {
+      "id": "CVE-2001-0406",
+      "severity": "LOW",
+      "cvss": 2.1,
+      "desc": "Samba before 2.2.0 allows local attackers to overwrite arbitrary files via a ..."
+    },
+    {
+      "id": "CVE-2001-1010",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Directory traversal vulnerability in pagecount CGI script in Sambar Server be..."
+    },
+    {
+      "id": "CVE-2001-1106",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The default configuration of Sambar Server 5 and earlier uses a symmetric key..."
+    }
   ],
   "OpenVPN": [
-    {"id": "CVE-2020-11810", "severity": "MEDIUM",   "cvss": 3.7, "desc": "OpenVPN race condition in client instance"},
-    {"id": "CVE-2020-11462", "severity": "HIGH",     "cvss": 7.5, "desc": "OpenVPN DoS via malformed packet"},
-    {"id": "CVE-2017-7521",  "severity": "HIGH",     "cvss": 7.5, "desc": "OpenVPN server-side use-after-free with mbedTLS"},
-    {"id": "CVE-2017-7520",  "severity": "MEDIUM",   "cvss": 5.9, "desc": "OpenVPN pre-auth credential disclosure"}
+    {
+      "id": "CVE-2020-11810",
+      "severity": "MEDIUM",
+      "cvss": 3.7,
+      "desc": "OpenVPN race condition in client instance"
+    },
+    {
+      "id": "CVE-2020-11462",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "OpenVPN DoS via malformed packet"
+    },
+    {
+      "id": "CVE-2017-7521",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "OpenVPN server-side use-after-free with mbedTLS"
+    },
+    {
+      "id": "CVE-2017-7520",
+      "severity": "MEDIUM",
+      "cvss": 5.9,
+      "desc": "OpenVPN pre-auth credential disclosure"
+    }
+  ],
+  "Jenkins": [
+    {
+      "id": "CVE-2024-23897",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Jenkins arbitrary file read via CLI (2024)"
+    },
+    {
+      "id": "CVE-2023-27898",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Jenkins XSS leading to RCE via update center"
+    },
+    {
+      "id": "CVE-2022-34177",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Jenkins arbitrary file write in Pipeline"
+    },
+    {
+      "id": "CVE-2019-1003000",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Jenkins Script Security sandbox bypass RCE"
+    },
+    {
+      "id": "CVE-2018-1000861",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Jenkins Stapler unauthenticated RCE"
+    },
+    {
+      "id": "CVE-2017-1000353",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Jenkins Java deserialization RCE"
+    },
+    {
+      "id": "CVE-2016-0792",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Jenkins XStream deserialization RCE"
+    },
+    {
+      "id": "CVE-2015-8103",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Jenkins remoting deserialization RCE"
+    },
+    {
+      "id": "CVE-2011-4344",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Cross-site scripting (XSS) vulnerability in Jenkins Core in Jenkins before 1...."
+    },
+    {
+      "id": "CVE-2012-0324",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Cross-site scripting (XSS) vulnerability in Jenkins before 1.454, Jenkins LTS..."
+    },
+    {
+      "id": "CVE-2012-0325",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Cross-site scripting (XSS) vulnerability in Jenkins before 1.454, Jenkins LTS..."
+    },
+    {
+      "id": "CVE-2012-6072",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "CRLF injection vulnerability in Jenkins before 1.491, Jenkins LTS before 1.48..."
+    },
+    {
+      "id": "CVE-2012-6073",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Open redirect vulnerability in Jenkins before 1.491, Jenkins LTS before 1.480..."
+    },
+    {
+      "id": "CVE-2012-6074",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Cross-site scripting (XSS) vulnerability in Jenkins before 1.491, Jenkins LTS..."
+    },
+    {
+      "id": "CVE-2013-0158",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Unspecified vulnerability in Jenkins before 1.498, Jenkins LTS before 1.480.2..."
+    },
+    {
+      "id": "CVE-2013-0327",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Cross-site request forgery (CSRF) vulnerability in Jenkins master in Jenkins ..."
+    },
+    {
+      "id": "CVE-2013-0328",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Cross-site scripting (XSS) vulnerability in Jenkins before 1.502 and LTS befo..."
+    },
+    {
+      "id": "CVE-2013-0329",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Unspecified vulnerability in Jenkins before 1.502 and LTS before 1.480.3 allo..."
+    },
+    {
+      "id": "CVE-2013-0330",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Unspecified vulnerability in Jenkins before 1.502 and LTS before 1.480.3 allo..."
+    },
+    {
+      "id": "CVE-2013-0331",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Jenkins before 1.502 and LTS before 1.480.3 allows remote authenticated users..."
+    },
+    {
+      "id": "CVE-2013-6373",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "The Exclusion plugin before 0.9 for Jenkins does not properly prevent access ..."
+    },
+    {
+      "id": "CVE-2013-6374",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Cross-site scripting (XSS) vulnerability in the Build Failure Analyzer plugin..."
+    },
+    {
+      "id": "CVE-2013-5676",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "The Jenkins Plugin for SonarQube 3.7 and earlier allows remote authenticated ..."
+    },
+    {
+      "id": "CVE-2013-5573",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Cross-site scripting (XSS) vulnerability in the default markup formatter in J..."
+    },
+    {
+      "id": "CVE-2014-2059",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Directory traversal vulnerability in the CLI job creation (hudson/cli/CreateJ..."
+    },
+    {
+      "id": "CVE-2014-2067",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Cross-site scripting (XSS) vulnerability in java/hudson/model/Cause.java in J..."
+    },
+    {
+      "id": "CVE-2013-2033",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "Cross-site scripting (XSS) vulnerability in Jenkins before 1.514, LTS before ..."
+    },
+    {
+      "id": "CVE-2013-6372",
+      "severity": "MEDIUM",
+      "cvss": 0.0,
+      "desc": "The Subversion plugin before 1.54 for Jenkins stores credentials using base64..."
+    }
+  ],
+  "GitLab": [
+    {
+      "id": "CVE-2023-7028",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "GitLab account takeover via password reset"
+    },
+    {
+      "id": "CVE-2022-2992",
+      "severity": "CRITICAL",
+      "cvss": 9.9,
+      "desc": "GitLab RCE via Import from GitHub"
+    },
+    {
+      "id": "CVE-2021-22205",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "GitLab RCE via ExifTool image parsing"
+    },
+    {
+      "id": "CVE-2021-22214",
+      "severity": "HIGH",
+      "cvss": 8.6,
+      "desc": "GitLab SSRF via DNS rebinding"
+    },
+    {
+      "id": "CVE-2020-10977",
+      "severity": "HIGH",
+      "cvss": 8.7,
+      "desc": "GitLab arbitrary file read via project import"
+    },
+    {
+      "id": "CVE-2019-5461",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "GitLab path traversal in repository download"
+    },
+    {
+      "id": "CVE-2018-19571",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "GitLab SSRF in Webhooks"
+    },
+    {
+      "id": "CVE-2013-7316",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in GitLab 6.0 and other versions bef..."
+    },
+    {
+      "id": "CVE-2013-4580",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "GitLab before 5.4.2, Community Edition before 6.2.4, and Enterprise Edition b..."
+    },
+    {
+      "id": "CVE-2013-4581",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "GitLab 5.0 before 5.4.2, Community Edition before 6.2.4, Enterprise Edition b..."
+    },
+    {
+      "id": "CVE-2013-4490",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "The SSH key upload feature (lib/gitlab_keys.rb) in gitlab-shell before 1.7.3,..."
+    },
+    {
+      "id": "CVE-2013-4546",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "The repository import feature in gitlab-shell before 1.7.4, as used in GitLab..."
+    },
+    {
+      "id": "CVE-2014-3456",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in GitLab Enterprise Edition (EE) 6...."
+    },
+    {
+      "id": "CVE-2013-4489",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "The Grit gem for Ruby, as used in GitLab 5.2 before 5.4.1 and 6.x before 6.2...."
+    },
+    {
+      "id": "CVE-2016-9086",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "GitLab versions 8.9.x and above contain a critical security flaw in the \"impo..."
+    },
+    {
+      "id": "CVE-2016-4340",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "The impersonate feature in Gitlab 8.7.0, 8.6.0 through 8.6.7, 8.5.0 through 8..."
+    },
+    {
+      "id": "CVE-2016-9469",
+      "severity": "HIGH",
+      "cvss": 8.2,
+      "desc": "Multiple versions of GitLab expose a dangerous method to any authenticated us..."
+    },
+    {
+      "id": "CVE-2017-0882",
+      "severity": "MEDIUM",
+      "cvss": 6.3,
+      "desc": "Multiple versions of GitLab expose sensitive user credentials when assigning ..."
+    },
+    {
+      "id": "CVE-2017-8778",
+      "severity": "MEDIUM",
+      "cvss": 6.1,
+      "desc": "GitLab before 8.14.9, 8.15.x before 8.15.6, and 8.16.x before 8.16.5 has XSS ..."
+    },
+    {
+      "id": "CVE-2017-11437",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "GitLab Enterprise Edition (EE) before 8.17.7, 9.0.11, 9.1.8, 9.2.8, and 9.3.8..."
+    },
+    {
+      "id": "CVE-2017-11438",
+      "severity": "MEDIUM",
+      "cvss": 6.3,
+      "desc": "GitLab Community Edition (CE) and Enterprise Edition (EE) before 9.0.11, 9.1...."
+    },
+    {
+      "id": "CVE-2017-12426",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "GitLab Community Edition (CE) and Enterprise Edition (EE) before 8.17.8, 9.0...."
+    },
+    {
+      "id": "CVE-2017-17716",
+      "severity": "MEDIUM",
+      "cvss": 5.9,
+      "desc": "GitLab 9.4.x before 9.4.2 does not support LDAP SSL certificate verification,..."
+    },
+    {
+      "id": "CVE-2014-8540",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "The groups API in GitLab 6.x and 7.x before 7.4.3 allows remote authenticated..."
+    },
+    {
+      "id": "CVE-2018-7206",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "An issue was discovered in Project Jupyter JupyterHub OAuthenticator 0.6.x be..."
+    },
+    {
+      "id": "CVE-2017-0914",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Gitlab Community and Enterprise Editions version 10.1, 10.2, and 10.2.4 are v..."
+    },
+    {
+      "id": "CVE-2017-0915",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Gitlab Community Edition version 10.2.4 is vulnerable to a lack of input vali..."
+    }
+  ],
+  "Exchange": [
+    {
+      "id": "CVE-2021-26855",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "ProxyLogon - Exchange Server SSRF RCE"
+    },
+    {
+      "id": "CVE-2021-26857",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "Exchange insecure deserialization privilege escalation"
+    },
+    {
+      "id": "CVE-2021-26858",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "Exchange post-auth arbitrary file write"
+    },
+    {
+      "id": "CVE-2021-27065",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "Exchange post-auth arbitrary file write 2"
+    },
+    {
+      "id": "CVE-2021-34473",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "ProxyShell - Exchange pre-auth RCE"
+    },
+    {
+      "id": "CVE-2022-41082",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "ProxyNotShell - Exchange RCE via PowerShell"
+    },
+    {
+      "id": "CVE-2022-41040",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "ProxyNotShell - Exchange SSRF"
+    },
+    {
+      "id": "CVE-1999-1368",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "AV Option for MS Exchange Server option for InoculateIT 4.53, and possibly ot..."
+    },
+    {
+      "id": "CVE-1999-0682",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Microsoft Exchange 5.5 allows a remote attacker to relay email (i.e. spam) us..."
+    },
+    {
+      "id": "CVE-1999-0993",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Modifications to ACLs (Access Control Lists) in Microsoft Exchange  5.5 do no..."
+    },
+    {
+      "id": "CVE-1999-1043",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Microsoft Exchange Server 5.5 and 5.0 does not properly handle (1) malformed ..."
+    },
+    {
+      "id": "CVE-2000-0216",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Microsoft email clients in Outlook, Exchange, and Windows Messaging automatic..."
+    },
+    {
+      "id": "CVE-2000-1006",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Microsoft Exchange Server 5.5 does not properly handle a MIME header with a b..."
+    },
+    {
+      "id": "CVE-2000-1139",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The installation of Microsoft Exchange 2000 before Rev. A creates a user acco..."
+    },
+    {
+      "id": "CVE-1999-0945",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Buffer overflow in Internet Mail Service (IMS) for Microsoft Exchange 5.5 and..."
+    },
+    {
+      "id": "CVE-2001-0146",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "IIS 5.0 and Microsoft Exchange 2000 allow remote attackers to cause a denial ..."
+    },
+    {
+      "id": "CVE-2001-1319",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Microsoft Exchange 5.5 2000 allows remote attackers to cause a denial of serv..."
+    },
+    {
+      "id": "CVE-2001-0340",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "An interaction between the Outlook Web Access (OWA) service in Microsoft Exch..."
+    },
+    {
+      "id": "CVE-2001-1099",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The default configuration of Norton AntiVirus for Microsoft Exchange 2000 2.x..."
+    },
+    {
+      "id": "CVE-2001-0509",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Vulnerabilities in RPC servers in (1) Microsoft Exchange Server 2000 and earl..."
+    },
+    {
+      "id": "CVE-2001-0660",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Outlook Web Access (OWA) in Microsoft Exchange 5.5, SP4 and earlier, allows r..."
+    },
+    {
+      "id": "CVE-2001-0666",
+      "severity": "LOW",
+      "cvss": 2.1,
+      "desc": "Outlook Web Access (OWA) in Microsoft Exchange 2000 allows an authenticated u..."
+    },
+    {
+      "id": "CVE-2001-0726",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Outlook Web Access (OWA) in Microsoft Exchange 5.5 Server, when used with Int..."
+    },
+    {
+      "id": "CVE-2002-0049",
+      "severity": "MEDIUM",
+      "cvss": 6.4,
+      "desc": "Microsoft Exchange Server 2000 System Attendant gives \"Everyone\" group privil..."
+    },
+    {
+      "id": "CVE-2002-0054",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "SMTP service in (1) Microsoft Windows 2000 and (2) Internet Mail Connector (I..."
+    },
+    {
+      "id": "CVE-2002-0055",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "SMTP service in Microsoft Windows 2000, Windows XP Professional, and Exchange..."
+    },
+    {
+      "id": "CVE-2002-0155",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Buffer overflow in Microsoft MSN Chat ActiveX Control, as used in MSN Messeng..."
+    }
+  ],
+  "VMware": [
+    {
+      "id": "CVE-2021-21985",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "VMware vCenter Server RCE via vSAN Health"
+    },
+    {
+      "id": "CVE-2021-21986",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "VMware vCenter authentication bypass"
+    },
+    {
+      "id": "CVE-2021-22005",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "VMware vCenter arbitrary file upload RCE"
+    },
+    {
+      "id": "CVE-2022-22954",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "VMware Workspace ONE SSTI RCE"
+    },
+    {
+      "id": "CVE-2022-22960",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "VMware Workspace ONE local privilege escalation"
+    },
+    {
+      "id": "CVE-2021-21972",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "VMware vSphere Client RCE unauthenticated"
+    },
+    {
+      "id": "CVE-2020-3952",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "VMware vCenter LDAP auth bypass"
+    },
+    {
+      "id": "CVE-2009-3731",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Multiple cross-site scripting (XSS) vulnerabilities in WebWorks Help 2.0 thro..."
+    },
+    {
+      "id": "CVE-2010-2928",
+      "severity": "LOW",
+      "cvss": 2.1,
+      "desc": "The vCenter Tomcat Management Application in VMware vCenter Server 4.1 before..."
+    },
+    {
+      "id": "CVE-2011-0426",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Directory traversal vulnerability in vCenter Server in VMware vCenter 4.0 bef..."
+    },
+    {
+      "id": "CVE-2011-1788",
+      "severity": "LOW",
+      "cvss": 2.1,
+      "desc": "vCenter Server in VMware vCenter 4.0 before Update 3 and 4.1 before Update 1 ..."
+    },
+    {
+      "id": "CVE-2011-1789",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The self-extracting installer in the vSphere Client Installer package in VMwa..."
+    },
+    {
+      "id": "CVE-2011-4404",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The default configuration of the HTTP server in Jetty in vSphere Update Manag..."
+    },
+    {
+      "id": "CVE-2012-1472",
+      "severity": "MEDIUM",
+      "cvss": 6.4,
+      "desc": "VMware vCenter Chargeback Manager (aka CBM) before 2.0.1 does not properly ha..."
+    },
+    {
+      "id": "CVE-2012-1513",
+      "severity": "MEDIUM",
+      "cvss": 4.0,
+      "desc": "The Web Configuration tool in VMware vCenter Orchestrator (vCO) 4.0 before Up..."
+    },
+    {
+      "id": "CVE-2012-5050",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in the server in VMware vCenter Oper..."
+    },
+    {
+      "id": "CVE-2012-6324",
+      "severity": "MEDIUM",
+      "cvss": 4.0,
+      "desc": "Directory traversal vulnerability in VMware vCenter Server Appliance (vCSA) 5..."
+    },
+    {
+      "id": "CVE-2012-6325",
+      "severity": "MEDIUM",
+      "cvss": 4.0,
+      "desc": "VMware vCenter Server Appliance (vCSA) 5.0 before Update 2 does not properly ..."
+    },
+    {
+      "id": "CVE-2013-1405",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "VMware vCenter Server 4.0 before Update 4b and 4.1 before Update 3a, VMware V..."
+    },
+    {
+      "id": "CVE-2012-6326",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "VMware vCenter Server 4.1 before Update 3 and 5.0 before Update 2, and vCSA 5..."
+    },
+    {
+      "id": "CVE-2013-1659",
+      "severity": "HIGH",
+      "cvss": 7.6,
+      "desc": "VMware vCenter Server 4.0 before Update 4b, 5.0 before Update 2, and 5.1 befo..."
+    },
+    {
+      "id": "CVE-2013-3079",
+      "severity": "CRITICAL",
+      "cvss": 9.0,
+      "desc": "VMware vCenter Server Appliance (vCSA) 5.1 before Update 1 allows remote auth..."
+    },
+    {
+      "id": "CVE-2013-3080",
+      "severity": "CRITICAL",
+      "cvss": 9.0,
+      "desc": "VMware vCenter Server Appliance (vCSA) 5.1 before Update 1 allows remote auth..."
+    },
+    {
+      "id": "CVE-2013-3107",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "VMware vCenter Server 5.1 before Update 1, when anonymous LDAP binding for Ac..."
+    },
+    {
+      "id": "CVE-2013-1212",
+      "severity": "MEDIUM",
+      "cvss": 5.8,
+      "desc": "The SSL functionality in Cisco NX-OS on the Nexus 1000V does not properly ver..."
+    },
+    {
+      "id": "CVE-2013-3520",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "VMware vCenter Chargeback Manager (aka CBM) before 2.5.1 does not proper hand..."
+    },
+    {
+      "id": "CVE-2013-5971",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "Session fixation vulnerability in the vSphere Web Client Server in VMware vCe..."
+    }
+  ],
+  "Fortinet": [
+    {
+      "id": "CVE-2023-27997",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "FortiOS SSL-VPN heap overflow RCE (pre-auth)"
+    },
+    {
+      "id": "CVE-2022-40684",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "FortiOS/FortiProxy auth bypass in admin interface"
+    },
+    {
+      "id": "CVE-2022-42475",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "FortiOS SSL-VPN heap-based buffer overflow"
+    },
+    {
+      "id": "CVE-2018-13382",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "FortiOS SSL VPN magic backdoor password"
+    },
+    {
+      "id": "CVE-2019-5591",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "FortiOS default configuration MITM attack"
+    },
+    {
+      "id": "CVE-2005-1837",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Fortinet firewall running FortiOS 2.x contains a hardcoded username with the ..."
+    },
+    {
+      "id": "CVE-2005-4570",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "The Internet Key Exchange version 1 (IKEv1) implementations in Fortinet Forti..."
+    },
+    {
+      "id": "CVE-2005-3057",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "The FTP component in FortiGate 2.8 running FortiOS 2.8MR10 and v3beta, and ot..."
+    },
+    {
+      "id": "CVE-2005-3058",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Interpretation conflict in Fortinet FortiGate 2.8, running FortiOS 2.8MR10 an..."
+    },
+    {
+      "id": "CVE-2006-3222",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The FTP proxy module in Fortinet FortiOS (FortiGate) before 2.80 MR12 and 3.0..."
+    },
+    {
+      "id": "CVE-2013-4604",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "Fortinet FortiOS before 5.0.3 on FortiGate devices does not properly restrict..."
+    },
+    {
+      "id": "CVE-2013-1414",
+      "severity": "MEDIUM",
+      "cvss": 5.1,
+      "desc": "Multiple cross-site request forgery (CSRF) vulnerabilities in Fortinet FortiO..."
+    },
+    {
+      "id": "CVE-2013-7181",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in user/ldap_user/add in Fortinet Fo..."
+    },
+    {
+      "id": "CVE-2013-7182",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in firewall/schedule/recurrdlg in Fo..."
+    },
+    {
+      "id": "CVE-2014-2216",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "The FortiManager protocol service in Fortinet FortiOS before 4.3.16 and 5.0.0..."
+    },
+    {
+      "id": "CVE-2014-0351",
+      "severity": "MEDIUM",
+      "cvss": 5.4,
+      "desc": "The FortiManager protocol service in Fortinet FortiOS before 4.3.16 and 5.x b..."
+    },
+    {
+      "id": "CVE-2015-1451",
+      "severity": "LOW",
+      "cvss": 3.5,
+      "desc": "Multiple cross-site scripting (XSS) vulnerabilities in Fortinet FortiOS 5.0 P..."
+    },
+    {
+      "id": "CVE-2015-1452",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "The Control and Provisioning of Wireless Access Points (CAPWAP) daemon in For..."
+    },
+    {
+      "id": "CVE-2015-1571",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "The CAPWAP DTLS protocol implementation in Fortinet FortiOS 5.0 Patch 7 build..."
+    },
+    {
+      "id": "CVE-2014-8616",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Multiple cross-site scripting (XSS) vulnerabilities in Fortinet FortiOS 5.2.x..."
+    },
+    {
+      "id": "CVE-2015-1880",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in the sslvpn login page in Fortinet..."
+    },
+    {
+      "id": "CVE-2015-2323",
+      "severity": "MEDIUM",
+      "cvss": 6.4,
+      "desc": "FortiOS 5.0.x before 5.0.12 and 5.2.x before 5.2.4 supports anonymous, export..."
+    },
+    {
+      "id": "CVE-2015-3626",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in the DHCP Monitor page in the Web ..."
+    },
+    {
+      "id": "CVE-2015-5965",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The SSL-VPN feature in Fortinet FortiOS before 4.3.13 only checks the first b..."
+    },
+    {
+      "id": "CVE-2015-7361",
+      "severity": "CRITICAL",
+      "cvss": 9.3,
+      "desc": "FortiOS 5.2.3, when configured to use High Availability (HA) and the dedicate..."
+    }
+  ],
+  "PulseSecure": [
+    {
+      "id": "CVE-2019-11510",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Pulse Secure arbitrary file read (unauthenticated)"
+    },
+    {
+      "id": "CVE-2019-11508",
+      "severity": "CRITICAL",
+      "cvss": 9.0,
+      "desc": "Pulse Secure RCE in NFS"
+    },
+    {
+      "id": "CVE-2020-8218",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "Pulse Connect Secure code injection"
+    },
+    {
+      "id": "CVE-2021-22893",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Pulse Secure pre-auth RCE (zero-day 2021)"
+    },
+    {
+      "id": "CVE-2014-2292",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "Unspecified vulnerability in the Linux Network Connect client in Juniper Juno..."
+    },
+    {
+      "id": "CVE-2015-5369",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Pulse Connect Secure (aka PCS and formerly Juniper PCS) PSC6000, PCS6500, and..."
+    },
+    {
+      "id": "CVE-2015-7322",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The Secure Meeting (Pulse Collaboration) in Pulse Connect Secure (formerly Ju..."
+    },
+    {
+      "id": "CVE-2015-7323",
+      "severity": "LOW",
+      "cvss": 3.5,
+      "desc": "The Secure Meeting (Pulse Collaboration) in Pulse Connect Secure (formerly Ju..."
+    },
+    {
+      "id": "CVE-2016-3985",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "The Terminal Services Remote Desktop Protocol (RDP) client session restrictio..."
+    },
+    {
+      "id": "CVE-2016-4786",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Pulse Connect Secure (PCS) 8.2 before 8.2r1, 8.1 before 8.1r3, 8.0 before 8.0..."
+    },
+    {
+      "id": "CVE-2016-4787",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Pulse Connect Secure (PCS) 8.2 before 8.2r1, 8.1 before 8.1r2, 8.0 before 8.0..."
+    },
+    {
+      "id": "CVE-2016-4788",
+      "severity": "MEDIUM",
+      "cvss": 5.8,
+      "desc": "Pulse Connect Secure (PCS) 8.2 before 8.2r1, 8.1 before 8.1r2, 8.0 before 8.0..."
+    },
+    {
+      "id": "CVE-2016-4789",
+      "severity": "MEDIUM",
+      "cvss": 6.1,
+      "desc": "Cross-site scripting (XSS) vulnerability in the system configuration section ..."
+    },
+    {
+      "id": "CVE-2016-4790",
+      "severity": "MEDIUM",
+      "cvss": 5.5,
+      "desc": "Cross-site scripting (XSS) vulnerability in the administrative user interface..."
+    },
+    {
+      "id": "CVE-2016-4791",
+      "severity": "HIGH",
+      "cvss": 8.6,
+      "desc": "The administrative user interface in Pulse Connect Secure (PCS) 8.2 before 8...."
+    },
+    {
+      "id": "CVE-2016-4792",
+      "severity": "MEDIUM",
+      "cvss": 5.3,
+      "desc": "Pulse Connect Secure (PCS) 8.2 before 8.2r1 allows remote attackers to disclo..."
+    },
+    {
+      "id": "CVE-2017-11193",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Pulse Connect Secure 8.3R1 has CSRF in diag.cgi. In the panel, the diag.cgi f..."
+    },
+    {
+      "id": "CVE-2017-11194",
+      "severity": "MEDIUM",
+      "cvss": 6.1,
+      "desc": "Pulse Connect Secure 8.3R1 has Reflected XSS in adminservercacertdetails.cgi...."
+    },
+    {
+      "id": "CVE-2017-11195",
+      "severity": "MEDIUM",
+      "cvss": 6.1,
+      "desc": "Pulse Connect Secure 8.3R1 has Reflected XSS in launchHelp.cgi. The helpLaunc..."
+    },
+    {
+      "id": "CVE-2017-11196",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Pulse Connect Secure 8.3R1 has CSRF in logout.cgi. The logout function of the..."
+    },
+    {
+      "id": "CVE-2017-11455",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "diag.cgi in Pulse Connect Secure 8.2R1 through 8.2R5, 8.1R1 through 8.1R10 an..."
+    },
+    {
+      "id": "CVE-2017-17947",
+      "severity": "MEDIUM",
+      "cvss": 4.8,
+      "desc": "A cross site scripting issue has been found in custompage.cgi in Pulse Secure..."
+    },
+    {
+      "id": "CVE-2018-5299",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "A stack-based Buffer Overflow Vulnerability exists in the web server in Pulse..."
+    },
+    {
+      "id": "CVE-2018-6374",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "The GUI component (aka PulseUI) in Pulse Secure Desktop Linux clients before ..."
+    }
+  ],
+  "Citrix": [
+    {
+      "id": "CVE-2023-3519",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Citrix NetScaler unauthenticated RCE"
+    },
+    {
+      "id": "CVE-2019-19781",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Citrix ADC path traversal RCE (shitrix)"
+    },
+    {
+      "id": "CVE-2022-27518",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Citrix ADC/Gateway unauthenticated RCE"
+    },
+    {
+      "id": "CVE-2020-8195",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Citrix ADC information disclosure"
+    },
+    {
+      "id": "CVE-2020-8196",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Citrix ADC privilege escalation"
+    },
+    {
+      "id": "CVE-2007-6037",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in ws/generic_api_call.pl in Citrix ..."
+    },
+    {
+      "id": "CVE-2007-6192",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "The web management interface in Citrix NetScaler 8.0 build 47.8 uses weak enc..."
+    },
+    {
+      "id": "CVE-2007-6193",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The web management interface in Citrix NetScaler 8.0 build 47.8 stores the de..."
+    },
+    {
+      "id": "CVE-2007-6267",
+      "severity": "LOW",
+      "cvss": 2.1,
+      "desc": "Citrix EdgeSight 4.2 and 4.5 for Presentation Server, EdgeSight 4.2 and 4.5 f..."
+    },
+    {
+      "id": "CVE-2009-2213",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "The default configuration of the Security global settings on the Citrix NetSc..."
+    },
+    {
+      "id": "CVE-2013-2767",
+      "severity": "MEDIUM",
+      "cvss": 5.4,
+      "desc": "Unspecified vulnerability in Citrix NetScaler Access Gateway Enterprise Editi..."
+    },
+    {
+      "id": "CVE-2013-6011",
+      "severity": "HIGH",
+      "cvss": 7.8,
+      "desc": "Citrix NetScaler Application Delivery Controller (ADC) 10.0 before 10.0-76.7 ..."
+    },
+    {
+      "id": "CVE-2013-6938",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Unspecified vulnerability in the Service VM in Citrix NetScaler SDX 9.3 befor..."
+    },
+    {
+      "id": "CVE-2013-6939",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Unspecified vulnerability in Citrix NetScaler Application Delivery Controller..."
+    },
+    {
+      "id": "CVE-2013-6940",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Citrix NetScaler Application Delivery Controller (ADC) 9.3.x before 9.3-64.4,..."
+    },
+    {
+      "id": "CVE-2013-6941",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Unspecified vulnerability in Citrix NetScaler Application Delivery Controller..."
+    },
+    {
+      "id": "CVE-2013-6942",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "Cross-site request forgery (CSRF) vulnerability in Citrix NetScaler Applicati..."
+    },
+    {
+      "id": "CVE-2013-6943",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Citrix NetScaler Application Delivery Controller (ADC) 9.3.x before 9.3-64.4,..."
+    },
+    {
+      "id": "CVE-2013-6944",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in the user interface in the AAA TM ..."
+    },
+    {
+      "id": "CVE-2014-2881",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Unspecified vulnerability in the Diffie-Hellman key agreement implementation ..."
+    },
+    {
+      "id": "CVE-2014-2882",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Unspecified vulnerability in the management GUI in Citrix NetScaler Applicati..."
+    },
+    {
+      "id": "CVE-2014-1899",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in Citrix NetScaler Gateway (formerl..."
+    },
+    {
+      "id": "CVE-2014-4346",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in administration user interface in ..."
+    },
+    {
+      "id": "CVE-2014-4347",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Citrix NetScaler Application Delivery Controller (ADC) and NetScaler Gateway ..."
+    },
+    {
+      "id": "CVE-2014-7140",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Unspecified vulnerability in the management interface in Citrix NetScaler App..."
+    }
+  ],
+  "MSSQL": [
+    {
+      "id": "CVE-2022-23276",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "SQL Server container escape privilege escalation"
+    },
+    {
+      "id": "CVE-2021-1636",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Microsoft SQL Server privilege escalation"
+    },
+    {
+      "id": "CVE-2019-1068",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Microsoft SQL Server RCE"
+    },
+    {
+      "id": "CVE-2012-1856",
+      "severity": "HIGH",
+      "cvss": 9.3,
+      "desc": "MSSQL report viewer RCE"
+    },
+    {
+      "id": "CVE-2002-0649",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "MSSQL Slammer worm buffer overflow"
+    },
+    {
+      "id": "CVE-1999-1556",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "Microsoft SQL Server 6.5 uses weak encryption for the password for the SQLExe..."
+    },
+    {
+      "id": "CVE-1999-1520",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "A configuration problem in the Ad Server Sample directory (AdSamples) in Micr..."
+    },
+    {
+      "id": "CVE-1999-0999",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Microsoft SQL 7.0 server allows a remote attacker to cause a denial of servic..."
+    },
+    {
+      "id": "CVE-2000-0161",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Sample web sites on Microsoft Site Server 3.0 Commerce Edition do not validat..."
+    },
+    {
+      "id": "CVE-2000-0202",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Microsoft SQL Server 7.0 and Microsoft Data Engine (MSDE) 1.0 allow remote at..."
+    },
+    {
+      "id": "CVE-2000-0199",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "When a new SQL Server is registered in Enterprise Manager for Microsoft SQL S..."
+    },
+    {
+      "id": "CVE-2000-0402",
+      "severity": "LOW",
+      "cvss": 2.1,
+      "desc": "The Mixed Mode authentication capability in Microsoft SQL Server 7.0 stores t..."
+    },
+    {
+      "id": "CVE-2000-0485",
+      "severity": "LOW",
+      "cvss": 2.1,
+      "desc": "Microsoft SQL Server allows local users to obtain database passwords via the ..."
+    },
+    {
+      "id": "CVE-2000-0603",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "Microsoft SQL Server 7.0 allows a local user to bypass permissions for stored..."
+    },
+    {
+      "id": "CVE-2000-1081",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "The xp_displayparamstmt function in SQL Server and Microsoft SQL Server Deskt..."
+    },
+    {
+      "id": "CVE-2000-1082",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "The xp_enumresultset function in SQL Server and Microsoft SQL Server Desktop ..."
+    },
+    {
+      "id": "CVE-2000-1083",
+      "severity": "LOW",
+      "cvss": 2.1,
+      "desc": "The xp_showcolv function in SQL Server and Microsoft SQL Server Desktop Engin..."
+    },
+    {
+      "id": "CVE-2000-1084",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "The xp_updatecolvbm function in SQL Server and Microsoft SQL Server Desktop E..."
+    },
+    {
+      "id": "CVE-2000-1085",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "The xp_peekqueue function in Microsoft SQL Server 2000 and SQL Server Desktop..."
+    },
+    {
+      "id": "CVE-2000-1086",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "The xp_printstatements function in Microsoft SQL Server 2000 and SQL Server D..."
+    },
+    {
+      "id": "CVE-2000-1087",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "The xp_proxiedmetadata function in Microsoft SQL Server 2000 and SQL Server D..."
+    },
+    {
+      "id": "CVE-2000-1088",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "The xp_SetSQLSecurity function in Microsoft SQL Server 2000 and SQL Server De..."
+    },
+    {
+      "id": "CVE-2001-0344",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "An SQL query method in Microsoft SQL Server 2000 Gold and 7.0 using Mixed Mod..."
+    },
+    {
+      "id": "CVE-2001-0986",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "SQLQHit.asp sample file in Microsoft Index Server 2.0 allows remote attackers..."
+    },
+    {
+      "id": "CVE-2001-0509",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Vulnerabilities in RPC servers in (1) Microsoft Exchange Server 2000 and earl..."
+    }
+  ],
+  "Oracle": [
+    {
+      "id": "CVE-2022-21500",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Oracle E-Business Suite info disclosure"
+    },
+    {
+      "id": "CVE-2021-2351",
+      "severity": "HIGH",
+      "cvss": 8.3,
+      "desc": "Oracle JDBC MITM attack"
+    },
+    {
+      "id": "CVE-2020-14871",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Oracle Solaris PAM RCE unauthenticated"
+    },
+    {
+      "id": "CVE-2019-2725",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Oracle WebLogic deserialization RCE"
+    },
+    {
+      "id": "CVE-2020-14882",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Oracle WebLogic Console RCE unauthenticated"
+    },
+    {
+      "id": "CVE-2021-2109",
+      "severity": "HIGH",
+      "cvss": 7.2,
+      "desc": "Oracle WebLogic Server RCE via IIOP"
+    },
+    {
+      "id": "CVE-2008-2576",
+      "severity": "MEDIUM",
+      "cvss": 4.4,
+      "desc": "Unspecified vulnerability in the WebLogic Server component in Oracle BEA Prod..."
+    },
+    {
+      "id": "CVE-2008-2577",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "Unspecified vulnerability in the WebLogic Server component in Oracle BEA Prod..."
+    },
+    {
+      "id": "CVE-2008-2578",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Unspecified vulnerability in the WebLogic Server component in Oracle BEA Prod..."
+    },
+    {
+      "id": "CVE-2008-2579",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Unspecified vulnerability in the WebLogic Server Plugins for Apache, Sun and ..."
+    },
+    {
+      "id": "CVE-2008-2580",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Unspecified vulnerability in the WebLogic Server component in Oracle BEA Prod..."
+    },
+    {
+      "id": "CVE-2008-2581",
+      "severity": "MEDIUM",
+      "cvss": 5.1,
+      "desc": "Unspecified vulnerability in the WebLogic Server component in Oracle BEA Prod..."
+    },
+    {
+      "id": "CVE-2008-2582",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Unspecified vulnerability in the WebLogic Server component in Oracle BEA Prod..."
+    },
+    {
+      "id": "CVE-2008-3257",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Stack-based buffer overflow in the Apache Connector (mod_wl) in Oracle WebLog..."
+    },
+    {
+      "id": "CVE-2008-4008",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Unspecified vulnerability in the WebLogic Server Plugins for Apache component..."
+    },
+    {
+      "id": "CVE-2008-5457",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Unspecified vulnerability in the Oracle BEA WebLogic Server Plugins for Apach..."
+    },
+    {
+      "id": "CVE-2008-5461",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "Unspecified vulnerability in the WebLogic Server component in BEA Product Sui..."
+    },
+    {
+      "id": "CVE-2009-1001",
+      "severity": "MEDIUM",
+      "cvss": 5.5,
+      "desc": "Unspecified vulnerability in Oracle BEA WebLogic Portal 8.1 Gold through SP6 ..."
+    },
+    {
+      "id": "CVE-2009-1002",
+      "severity": "MEDIUM",
+      "cvss": 5.8,
+      "desc": "Unspecified vulnerability in Oracle BEA WebLogic Server 10.3, 10.0 Gold throu..."
+    },
+    {
+      "id": "CVE-2009-1012",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Unspecified vulnerability in the plug-ins for Apache and IIS web servers in O..."
+    },
+    {
+      "id": "CVE-2009-1016",
+      "severity": "HIGH",
+      "cvss": 8.5,
+      "desc": "Unspecified vulnerability in the WebLogic Server component in BEA Product Sui..."
+    },
+    {
+      "id": "CVE-2009-1953",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "IBM FileNet Content Manager 4.0, 4.0.1, and 4.5, as used in IBM WebSphere App..."
+    },
+    {
+      "id": "CVE-2009-0217",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "The design of the W3C XML Signature Syntax and Processing (XMLDsig) recommend..."
+    },
+    {
+      "id": "CVE-2010-0073",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Unspecified vulnerability in the WebLogic Server in Oracle WebLogic Server 7...."
+    },
+    {
+      "id": "CVE-2010-2375",
+      "severity": "MEDIUM",
+      "cvss": 6.4,
+      "desc": "Package/Privilege: Plugins for Apache, Sun and IIS web servers Unspecified vu..."
+    },
+    {
+      "id": "CVE-2010-3510",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Unspecified vulnerability in the Oracle WebLogic Server component in Oracle F..."
+    }
+  ],
+  "Grafana": [
+    {
+      "id": "CVE-2021-43798",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Grafana path traversal arbitrary file read"
+    },
+    {
+      "id": "CVE-2022-31107",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Grafana OAuth account takeover"
+    },
+    {
+      "id": "CVE-2021-41174",
+      "severity": "MEDIUM",
+      "cvss": 6.1,
+      "desc": "Grafana XSS via data source name"
+    },
+    {
+      "id": "CVE-2020-13379",
+      "severity": "HIGH",
+      "cvss": 8.2,
+      "desc": "Grafana SSRF and unauthorized access"
+    },
+    {
+      "id": "CVE-2018-12099",
+      "severity": "MEDIUM",
+      "cvss": 6.1,
+      "desc": "Grafana before 5.2.0-beta1 has XSS vulnerabilities in dashboard links."
+    },
+    {
+      "id": "CVE-2018-0039",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "Juniper Networks Contrail Service Orchestration releases prior to 4.0.0 have ..."
+    },
+    {
+      "id": "CVE-2018-15727",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Grafana 2.x, 3.x, and 4.x before 4.6.4 and 5.x before 5.2.3 allows authentica..."
+    },
+    {
+      "id": "CVE-2018-19039",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "Grafana before 4.6.5 and 5.x before 5.3.3 allows remote authenticated users t..."
+    },
+    {
+      "id": "CVE-2018-1000816",
+      "severity": "MEDIUM",
+      "cvss": 5.4,
+      "desc": "Grafana version confirmed for 5.2.4 and 5.3.0 contains a Cross Site Scripting..."
+    },
+    {
+      "id": "CVE-2015-9282",
+      "severity": "MEDIUM",
+      "cvss": 6.1,
+      "desc": "The Pie Chart Panel plugin through 2019-01-02 for Grafana is vulnerable to XS..."
+    },
+    {
+      "id": "CVE-2019-13068",
+      "severity": "MEDIUM",
+      "cvss": 5.4,
+      "desc": "public/app/features/panel/panel_ctrl.ts in Grafana before 6.2.5 allows HTML I..."
+    },
+    {
+      "id": "CVE-2019-15043",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "In Grafana 2.x through 6.x before 6.3.4, parts of the HTTP API allow unauthen..."
+    },
+    {
+      "id": "CVE-2019-15635",
+      "severity": "MEDIUM",
+      "cvss": 4.9,
+      "desc": "An issue was discovered in Grafana 5.4.0. Passwords for data sources used by ..."
+    },
+    {
+      "id": "CVE-2018-9090",
+      "severity": "MEDIUM",
+      "cvss": 6.1,
+      "desc": "CoreOS Tectonic 1.7.x and 1.8.x before 1.8.7-tectonic.2 deploys the Grafana w..."
+    },
+    {
+      "id": "CVE-2020-10092",
+      "severity": "MEDIUM",
+      "cvss": 6.1,
+      "desc": "GitLab 12.1 through 12.8.1 allows XSS. A cross-site scripting vulnerability w..."
+    },
+    {
+      "id": "CVE-2020-10791",
+      "severity": "MEDIUM",
+      "cvss": 6.5,
+      "desc": "app/Plugin/GrafanaModule/Controller/GrafanaConfigurationController.php in ope..."
+    },
+    {
+      "id": "CVE-2020-12245",
+      "severity": "MEDIUM",
+      "cvss": 6.1,
+      "desc": "Grafana before 6.7.3 allows table-panel XSS via column.title or cellLinkTooltip."
+    },
+    {
+      "id": "CVE-2020-12052",
+      "severity": "MEDIUM",
+      "cvss": 6.1,
+      "desc": "Grafana version < 6.7.3 is vulnerable for annotation popup XSS."
+    },
+    {
+      "id": "CVE-2020-12458",
+      "severity": "MEDIUM",
+      "cvss": 5.5,
+      "desc": "An information-disclosure flaw was found in Grafana through 6.7.3. The databa..."
+    },
+    {
+      "id": "CVE-2020-12459",
+      "severity": "MEDIUM",
+      "cvss": 5.5,
+      "desc": "In certain Red Hat packages for Grafana 6.x through 6.3.6, the configuration ..."
+    },
+    {
+      "id": "CVE-2020-13429",
+      "severity": "MEDIUM",
+      "cvss": 5.4,
+      "desc": "legend.ts in the piechart-panel (aka Pie Chart Panel) plugin before 1.5.0 for..."
+    },
+    {
+      "id": "CVE-2020-13430",
+      "severity": "MEDIUM",
+      "cvss": 6.1,
+      "desc": "Grafana before 7.0.0 allows tag value XSS via the OpenTSDB datasource."
+    },
+    {
+      "id": "CVE-2018-18623",
+      "severity": "MEDIUM",
+      "cvss": 6.1,
+      "desc": "Grafana 5.3.1 has XSS via the \"Dashboard > Text Panel\" screen. NOTE: this iss..."
+    },
+    {
+      "id": "CVE-2018-18624",
+      "severity": "MEDIUM",
+      "cvss": 6.1,
+      "desc": "Grafana 5.3.1 has XSS via a column style on the \"Dashboard > Table Panel\" scr..."
+    }
+  ],
+  "Struts": [
+    {
+      "id": "CVE-2017-5638",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Apache Struts2 RCE via Content-Type (Equifax)"
+    },
+    {
+      "id": "CVE-2018-11776",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Apache Struts2 RCE namespace evaluation"
+    },
+    {
+      "id": "CVE-2021-31805",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Apache Struts2 forced double OGNL evaluation"
+    },
+    {
+      "id": "CVE-2020-17530",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Apache Struts2 forced OGNL evaluation"
+    },
+    {
+      "id": "CVE-2019-0230",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Apache Struts2 double evaluation RCE"
+    },
+    {
+      "id": "CVE-2005-3745",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in Apache Struts 1.2.7, and possibly..."
+    },
+    {
+      "id": "CVE-2006-1546",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Apache Software Foundation (ASF) Struts before 1.2.9 allows remote attackers ..."
+    },
+    {
+      "id": "CVE-2006-1547",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "ActionForm in Apache Software Foundation (ASF) Struts before 1.2.9 with BeanU..."
+    },
+    {
+      "id": "CVE-2006-1548",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in (1) LookupDispatchAction and poss..."
+    },
+    {
+      "id": "CVE-2007-4556",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "Struts support in OpenSymphony XWork before 1.2.3, and 2.x before 2.0.4, as u..."
+    },
+    {
+      "id": "CVE-2008-6504",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "ParametersInterceptor in OpenSymphony XWork 2.0.x before 2.0.6 and 2.1.x befo..."
+    },
+    {
+      "id": "CVE-2008-6505",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Multiple directory traversal vulnerabilities in Apache Struts 2.0.x before 2...."
+    },
+    {
+      "id": "CVE-2007-6726",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Multiple cross-site scripting (XSS) vulnerabilities in Dojo 0.4.1 and 0.4.2, ..."
+    },
+    {
+      "id": "CVE-2008-2025",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in Apache Struts before 1.2.9-162.31..."
+    },
+    {
+      "id": "CVE-2008-6682",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Multiple cross-site scripting (XSS) vulnerabilities in Apache Struts 2.0.x be..."
+    },
+    {
+      "id": "CVE-2009-1275",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "Apache Tiles 2.1 before 2.1.2, as used in Apache Struts and other products, e..."
+    },
+    {
+      "id": "CVE-2011-1772",
+      "severity": "LOW",
+      "cvss": 2.6,
+      "desc": "Multiple cross-site scripting (XSS) vulnerabilities in XWork in Apache Struts..."
+    },
+    {
+      "id": "CVE-2011-2087",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Multiple cross-site scripting (XSS) vulnerabilities in component handlers in ..."
+    },
+    {
+      "id": "CVE-2011-2088",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "XWork 2.2.1 in Apache Struts 2.2.1, and OpenSymphony XWork in OpenSymphony We..."
+    },
+    {
+      "id": "CVE-2012-0391",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "The ExceptionDelegator component in Apache Struts before 2.2.3.1 interprets p..."
+    },
+    {
+      "id": "CVE-2012-0392",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "The CookieInterceptor component in Apache Struts before 2.3.1.1 does not use ..."
+    },
+    {
+      "id": "CVE-2012-0393",
+      "severity": "MEDIUM",
+      "cvss": 6.4,
+      "desc": "The ParameterInterceptor component in Apache Struts before 2.3.1.1 does not p..."
+    },
+    {
+      "id": "CVE-2012-0394",
+      "severity": "MEDIUM",
+      "cvss": 6.8,
+      "desc": "The DebuggingInterceptor component in Apache Struts before 2.3.1.1, when deve..."
+    },
+    {
+      "id": "CVE-2011-5057",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Apache Struts 2.3.1.2 and earlier, 2.3.19-2.3.23, provides interfaces that do..."
+    },
+    {
+      "id": "CVE-2012-1006",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Multiple cross-site scripting (XSS) vulnerabilities in Apache Struts 2.0.14 a..."
+    }
+  ],
+  "Drupal": [
+    {
+      "id": "CVE-2018-7600",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Drupalgeddon2 - Drupal RCE unauthenticated"
+    },
+    {
+      "id": "CVE-2018-7602",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Drupalgeddon3 - Drupal RCE (authenticated)"
+    },
+    {
+      "id": "CVE-2019-6340",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Drupal REST module RCE"
+    },
+    {
+      "id": "CVE-2014-3704",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Drupalgeddon1 - SQL injection leading to RCE"
+    },
+    {
+      "id": "CVE-2002-1806",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in Drupal 4.0.0 allows remote attack..."
+    },
+    {
+      "id": "CVE-2005-0682",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in common.inc in Drupal before 4.5.2..."
+    },
+    {
+      "id": "CVE-2005-1871",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Unknown vulnerability in the privilege system in Drupal 4.4.0 through 4.6.0, ..."
+    },
+    {
+      "id": "CVE-2005-1921",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Eval injection vulnerability in PEAR XML_RPC 1.3.0 and earlier (aka XML-RPC o..."
+    },
+    {
+      "id": "CVE-2005-2106",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "Unknown vulnerability in Drupal 4.5.0 through 4.5.3, 4.6.0, and 4.6.1 allows ..."
+    },
+    {
+      "id": "CVE-2005-2498",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Eval injection vulnerability in PHPXMLRPC 1.1.1 and earlier (PEAR XML-RPC for..."
+    },
+    {
+      "id": "CVE-2005-3973",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Multiple cross-site scripting (XSS) vulnerabilities in Drupal 4.5.0 through 4..."
+    },
+    {
+      "id": "CVE-2005-3974",
+      "severity": "MEDIUM",
+      "cvss": 6.4,
+      "desc": "Drupal 4.5.0 through 4.5.5 and 4.6.0 through 4.6.3, when running on PHP5, doe..."
+    },
+    {
+      "id": "CVE-2005-3975",
+      "severity": "MEDIUM",
+      "cvss": 4.0,
+      "desc": "Interpretation conflict in file.inc in Drupal 4.5.0 through 4.5.5 and 4.6.0 t..."
+    },
+    {
+      "id": "CVE-2006-0070",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Drupal allows remote attackers to conduct cross-site scripting (XSS) attacks ..."
+    },
+    {
+      "id": "CVE-2006-1225",
+      "severity": "MEDIUM",
+      "cvss": 5.0,
+      "desc": "CRLF injection vulnerability in Drupal 4.5.x before 4.5.8 and 4.6.x before 4...."
+    },
+    {
+      "id": "CVE-2006-1226",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in Drupal 4.5.x before 4.5.8 and 4.6..."
+    },
+    {
+      "id": "CVE-2006-1227",
+      "severity": "MEDIUM",
+      "cvss": 4.6,
+      "desc": "Drupal 4.5.x before 4.5.8 and 4.6.x before 4.5.8, when menu.module is used to..."
+    },
+    {
+      "id": "CVE-2006-1228",
+      "severity": "MEDIUM",
+      "cvss": 5.1,
+      "desc": "Session fixation vulnerability in Drupal 4.5.x before 4.5.8 and 4.6.x before ..."
+    },
+    {
+      "id": "CVE-2006-2260",
+      "severity": "MEDIUM",
+      "cvss": 4.3,
+      "desc": "Cross-site scripting (XSS) vulnerability in the project module (project.modul..."
+    },
+    {
+      "id": "CVE-2006-2742",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "SQL injection vulnerability in Drupal 4.6.x before 4.6.7 and 4.7.0 allows rem..."
+    },
+    {
+      "id": "CVE-2006-2743",
+      "severity": "MEDIUM",
+      "cvss": 5.1,
+      "desc": "Drupal 4.6.x before 4.6.7 and 4.7.0, when running on Apache with mod_mime, do..."
+    },
+    {
+      "id": "CVE-2006-2831",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Drupal 4.6.x before 4.6.8 and 4.7.x before 4.7.2, when running under certain ..."
+    },
+    {
+      "id": "CVE-2006-2832",
+      "severity": "LOW",
+      "cvss": 2.6,
+      "desc": "Cross-site scripting (XSS) vulnerability in the upload module (upload.module)..."
+    },
+    {
+      "id": "CVE-2006-2833",
+      "severity": "LOW",
+      "cvss": 2.6,
+      "desc": "Cross-site scripting (XSS) vulnerability in the taxonomy module in Drupal 4.6..."
+    }
+  ],
+  "Log4j": [
+    {
+      "id": "CVE-2021-44228",
+      "severity": "CRITICAL",
+      "cvss": 10.0,
+      "desc": "Log4Shell - JNDI injection RCE (критично!)"
+    },
+    {
+      "id": "CVE-2021-45046",
+      "severity": "CRITICAL",
+      "cvss": 9.0,
+      "desc": "Log4j2 Thread Context JNDI bypass"
+    },
+    {
+      "id": "CVE-2021-45105",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Log4j2 infinite recursion DoS"
+    },
+    {
+      "id": "CVE-2021-44832",
+      "severity": "HIGH",
+      "cvss": 6.6,
+      "desc": "Log4j2 RCE via JDBC Appender"
+    },
+    {
+      "id": "CVE-2012-5616",
+      "severity": "LOW",
+      "cvss": 1.5,
+      "desc": "Apache CloudStack 4.0.0-incubating and Citrix CloudPlatform (formerly Citrix ..."
+    },
+    {
+      "id": "CVE-2017-5645",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "In Apache Log4j 2.x before 2.8.2, when using the TCP socket server or UDP soc..."
+    },
+    {
+      "id": "CVE-2020-9488",
+      "severity": "LOW",
+      "cvss": 3.7,
+      "desc": "Improper validation of certificate with host mismatch in Apache Log4j SMTP ap..."
+    },
+    {
+      "id": "CVE-2021-4104",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "JMSAppender in Log4j 1.2 is vulnerable to deserialization of untrusted data w..."
+    },
+    {
+      "id": "CVE-2022-23302",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "JMSSink in all versions of Log4j 1.x is vulnerable to deserialization of untr..."
+    },
+    {
+      "id": "CVE-2022-23305",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "By design, the JDBCAppender in Log4j 1.2.x accepts an SQL statement as a conf..."
+    },
+    {
+      "id": "CVE-2022-23307",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "CVE-2020-9493 identified a deserialization issue that was present in Apache C..."
+    },
+    {
+      "id": "CVE-2021-3100",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "The Apache Log4j hotpatch package before log4j-cve-2021-44228-hotpatch-1.1-13..."
+    },
+    {
+      "id": "CVE-2022-0070",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Incomplete fix for CVE-2021-3100. The Apache Log4j hotpatch package starting ..."
+    },
+    {
+      "id": "CVE-2022-33915",
+      "severity": "HIGH",
+      "cvss": 7.0,
+      "desc": "Versions of the Amazon AWS Apache Log4j hotpatch package before log4j-cve-202..."
+    },
+    {
+      "id": "CVE-2023-26464",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "** UNSUPPORTED WHEN ASSIGNED **\n\nWhen using the Chainsaw or SocketAppender co..."
+    },
+    {
+      "id": "CVE-2023-50780",
+      "severity": "HIGH",
+      "cvss": 8.8,
+      "desc": "Apache ActiveMQ Artemis allows access to diagnostic information and controls ..."
+    },
+    {
+      "id": "CVE-2025-68161",
+      "severity": "MEDIUM",
+      "cvss": 4.8,
+      "desc": "The Socket Appender in Apache Log4j Core versions 2.0-beta9 through 2.25.2 do..."
+    }
   ]
 }

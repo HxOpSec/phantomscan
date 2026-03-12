@@ -43,16 +43,24 @@ std::vector<UDPResult> UDPScanner::scan(const std::string& target,
               << "[!] UDP сложнее TCP — нет handshake!"
               << Color::RESET << std::endl;
 
-    // Резолвим цель
-    struct hostent* he = gethostbyname(target.c_str());
-    if (!he) {
-        std::cout << Color::FAIL << "Не удалось резолвить цель!"
+    // FIX: getaddrinfo() вместо gethostbyname()
+    // gethostbyname() — устарела, не thread-safe, не поддерживает IPv6
+    struct addrinfo hints, *res;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family   = AF_INET;       // IPv4
+    hints.ai_socktype = SOCK_DGRAM;    // UDP
+
+    int err = getaddrinfo(target.c_str(), nullptr, &hints, &res);
+    if (err != 0) {
+        std::cout << Color::FAIL << "Не удалось резолвить цель: "
+                  << gai_strerror(err)  // точное сообщение об ошибке
                   << Color::RESET << std::endl;
         return results;
     }
 
-    struct in_addr dest_addr;
-    memcpy(&dest_addr, he->h_addr_list[0], sizeof(dest_addr));
+    struct sockaddr_in* addr_in = (struct sockaddr_in*)res->ai_addr;
+    struct in_addr dest_addr    = addr_in->sin_addr;
+    freeaddrinfo(res);             // FIX: освобождаем память
 
     for (int port = port_start; port <= port_end; port++) {
 

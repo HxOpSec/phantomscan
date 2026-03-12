@@ -44,17 +44,24 @@ std::vector<SYNResult> SYNScanner::scan(const std::string& target,
               << "Режим: невидимый (SYN без ACK)"
               << Color::RESET << std::endl;
 
-    // Резолвим цель
-    struct hostent* he = gethostbyname(target.c_str());
-    if (!he) {
-        std::cout << Color::FAIL << "Не удалось разрезолвить!"
+    // FIX: getaddrinfo() вместо gethostbyname()
+    // gethostbyname() — устарела, не thread-safe, не поддерживает IPv6
+    struct addrinfo hints, *res;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family   = AF_INET;      // IPv4
+    hints.ai_socktype = SOCK_STREAM;
+
+    int err = getaddrinfo(target.c_str(), nullptr, &hints, &res);
+    if (err != 0) {
+        std::cout << Color::FAIL << "Не удалось разрезолвить: "
+                  << gai_strerror(err)  // точное сообщение об ошибке
                   << Color::RESET << std::endl;
         return results;
     }
 
-    struct in_addr dest_addr;
-    memcpy(&dest_addr, he->h_addr_list[0], sizeof(dest_addr));
-    std::string dest_ip = inet_ntoa(dest_addr);
+    struct sockaddr_in* addr_in = (struct sockaddr_in*)res->ai_addr;
+    struct in_addr dest_addr    = addr_in->sin_addr;
+    freeaddrinfo(res);             // FIX: обязательно освобождаем память
 
     // Raw socket
     int sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
@@ -107,11 +114,11 @@ std::vector<SYNResult> SYNScanner::scan(const std::string& target,
         // Pseudo header для checksum
         char psh[4096];
         struct pseudo_header* pshdr = (struct pseudo_header*)psh;
-        pshdr->src_addr  = iph->saddr;
-        pshdr->dst_addr  = iph->daddr;
+        pshdr->src_addr    = iph->saddr;
+        pshdr->dst_addr    = iph->daddr;
         pshdr->placeholder = 0;
-        pshdr->protocol  = IPPROTO_TCP;
-        pshdr->tcp_length = htons(sizeof(struct tcphdr));
+        pshdr->protocol    = IPPROTO_TCP;
+        pshdr->tcp_length  = htons(sizeof(struct tcphdr));
         memcpy(psh + sizeof(struct pseudo_header), tcph,
                sizeof(struct tcphdr));
         tcph->check = checksum(psh,
@@ -154,7 +161,6 @@ std::vector<SYNResult> SYNScanner::scan(const std::string& target,
                               << Color::RESET << std::endl;
 
                     // Сразу RST чтобы не завершать соединение
-                    // (это и есть stealth!)
                     struct tcphdr* rst = r_tcp;
                     rst->syn = 0;
                     rst->ack = 0;

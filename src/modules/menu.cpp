@@ -1,3 +1,5 @@
+#include "modules/dns_enum.h"
+#include "modules/http_scan.h"
 #include "modules/udp_scan.h"
 #include "modules/exploit.h"
 #include "modules/topology.h"
@@ -18,26 +20,50 @@
 #include "modules/cve.h"
 #include "modules/report.h"
 #include "modules/packet_capture.h"
+#include "modules/scorecard.h"
 #include "utils/colors.h"
 #include "utils/progress.h"
 #include "utils/banner.h"
 #include <iostream>
-#include <netdb.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <chrono>
-#include "modules/scorecard.h"
+#include <cstring>
+
+// ── Резолвинг домена в IP (getaddrinfo вместо устаревшего gethostbyname) ──
+static std::string resolve_host(const std::string& host) {
+    struct addrinfo hints, *res;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family   = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+
+    if (getaddrinfo(host.c_str(), nullptr, &hints, &res) != 0)
+        return "";
+
+    char ip_buf[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET,
+              &((struct sockaddr_in*)res->ai_addr)->sin_addr,
+              ip_buf, sizeof(ip_buf));
+    freeaddrinfo(res);
+    return std::string(ip_buf);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ВСПОМОГАТЕЛЬНЫЕ
+// ─────────────────────────────────────────────────────────────────────────────
 
 void Menu::show_help() {
     std::cout << Color::CYAN << Color::BOLD;
     std::cout << "┌─────────────────────────────────────────┐\n";
     std::cout << "│           ДОСТУПНЫЕ КОМАНДЫ             │\n";
     std::cout << "├─────────────────────────────────────────┤\n";
-    std::cout << "│  1 - Полное сканирование                │\n";
-    std::cout << "│  2 - Быстрый скан (топ 100 портов)      │\n";
-    std::cout << "│  3 - Поиск поддоменов                   │\n";
-    std::cout << "│  4 - Мониторинг пакетов                 │\n";
-    std::cout << "│  5 - Сменить цель                       │\n";
-    std::cout << "│  0 - Выход                              │\n";
+    std::cout << "│  1  - Полное сканирование               │\n";
+    std::cout << "│  2  - Быстрый скан (топ 1024 портов)   │\n";
+    std::cout << "│  3  - Поиск поддоменов                  │\n";
+    std::cout << "│  4  - Мониторинг пакетов                │\n";
+    std::cout << "│  18 - HTTP директори скан               │\n";
+    std::cout << "│  19 - DNS разведка (enum + AXFR)        │\n";
+    std::cout << "│  0  - Выход                             │\n";
     std::cout << "└─────────────────────────────────────────┘\n";
     std::cout << Color::RESET << std::endl;
 }
@@ -45,62 +71,61 @@ void Menu::show_help() {
 bool Menu::get_target() {
     std::cout << Color::INFO << "Введите IP или домен: " << Color::CYAN;
     std::cin >> target;
-    original_target = target;  
+    original_target = target;
     std::cout << Color::RESET;
 
-    // Резолвинг домена в IP
-    struct hostent* host = gethostbyname(target.c_str());
-    if (!host) {
-        std::cout << Color::FAIL << "[-] Не удалось разрезолвить: " 
+    std::string ip = resolve_host(target);
+    if (ip.empty()) {
+        std::cout << Color::FAIL << "[-] Не удалось разрезолвить: "
                   << target << Color::RESET << std::endl;
         return false;
     }
 
-    std::string ip = inet_ntoa(*(struct in_addr*)host->h_addr_list[0]);
     if (ip != target) {
-        std::cout << Color::INFO << " Резолвинг: " << Color::YELLOW 
+        std::cout << Color::INFO << " Резолвинг: " << Color::YELLOW
                   << target << " -> " << ip << Color::RESET << std::endl;
     }
-    target = ip;  // ВАЖНО: заменяем домен на IP!
+    target = ip;
     return true;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  МОДУЛИ СКАНИРОВАНИЯ
+// ─────────────────────────────────────────────────────────────────────────────
+
 void Menu::full_scan() {
-    std::cout << "\n" << Color::INFO << "Полное сканирование: " 
+    std::cout << "\n" << Color::INFO << "Полное сканирование: "
               << Color::CYAN << target << Color::RESET << std::endl;
     std::cout << "──────────────────────────────────────────\n";
 
-    auto scan_start = std::chrono::steady_clock::now();
+    auto t_start = std::chrono::steady_clock::now();
 
     // WHOIS
     Whois whois;
     WhoisResult wi = whois.lookup(target);
-    std::cout << Color::INFO << "Страна: " << Color::YELLOW 
-              << wi.country << Color::RESET << std::endl;
-    std::cout << Color::INFO << "Город : " << Color::YELLOW 
-              << wi.city << Color::RESET << std::endl;
+    std::cout << Color::INFO << "Страна: " << Color::YELLOW << wi.country << Color::RESET << std::endl;
+    std::cout << Color::INFO << "Город : " << Color::YELLOW << wi.city   << Color::RESET << std::endl;
     std::cout << "──────────────────────────────────────────\n";
 
-    // OS
+    // ОС
     OSDetector os_det;
     std::string os = os_det.detect(target);
-    std::cout << Color::INFO << "ОС: " << Color::YELLOW 
-              << os << Color::RESET << std::endl;
+    std::cout << Color::INFO << "ОС: " << Color::YELLOW << os << Color::RESET << std::endl;
     std::cout << "──────────────────────────────────────────\n";
 
     // Порты
     std::cout << Color::INFO << "Сканируем порты 1-1024..." << Color::RESET << std::endl;
     ThreadScanner scanner(target, 50);
-    auto results = scanner.scan(1, 1024);
-    print_table(results);
+    auto ports = scanner.scan(1, 1024);
+    print_table(ports);
 
     // CVE
     std::cout << Color::WARN << "Проверяем CVE..." << Color::RESET << std::endl;
     CVEScanner cve;
-    for (const auto& r : results) {
+    for (const auto& r : ports) {
         auto cves = cve.search(r.service);
         if (!cves.empty()) {
-            std::cout << Color::INFO << "Порт " << r.port 
+            std::cout << Color::INFO << "Порт " << r.port
                       << " (" << r.service << "):" << Color::RESET << std::endl;
             cve.print_results(r.service, cves);
         }
@@ -109,75 +134,69 @@ void Menu::full_scan() {
 
     // Firewall
     FirewallDetector fw;
-    FirewallResult fw_result = fw.detect(target);
-    if (fw_result.detected) {
-        std::cout << Color::WARN << fw_result.status << Color::RESET << std::endl;
-    } else {
-        std::cout << Color::OK << fw_result.status << Color::RESET << std::endl;
-    }
+    FirewallResult fw_res = fw.detect(target);
+    std::cout << (fw_res.detected ? Color::WARN : Color::OK)
+              << fw_res.status << Color::RESET << std::endl;
     std::cout << "──────────────────────────────────────────\n";
 
-    // Subdomains
+    // Поддомены
     SubdomainEnum sub;
     auto subs = sub.enumerate(original_target);
     std::cout << "──────────────────────────────────────────\n";
 
-    auto scan_end = std::chrono::steady_clock::now();
-    int scan_sec = std::chrono::duration_cast<std::chrono::seconds>
-                   (scan_end - scan_start).count();
+    auto t_end   = std::chrono::steady_clock::now();
+    int  scan_sec = std::chrono::duration_cast<std::chrono::seconds>
+                    (t_end - t_start).count();
 
-    // Summary
-    print_summary(target, os, results.size(), scan_sec);
+    print_summary(target, os, ports.size(), scan_sec);
 
-    // Reports
+    // Отчёты
     std::cout << Color::INFO << "Сохраняем отчёты..." << Color::RESET << std::endl;
-    ScanReport report;
-    report.target = target;
-    report.ip = target;
-    report.os = os;
-    report.country = wi.country;
-    report.city = wi.city;
-    report.isp = wi.isp;
-    report.firewall_detected = fw_result.detected;
-    report.ports = results;
-    report.scan_time = scan_sec;
-    for (const auto& s : subs) {
-        report.subdomains.push_back(s.subdomain + " → " + s.ip);
-    }
+    ScanReport rep;
+    rep.target            = target;
+    rep.ip                = target;
+    rep.os                = os;
+    rep.country           = wi.country;
+    rep.city              = wi.city;
+    rep.isp               = wi.isp;
+    rep.firewall_detected = fw_res.detected;
+    rep.ports             = ports;
+    rep.scan_time         = scan_sec;
+    for (const auto& s : subs)
+        rep.subdomains.push_back(s.subdomain + " → " + s.ip);
 
     Reporter reporter;
-    reporter.save_txt(report);
-    reporter.save_json(report);
-    reporter.save_html(report);
+    reporter.save_txt(rep);
+    reporter.save_json(rep);
+    reporter.save_html(rep);
 }
 
 void Menu::quick_scan() {
-    std::cout << "\n" << Color::INFO << "Быстрый скан топ 100 портов..." 
+    std::cout << "\n" << Color::INFO << "Быстрый скан топ 1024 портов..."
               << Color::RESET << std::endl;
-
     ThreadScanner scanner(target, 50);
     auto results = scanner.scan(1, 1024);
     print_table(results);
 }
 
 void Menu::subdomain_scan() {
-    std::cout << "\n" << Color::INFO << "Поиск поддоменов..." 
+    std::cout << "\n" << Color::INFO << "Поиск поддоменов..."
               << Color::RESET << std::endl;
     SubdomainEnum sub;
-    auto results = sub.enumerate(target);
-    std::cout << Color::INFO << "Найдено: " << Color::GREEN 
+    auto results = sub.enumerate(original_target);
+    std::cout << Color::INFO << "Найдено: " << Color::GREEN
               << results.size() << Color::RESET << std::endl;
 }
 
 void Menu::packet_monitor() {
-    std::cout << "\n" << Color::INFO << "Мониторинг пакетов (lo)..." 
+    std::cout << "\n" << Color::INFO << "Мониторинг пакетов (lo)..."
               << Color::RESET << std::endl;
     PacketCapture capture("lo");
     capture.start(20);
 }
 
 void Menu::arp_scan() {
-    std::cout << Color::INFO << "Введите подсеть (например 192.168.1.0/24): " 
+    std::cout << Color::INFO << "Введите подсеть (например 192.168.1.0/24): "
               << Color::CYAN;
     std::string subnet;
     std::cin >> subnet;
@@ -204,8 +223,10 @@ void Menu::syn_scan() {
     int p_start = 1, p_end = 1024;
     size_t dash = range.find('-');
     if (dash != std::string::npos) {
-        p_start = std::stoi(range.substr(0, dash));
-        p_end   = std::stoi(range.substr(dash + 1));
+        try {
+            p_start = std::stoi(range.substr(0, dash));
+            p_end   = std::stoi(range.substr(dash + 1));
+        } catch (...) {}
     }
 
     SYNScanner syn;
@@ -237,15 +258,13 @@ void Menu::wordlist_scan() {
     wl.print_results(found);
 
     if (!found.empty()) {
-        std::string filename = "reports/" + original_target
-                             + "_wordlist.txt";
+        std::string filename = "reports/" + original_target + "_wordlist.txt";
         wl.save_to_file(found, filename);
     }
 }
 
 void Menu::shodan_lookup() {
-    std::cout << Color::INFO << "Введите Shodan API ключ: "
-              << Color::CYAN;
+    std::cout << Color::INFO << "Введите Shodan API ключ: " << Color::CYAN;
     std::string key;
     std::cin >> key;
     std::cout << Color::RESET;
@@ -275,7 +294,6 @@ void Menu::topology_scan() {
     Traceroute tr;
     auto hops = tr.trace(original_target);
 
-    // Конвертируем TraceHop в TopoNode
     std::vector<TopoNode> nodes;
     for (const auto& h : hops) {
         TopoNode n;
@@ -301,8 +319,10 @@ void Menu::udp_scan() {
     int p_start = 1, p_end = 1024;
     size_t dash = range.find('-');
     if (dash != std::string::npos) {
-        p_start = std::stoi(range.substr(0, dash));
-        p_end   = std::stoi(range.substr(dash + 1));
+        try {
+            p_start = std::stoi(range.substr(0, dash));
+            p_end   = std::stoi(range.substr(dash + 1));
+        } catch (...) {}
     }
 
     UDPScanner udp;
@@ -310,11 +330,76 @@ void Menu::udp_scan() {
     udp.print_results(results);
 }
 
+void Menu::scorecard_scan() {
+    std::cout << Color::INFO << "Анализируем безопасность цели..."
+              << Color::RESET << std::endl;
+
+    ScanResult sr;
+
+    ThreadScanner scanner(target, 50);
+    auto ports = scanner.scan(1, 1024);
+    sr.open_port_count = ports.size();
+
+    CVEScanner cve;
+    for (const auto& r : ports) {
+        auto cves = cve.search(r.service);
+        for (const auto& c : cves)
+            sr.cve_severities.push_back(c.severity);
+        if (r.service == "Telnet") sr.has_telnet = true;
+        if (r.service == "FTP")    sr.has_ftp    = true;
+        if (r.service == "RDP")    sr.has_rdp    = true;
+    }
+
+    SSLScanner ssl;
+    auto ssl_info  = ssl.scan(original_target);
+    sr.has_ssl     = !ssl_info.subject.empty();
+    sr.ssl_valid   = !ssl_info.expired && !ssl_info.self_signed;
+    sr.ssl_expired = ssl_info.expired;
+
+    WAFDetector waf;
+    sr.waf_detected = waf.detect(original_target).detected;
+
+    FirewallDetector fw;
+    sr.firewall_detected = fw.detect(target).detected;
+
+    Scorecard sc;
+    sc.print(sc.calculate(sr), original_target);
+}
+
+void Menu::http_dir_scan() {
+    std::cout << Color::INFO << "Порт (80=HTTP, 443=HTTPS, Enter=80): "
+              << Color::CYAN;
+    std::string p;
+    std::cin.ignore();
+    std::getline(std::cin, p);
+    std::cout << Color::RESET;
+
+    int port = 80;
+    if (!p.empty()) {
+        try { port = std::stoi(p); } catch (...) { port = 80; }
+    }
+
+    HTTPScanner http;
+    auto results = http.scan(original_target, port);
+    http.print_results(results);
+}
+
+void Menu::dns_enum_scan() {
+    DNSEnum dns;
+    auto result = dns.enumerate(original_target);
+    dns.print_results(result);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ГЛАВНЫЙ ЦИКЛ МЕНЮ
+// ─────────────────────────────────────────────────────────────────────────────
+
 void Menu::run() {
     print_banner();
 
     if (!get_target()) {
-        std::cout << Color::FAIL << "Ошибка ввода цели!" << Color::RESET << std::endl;
+        std::cout << Color::FAIL << "Ошибка ввода цели!"
+                  << Color::RESET << std::endl;
         return;
     }
 
@@ -343,6 +428,8 @@ void Menu::run() {
         std::cout << "│  [15] UDP скан                          │\n";
         std::cout << "│  [16] Сменить цель                      │\n";
         std::cout << "│  [17] Scorecard безопасности            │\n";
+        std::cout << "│  [18] HTTP директори скан               │\n";
+        std::cout << "│  [19] DNS разведка (enum + AXFR)        │\n";
         std::cout << "│  [0]  Выход                             │\n";
         std::cout << Color::RESET;
 
@@ -351,151 +438,114 @@ void Menu::run() {
         std::cin >> choice;
 
         switch (choice) {
-    case 1:  full_scan();         break;
-    case 2:  quick_scan();        break;
-    case 3:  subdomain_scan();    break;
-    case 4:  packet_monitor();    break;
-    case 5:  arp_scan();          break;
-    case 6:  traceroute_scan();   break;
-    case 7:  syn_scan();          break;
-    case 8:  ssl_scan();          break;
-    case 9:  waf_detect();        break;
-    case 10: vuln_scan();         break;
-    case 11: wordlist_scan();     break;
-    case 12: shodan_lookup();     break;
-    case 13: exploit_search();    break;
-    case 14: topology_scan();     break;
-    case 15: udp_scan();          break;
-    case 16: get_target();        break;
-    case 17: scorecard_scan();    break;
-    case 0:
-        std::cout << Color::INFO << "До свидания! "
-                  << Color::RESET << std::endl;
-        return;
-    default:
-        std::cout << Color::FAIL << "Неверный выбор!"
-                  << Color::RESET << std::endl;
-}
+            case 1:  full_scan();       break;
+            case 2:  quick_scan();      break;
+            case 3:  subdomain_scan();  break;
+            case 4:  packet_monitor();  break;
+            case 5:  arp_scan();        break;
+            case 6:  traceroute_scan(); break;
+            case 7:  syn_scan();        break;
+            case 8:  ssl_scan();        break;
+            case 9:  waf_detect();      break;
+            case 10: vuln_scan();       break;
+            case 11: wordlist_scan();   break;
+            case 12: shodan_lookup();   break;
+            case 13: exploit_search();  break;
+            case 14: topology_scan();   break;
+            case 15: udp_scan();        break;
+            case 16: get_target();      break;
+            case 17: scorecard_scan();  break;
+            case 18: http_dir_scan();   break;
+            case 19: dns_enum_scan();   break;
+            case 0:
+                std::cout << Color::INFO << "До свидания!"
+                          << Color::RESET << std::endl;
+                return;
+            default:
+                std::cout << Color::FAIL << "Неверный выбор!"
+                          << Color::RESET << std::endl;
+        }
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  CLI РЕЖИМ (запуск с аргументами)
+// ─────────────────────────────────────────────────────────────────────────────
 
 void Menu::run_cli(const std::string& t, int p_start, int p_end,
                    const std::string& output) {
     print_banner();
 
     original_target = t;
-    struct hostent* host = gethostbyname(t.c_str());
-    if (!host) {
-        std::cout << Color::FAIL << "[-] Не удалось разрезолвить: " 
+    std::string ip  = resolve_host(t);
+    if (ip.empty()) {
+        std::cout << Color::FAIL << "[-] Не удалось разрезолвить: "
                   << t << Color::RESET << std::endl;
         return;
     }
-    target = inet_ntoa(*(struct in_addr*)host->h_addr_list[0]);
+    target = ip;
     if (target != t) {
         std::cout << Color::INFO << "Резолвинг: " << Color::YELLOW
                   << t << " -> " << target << Color::RESET << std::endl;
     }
 
-    std::cout << Color::INFO << "Порты: " << Color::CYAN 
+    std::cout << Color::INFO << "Порты: " << Color::CYAN
               << p_start << "-" << p_end << Color::RESET << std::endl;
     std::cout << "──────────────────────────────────────────\n";
 
-    auto scan_start = std::chrono::steady_clock::now();
+    auto t_start = std::chrono::steady_clock::now();
 
     Whois whois;
     WhoisResult wi = whois.lookup(target);
-    std::cout << Color::INFO << "Страна: " << Color::YELLOW 
+    std::cout << Color::INFO << "Страна: " << Color::YELLOW
               << wi.country << Color::RESET << std::endl;
     std::cout << "──────────────────────────────────────────\n";
 
     OSDetector os_det;
     std::string os = os_det.detect(target);
-    std::cout << Color::INFO << "ОС: " << Color::YELLOW 
+    std::cout << Color::INFO << "ОС: " << Color::YELLOW
               << os << Color::RESET << std::endl;
     std::cout << "──────────────────────────────────────────\n";
 
     ThreadScanner scanner(target, 50);
-    auto results = scanner.scan(p_start, p_end);
-    print_table(results);
+    auto ports = scanner.scan(p_start, p_end);
+    print_table(ports);
 
     CVEScanner cve;
-    for (const auto& r : results) {
+    for (const auto& r : ports) {
         auto cves = cve.search(r.service);
         if (!cves.empty()) cve.print_results(r.service, cves);
     }
 
     FirewallDetector fw;
-    FirewallResult fw_result = fw.detect(target);
-    std::cout << (fw_result.detected ? Color::WARN : Color::OK)
-              << fw_result.status << Color::RESET << std::endl;
+    FirewallResult fw_res = fw.detect(target);
+    std::cout << (fw_res.detected ? Color::WARN : Color::OK)
+              << fw_res.status << Color::RESET << std::endl;
 
     SubdomainEnum sub;
     auto subs = sub.enumerate(original_target);
 
-    auto scan_end = std::chrono::steady_clock::now();
-    int scan_sec = std::chrono::duration_cast<std::chrono::seconds>
-                   (scan_end - scan_start).count();
+    auto t_end    = std::chrono::steady_clock::now();
+    int  scan_sec = std::chrono::duration_cast<std::chrono::seconds>
+                    (t_end - t_start).count();
 
-    print_summary(target, os, results.size(), scan_sec);
+    print_summary(target, os, ports.size(), scan_sec);
 
-    ScanReport report;
-    report.target = original_target;
-    report.ip = target;
-    report.os = os;
-    report.country = wi.country;
-    report.city = wi.city;
-    report.isp = wi.isp;
-    report.firewall_detected = fw_result.detected;
-    report.ports = results;
-    report.scan_time = scan_sec;
+    ScanReport rep;
+    rep.target            = original_target;
+    rep.ip                = target;
+    rep.os                = os;
+    rep.country           = wi.country;
+    rep.city              = wi.city;
+    rep.isp               = wi.isp;
+    rep.firewall_detected = fw_res.detected;
+    rep.ports             = ports;
+    rep.scan_time         = scan_sec;
     for (const auto& s : subs)
-        report.subdomains.push_back(s.subdomain + " → " + s.ip);
+        rep.subdomains.push_back(s.subdomain + " → " + s.ip);
 
     Reporter reporter;
-    if (output == "txt" || output == "all") reporter.save_txt(report);
-    if (output == "json" || output == "all") reporter.save_json(report);
-    if (output == "html" || output == "all") reporter.save_html(report);
+    if (output == "txt"  || output == "all") reporter.save_txt(rep);
+    if (output == "json" || output == "all") reporter.save_json(rep);
+    if (output == "html" || output == "all") reporter.save_html(rep);
 }
-
-void Menu::scorecard_scan() {
-    std::cout << Color::INFO << "Анализируем безопасность цели..." 
-              << Color::RESET << std::endl;
-
-    ScanResult sr;
-
-    ThreadScanner scanner(target, 50);
-    auto ports = scanner.scan(1, 1024);
-    sr.open_port_count = ports.size();
-
-    CVEScanner cve;
-    for (const auto& r : ports) {
-        auto cves = cve.search(r.service);
-        for (const auto& c : cves)
-            sr.cve_severities.push_back(c.severity);
-        if (r.service == "Telnet") sr.has_telnet = true;
-        if (r.service == "FTP")    sr.has_ftp    = true;
-        if (r.service == "RDP")    sr.has_rdp    = true;
-    }
-
-    SSLScanner ssl;
-    auto ssl_info = ssl.scan(original_target);
-    sr.has_ssl     = !ssl_info.subject.empty();
-    sr.ssl_valid   = !ssl_info.expired && !ssl_info.self_signed;
-    sr.ssl_expired = ssl_info.expired;
-
-    WAFDetector waf;
-    auto waf_result = waf.detect(original_target);
-    sr.waf_detected = waf_result.detected;
-
-    FirewallDetector fw;
-    auto fw_result = fw.detect(target);
-    sr.firewall_detected = fw_result.detected;
-
-    Scorecard sc;
-    auto card = sc.calculate(sr);
-    sc.print(card, original_target);
-}
-    
-
-
-
