@@ -7,56 +7,71 @@
 #include <string>
 #include <array>
 
-// Выполняем команду и читаем вывод
+// FIX: lambda вместо &pclose
 static std::string exec_cmd(const std::string& cmd) {
-    std::array<char, 256> buffer;
+    std::array<char, 512> buffer;
     std::string result;
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
+    auto closer = [](FILE* f) { if (f) pclose(f); };
+    std::unique_ptr<FILE, decltype(closer)> pipe(popen(cmd.c_str(), "r"), closer);
     if (!pipe) return "";
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+    while (fgets(buffer.data(), (int)buffer.size(), pipe.get()) != nullptr)
         result += buffer.data();
-    }
     return result;
 }
 
-// Получаем WHOIS через curl
+// ── Парсим одно поле из JSON ──────────────────────────
+static std::string parse_json_field(const std::string& json,
+                                     const std::string& key) {
+    // Ищем "key":"value"
+    std::string search = "\"" + key + "\":\"";
+    size_t pos = json.find(search);
+    if (pos == std::string::npos) return "";
+    pos += search.size();
+    size_t end = json.find("\"", pos);
+    if (end == std::string::npos) return "";
+    return json.substr(pos, end - pos);
+}
+
+// ── WHOIS через ip-api.com (JSON формат) ─────────────
 WhoisResult Whois::lookup(const std::string& target) {
     WhoisResult result;
     result.ip = target;
 
-    std::cout << Color::INFO << "Получаем WHOIS информацию..." << Color::RESET << std::endl;
-
-    // Используем curl для запроса к ip-api.com
-    std::string cmd = "curl -s 'http://ip-api.com/line/" + target + 
-                      "?fields=country,city,org,isp' 2>/dev/null";
+    // JSON формат — надёжнее чем line (поля всегда на месте)
+    std::string cmd = "curl -s --max-time 5 "
+                      "'http://ip-api.com/json/" + target +
+                      "?fields=country,regionName,city,org,isp,as,timezone'"
+                      " 2>/dev/null";
     std::string output = exec_cmd(cmd);
 
-    if (output.empty()) {
-        result.country = "Недоступно";
-        result.city    = "Недоступно";
-        result.org     = "Недоступно";
-        result.isp     = "Недоступно";
+    if (output.empty() || output.find("fail") != std::string::npos) {
+        result.country  = "Приватная сеть (RFC1918)";
+        result.region   = "-";
+        result.city     = "-";
+        result.org      = "-";    
+        result.isp      = "-";
+        result.as       = "-";
+        result.timezone = "-";
         return result;
     }
 
-    // Парсим строки ответа
-    std::vector<std::string> lines;
-    std::string line;
-    for (char c : output) {
-        if (c == '\n') {
-            if (!line.empty()) lines.push_back(line);
-            line.clear();
-        } else {
-            line += c;
-        }
-    }
+    // Парсим каждое поле по ключу — не зависит от порядка строк
+    result.country  = parse_json_field(output, "country");
+    result.region   = parse_json_field(output, "regionName");
+    result.city     = parse_json_field(output, "city");
+    result.org      = parse_json_field(output, "org");
+    result.isp      = parse_json_field(output, "isp");
+    result.as       = parse_json_field(output, "as");
+    result.timezone = parse_json_field(output, "timezone");
 
-    if (lines.size() >= 4) {
-        result.country = lines[0];
-        result.city    = lines[1];
-        result.org     = lines[2];
-        result.isp     = lines[3];
-    }
+    // Заполняем пустые поля
+    if (result.country.empty())  result.country  = "Неизвестно";
+    if (result.region.empty())   result.region   = "Неизвестно";
+    if (result.city.empty())     result.city     = "Неизвестно";
+    if (result.org.empty())      result.org      = "Неизвестно";
+    if (result.isp.empty())      result.isp      = "Неизвестно";
+    if (result.as.empty())       result.as       = "Неизвестно";
+    if (result.timezone.empty()) result.timezone = "Неизвестно";
 
     return result;
 }

@@ -30,5 +30,6 @@ private:
     void udp_scan();
     void scorecard_scan();
     void http_dir_scan();
-    void dns_enum_scan();   // новый метод
+    void dns_enum_scan();
+    void multi_scan();      // [20] новый модуль
 };

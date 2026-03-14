@@ -15,19 +15,18 @@
 #include <fcntl.h>
 #include <sys/select.h>
 
-// =============================================
-//   THREAD POOL — пул потоков
-// =============================================
+// ═══════════════════════════════════════════════
+//   THREAD POOL
+// ═══════════════════════════════════════════════
 class ThreadPool {
 public:
-    ThreadPool(int num_threads) : stop(false) {
-        for (int i = 0; i < num_threads; i++) {
+    explicit ThreadPool(int n) : stop(false), completed(0) {
+        for (int i = 0; i < n; i++) {
             workers.emplace_back([this] {
                 while (true) {
                     std::function<void()> task;
                     {
                         std::unique_lock<std::mutex> lock(queue_mutex);
-                        // Ждём задачу или сигнал остановки
                         condition.wait(lock, [this] {
                             return stop || !tasks.empty();
                         });
@@ -35,22 +34,20 @@ public:
                         task = std::move(tasks.front());
                         tasks.pop();
                     }
-                    task(); // Выполняем задачу
+                    task();
                 }
             });
         }
     }
 
-    // Добавляем задачу в очередь
     void enqueue(std::function<void()> task) {
         {
             std::lock_guard<std::mutex> lock(queue_mutex);
             tasks.push(std::move(task));
         }
-        condition.notify_one(); // Будим один поток
+        condition.notify_one();
     }
 
-    // Ждём завершения всех задач
     void wait_all(int total_tasks) {
         std::unique_lock<std::mutex> lock(done_mutex);
         done_cv.wait(lock, [this, total_tasks] {
@@ -76,21 +73,23 @@ public:
     }
 
 private:
-    std::vector<std::thread> workers;
-    std::queue<std::function<void()>> tasks;
-    std::mutex queue_mutex;
-    std::condition_variable condition;
-    std::mutex done_mutex;
-    std::condition_variable done_cv;
-    int completed = 0;
-    bool stop;
+    std::vector<std::thread>            workers;
+    std::queue<std::function<void()>>   tasks;
+    std::mutex                          queue_mutex;
+    std::condition_variable             condition;
+    std::mutex                          done_mutex;
+    std::condition_variable             done_cv;
+    bool                                stop;
+    int                                 completed;
 };
 
-// =============================================
+// ═══════════════════════════════════════════════
 
-ThreadScanner::ThreadScanner(const std::string& target_ip, int num_threads)
-    : target_ip(target_ip), num_threads(num_threads) {}
+// FIX: параметры ip_ и threads_ вместо target_ip / num_threads (shadow warning)
+ThreadScanner::ThreadScanner(const std::string& ip_, int threads_)
+    : target_ip(ip_), num_threads(threads_) {}
 
+// ── Проверка одного порта ─────────────────────
 static bool check_port(const std::string& ip, int port) {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) return false;
@@ -109,13 +108,13 @@ static bool check_port(const std::string& ip, int port) {
     FD_SET(sock, &fdset);
 
     struct timeval tv;
-    tv.tv_sec  = 0;
-    tv.tv_usec = 300000; // 300мс
+    tv.tv_sec  = 1;      // 1 секунда для удалённых хостов
+    tv.tv_usec = 0;
 
     bool is_open = false;
     if (select(sock + 1, NULL, &fdset, NULL, &tv) == 1) {
-        int error = 0;
-        socklen_t len = sizeof(error);
+        int       error = 0;
+        socklen_t len   = sizeof(error);
         getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len);
         is_open = (error == 0);
     }
@@ -124,6 +123,7 @@ static bool check_port(const std::string& ip, int port) {
     return is_open;
 }
 
+// ── Сканирование диапазона портов (один поток) ─
 void ThreadScanner::scan_range(int start, int end,
                                 std::vector<PortResult>& results) {
     for (int port = start; port <= end; port++) {
@@ -135,46 +135,49 @@ void ThreadScanner::scan_range(int start, int end,
             ServiceDetector detector;
             result.service = detector.detect(target_ip, port);
 
-            std::lock_guard<std::mutex> lock(results_mutex);
-            results.push_back(result);
+            {
+                std::lock_guard<std::mutex> lock(results_mutex);
+                results.push_back(result);
+            }
 
             std::cout << "\r" << Color::OK
                       << "Порт " << Color::BOLD << result.port
                       << Color::RESET << Color::GREEN << " ОТКРЫТ"
                       << Color::RESET << " | " << Color::YELLOW
                       << result.service << Color::RESET
-                      << std::string(20, ' ') << std::endl;
+                      << std::string(20, ' ') << "\n";
         }
     }
 }
 
+// ── Главная функция скана ─────────────────────
 std::vector<PortResult> ThreadScanner::scan(int start_port, int end_port) {
     std::vector<PortResult> results;
 
     int total = end_port - start_port + 1;
-    int chunk = total / num_threads;
+    // Защита: потоков не больше чем портов
+    int threads = std::min(num_threads, total);
+    int chunk   = total / threads;
 
     std::cout << Color::INFO << "Thread Pool: " << Color::CYAN
-              << num_threads << " потоков" << Color::RESET << std::endl;
+              << threads << " потоков" << Color::RESET
+              << " | Портов: " << total << "\n";
 
     auto start_time = std::chrono::steady_clock::now();
 
-    // Создаём пул — потоки живут всё время скана
-    ThreadPool pool(num_threads);
+    ThreadPool pool(threads);
 
-    // Раздаём задачи — каждый поток получает свой диапазон
-    for (int i = 0; i < num_threads; i++) {
-        int start = start_port + (i * chunk);
-        int end   = (i == num_threads - 1) ? end_port : start + chunk - 1;
+    for (int i = 0; i < threads; i++) {
+        int s = start_port + (i * chunk);
+        int e = (i == threads - 1) ? end_port : s + chunk - 1;
 
-        pool.enqueue([this, start, end, &results, &pool] {
-            scan_range(start, end, results);
+        pool.enqueue([this, s, e, &results, &pool] {
+            scan_range(s, e, results);
             pool.increment_done();
         });
     }
 
-    // Ждём все задачи
-    pool.wait_all(num_threads);
+    pool.wait_all(threads);
 
     // Сортируем по номеру порта
     std::sort(results.begin(), results.end(),
@@ -183,12 +186,14 @@ std::vector<PortResult> ThreadScanner::scan(int start_port, int end_port) {
         });
 
     auto end_time = std::chrono::steady_clock::now();
-    int total_sec = std::chrono::duration_cast<std::chrono::seconds>(
-        end_time - start_time).count();
+    int  total_sec = std::chrono::duration_cast<std::chrono::seconds>
+                     (end_time - start_time).count();
 
     std::cout << Color::INFO << "Завершено за "
               << Color::YELLOW << total_sec << " сек"
-              << Color::RESET << std::endl;
+              << Color::RESET
+              << " | Открытых портов: " << Color::GREEN
+              << results.size() << Color::RESET << "\n";
 
     return results;
 }

@@ -29,6 +29,7 @@
 #include <netdb.h>
 #include <chrono>
 #include <cstring>
+#include "modules/multi_scan.h"
 
 // ── Резолвинг домена в IP (getaddrinfo вместо устаревшего gethostbyname) ──
 static std::string resolve_host(const std::string& host) {
@@ -103,8 +104,13 @@ void Menu::full_scan() {
     // WHOIS
     Whois whois;
     WhoisResult wi = whois.lookup(target);
-    std::cout << Color::INFO << "Страна: " << Color::YELLOW << wi.country << Color::RESET << std::endl;
-    std::cout << Color::INFO << "Город : " << Color::YELLOW << wi.city   << Color::RESET << std::endl;
+    std::cout << Color::INFO << "Страна  : " << Color::YELLOW << wi.country  << Color::RESET << "\n";
+    std::cout << Color::INFO << "Регион  : " << Color::YELLOW << wi.region   << Color::RESET << "\n";
+    std::cout << Color::INFO << "Город   : " << Color::YELLOW << wi.city     << Color::RESET << "\n";
+    std::cout << Color::INFO << "Орг     : " << Color::YELLOW << wi.org      << Color::RESET << "\n";
+    std::cout << Color::INFO << "ISP     : " << Color::YELLOW << wi.isp      << Color::RESET << "\n";
+    std::cout << Color::INFO << "AS      : " << Color::YELLOW << wi.as       << Color::RESET << "\n";
+    std::cout << Color::INFO << "Timezone: " << Color::YELLOW << wi.timezone << Color::RESET << "\n";
     std::cout << "──────────────────────────────────────────\n";
 
     // ОС
@@ -184,8 +190,7 @@ void Menu::subdomain_scan() {
               << Color::RESET << std::endl;
     SubdomainEnum sub;
     auto results = sub.enumerate(original_target);
-    std::cout << Color::INFO << "Найдено: " << Color::GREEN
-              << results.size() << Color::RESET << std::endl;
+
 }
 
 void Menu::packet_monitor() {
@@ -276,7 +281,7 @@ void Menu::shodan_lookup() {
 }
 
 void Menu::exploit_search() {
-    std::cout << Color::INFO << "Введите сервис (SSH/HTTP/FTP/MySQL): "
+    std::cout << Color::INFO << "Сервис (ssh/http/ftp/mysql/smb/rdp/redis/docker/vnc/php/grafana): "
               << Color::CYAN;
     std::string service;
     std::cin >> service;
@@ -390,6 +395,22 @@ void Menu::dns_enum_scan() {
     dns.print_results(result);
 }
 
+void Menu::multi_scan() {
+    std::cout << Color::INFO
+              << "Введите путь к файлу со списком целей\n"
+              << "(каждая строка = IP или домен, # = комментарий)\n"
+              << "Пример файла: targets.txt\n"
+              << "Путь: " << Color::CYAN;
+    std::string filename;
+    std::cin.ignore();
+    std::getline(std::cin, filename);
+    std::cout << Color::RESET;
+
+    MultiScanner ms;
+    auto results = ms.scan_from_file(filename);
+    ms.print_results(results);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  ГЛАВНЫЙ ЦИКЛ МЕНЮ
 // ─────────────────────────────────────────────────────────────────────────────
@@ -430,6 +451,7 @@ void Menu::run() {
         std::cout << "│  [17] Scorecard безопасности            │\n";
         std::cout << "│  [18] HTTP директори скан               │\n";
         std::cout << "│  [19] DNS разведка (enum + AXFR)        │\n";
+        std::cout << "│  [20] Параллельный скан целей           │\n";
         std::cout << "│  [0]  Выход                             │\n";
         std::cout << Color::RESET;
 
@@ -457,6 +479,7 @@ void Menu::run() {
             case 17: scorecard_scan();  break;
             case 18: http_dir_scan();   break;
             case 19: dns_enum_scan();   break;
+            case 20: multi_scan();      break;
             case 0:
                 std::cout << Color::INFO << "До свидания!"
                           << Color::RESET << std::endl;

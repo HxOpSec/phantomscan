@@ -4,9 +4,12 @@
 struct WhoisResult {
     std::string ip;
     std::string country;
+    std::string region;    // новое поле
+    std::string city;
     std::string org;
     std::string isp;
-    std::string city;
+    std::string as;        // новое поле
+    std::string timezone;  // новое поле
 };
 
 class Whois {

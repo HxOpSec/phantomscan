@@ -1,138 +1,221 @@
 #include "modules/waf_detect.h"
 #include "utils/colors.h"
 #include <iostream>
-#include <cstdio>
 #include <string>
+#include <cstdio>
+#include <memory>
+#include <vector>
+#include <algorithm>
+
+// ── Приводим строку к нижнему регистру ───────────────
+static std::string to_lower(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+    return s;
+}
+
+// ── Выполняем команду ─────────────────────────────────
+static std::string exec_cmd(const std::string& cmd) {
+    std::string result;
+    char line[2048];
+    auto closer = [](FILE* f) { if (f) pclose(f); };
+    std::unique_ptr<FILE, decltype(closer)> fp(
+        popen(cmd.c_str(), "r"), closer);
+    if (!fp) return "";
+    while (fgets(line, sizeof(line), fp.get()))
+        result += line;
+    return result;
+}
 
 WAFResult WAFDetector::detect(const std::string& target) {
     WAFResult result;
     result.detected = false;
-    result.name     = "Не обнаружен";
+    result.name     = "Not Detected";
     result.evidence = "";
 
     std::cout << Color::INFO << "Определяем WAF: " << Color::CYAN
-              << target << Color::RESET << std::endl;
+              << target << Color::RESET << "\n";
 
-    // Получаем заголовки через curl
-    std::string cmd = "curl -sI -m 5 --insecure https://" 
-                    + target + " 2>/dev/null";
-    FILE* pipe = popen(cmd.c_str(), "r");
-    if (!pipe) return result;
+    // Пробуем HTTPS, потом HTTP
+    std::string headers;
+    std::string body;
 
-    std::string headers = "";
-    char line[1024];
-    while (fgets(line, sizeof(line), pipe)) {
-        headers += std::string(line);
-    }
-    pclose(pipe);
-
-    // Если https не ответил — пробуем http
-    if (headers.empty()) {
-        cmd = "curl -sI -m 5 http://" + target + " 2>/dev/null";
-        pipe = popen(cmd.c_str(), "r");
-        if (pipe) {
-            while (fgets(line, sizeof(line), pipe))
-                headers += std::string(line);
-            pclose(pipe);
-        }
+    for (const auto& proto : {"https", "http"}) {
+        std::string cmd = "curl -sI -A 'Mozilla/5.0' -m 8 --insecure "
+                        + std::string(proto) + "://" + target
+                        + " 2>/dev/null";
+        headers = exec_cmd(cmd);
+        if (!headers.empty()) break;
     }
 
-    if (headers.empty()) {
-        std::cout << Color::WARN << "Сервер не отвечает"
-                  << Color::RESET << std::endl;
+    // Также получаем тело страницы (некоторые WAF видны в body)
+    std::string cmd_body = "curl -s -A 'Mozilla/5.0' -m 8 --insecure "
+                           "https://" + target +
+                           " 2>/dev/null | head -c 2000";
+    body = exec_cmd(cmd_body);
+
+    if (headers.empty() && body.empty()) {
+        std::cout << Color::WARN << "[!] Сервер не отвечает\n"
+                  << Color::RESET;
         return result;
     }
 
-    // Определяем WAF по заголовкам
-    auto contains = [&](const std::string& s) {
-        return headers.find(s) != std::string::npos;
+    std::string all   = headers + body;
+    std::string lower = to_lower(all);
+
+    // ── Функция поиска (case-insensitive) ─────────────
+    auto has = [&](const std::string& s) -> bool {
+        return lower.find(to_lower(s)) != std::string::npos;
     };
 
-    if (contains("cloudflare") || contains("Cloudflare") ||
-        contains("cf-ray") || contains("CF-RAY")) {
-        result.detected  = true;
-        result.name      = "Cloudflare";
-        result.evidence  = "Заголовок: cf-ray / cloudflare";
+    // ── База WAF сигнатур ─────────────────────────────
+    struct WAFSig {
+        const char* name;
+        std::vector<std::string> signatures;
+        const char* evidence;
+    };
+
+    std::vector<WAFSig> waf_db = {
+        { "Cloudflare",
+          { "cf-ray", "cloudflare", "cf-cache-status",
+            "__cfduid", "cf-request-id" },
+          "Header: cf-ray / cloudflare" },
+
+        { "AWS WAF / CloudFront",
+          { "x-amzn-requestid", "x-amz-cf-id", "awselb",
+            "x-amzn-trace-id", "x-cache: hit from cloudfront" },
+          "Header: x-amzn / x-amz-cf-id" },
+
+        { "Akamai",
+          { "akamai", "x-akamai", "akamaighost",
+            "x-check-cacheable", "ak_bmsc" },
+          "Header: X-Akamai / AkamaiGHost" },
+
+        { "Imperva Incapsula",
+          { "x-cdn: incapsula", "incap_ses", "visid_incap",
+            "x-iinfo", "incapsula" },
+          "Header: X-CDN=Incapsula / Cookie: incap_ses" },
+
+        { "Sucuri",
+          { "x-sucuri", "sucuri", "x-sucuri-id",
+            "x-sucuri-cache" },
+          "Header: X-Sucuri" },
+
+        { "ModSecurity",
+          { "mod_security", "modsecurity", "noyb",
+            "x-mod-sec", "501 method not implemented" },
+          "Header: mod_security / 501 response" },
+
+        { "F5 BIG-IP ASM",
+          { "x-wa-info", "bigip", "f5-TrafficShield",
+            "ts=", "x-cnection" },
+          "Header: X-WA-Info / BigIP" },
+
+        { "Barracuda WAF",
+          { "barracuda", "x-firewall",
+            "barra_counter_session" },
+          "Header: X-FireWall / Barracuda" },
+
+        { "Fortinet FortiWeb",
+          { "fortiwafsid", "x-fw-", "fortiweb",
+            "cookiesession1" },
+          "Header: FORTIWAFSID / FortiWeb" },
+
+        { "Azure Front Door",
+          { "x-azure-ref", "x-fd-healthprobe",
+            "x-msedge-ref", "azure" },
+          "Header: X-Azure-Ref / X-MSEdge-Ref" },
+
+        { "DDoS-Guard",
+          { "ddos-guard", "x-ddos-guard",
+            "__ddg1", "__ddg2" },
+          "Header/Cookie: DDoS-Guard" },
+
+        { "Nginx / OpenResty WAF",
+          { "x-ngx-proxy", "openresty",
+            "x-ratelimit-limit" },
+          "Header: X-Ngx-Proxy / OpenResty" },
+
+        { "Wallarm",
+          { "wallarm", "x-wallarm-node" },
+          "Header: X-Wallarm-Node" },
+
+        { "Radware AppWall",
+          { "x-sl-compstate", "rdwr", "appwall" },
+          "Header: X-SL-CompState / Radware" },
+
+        { "Reblaze",
+          { "rbzid", "x-reblaze", "reblaze" },
+          "Cookie: rbzid / Reblaze" },
+    };
+
+    // Проверяем каждый WAF
+    for (const auto& waf : waf_db) {
+        for (const auto& sig : waf.signatures) {
+            if (has(sig)) {
+                result.detected = true;
+                result.name     = waf.name;
+                result.evidence = waf.evidence;
+                return result;
+            }
+        }
     }
-    else if (contains("X-Sucuri") || contains("sucuri") ||
-             contains("Sucuri")) {
-        result.detected  = true;
-        result.name      = "Sucuri";
-        result.evidence  = "Заголовок: X-Sucuri";
-    }
-    else if (contains("X-CDN: Incapsula") || 
-             contains("incap_ses") ||
-             contains("visid_incap")) {
-        result.detected  = true;
-        result.name      = "Imperva Incapsula";
-        result.evidence  = "Заголовок: X-CDN / Cookie: incap_ses";
-    }
-    else if (contains("X-Akamai") || contains("AkamaiGHost") ||
-             contains("akamai")) {
-        result.detected  = true;
-        result.name      = "Akamai";
-        result.evidence  = "Заголовок: X-Akamai / AkamaiGHost";
-    }
-    else if (contains("X-Powered-By: AWS") || 
-             contains("awselb") ||
-             contains("x-amzn")) {
-        result.detected  = true;
-        result.name      = "AWS WAF";
-        result.evidence  = "Заголовок: x-amzn / awselb";
-    }
-    else if (contains("X-Azure") || contains("Azure")) {
-        result.detected  = true;
-        result.name      = "Azure Front Door";
-        result.evidence  = "Заголовок: X-Azure";
-    }
-    else if (contains("X-FireWall") || contains("Barracuda")) {
-        result.detected  = true;
-        result.name      = "Barracuda WAF";
-        result.evidence  = "Заголовок: X-FireWall";
-    }
-    else if (contains("mod_security") || 
-             contains("Mod_Security") ||
-             contains("NOYB")) {
-        result.detected  = true;
-        result.name      = "ModSecurity";
-        result.evidence  = "Заголовок: mod_security";
+
+    // Дополнительная проверка — нестандартный статус 403/406/429
+    // может означать WAF без явных заголовков
+    if (has("x-powered-by:") == false &&
+        (has("403 forbidden") || has("406 not acceptable") ||
+         has("429 too many"))) {
+        result.detected = false; // не уверены — не помечаем
+        result.name     = "Possible WAF (403/429)";
+        result.evidence = "Suspicious HTTP status code";
     }
 
     return result;
 }
 
 void WAFDetector::print_results(const WAFResult& result) {
-    std::cout << "\n";
-    std::cout << Color::CYAN;
-    std::cout << "┌─────────────────────────────────────────────┐\n";
-    std::cout << "│              WAF ДЕТЕКТОР                   │\n";
-    std::cout << "├─────────────────────────────────────────────┤\n";
-    std::cout << Color::RESET;
+    // Рамка: ║ + 48 символов + ║
+    // Префикс "  Label    : " = 13 символов => значение = 48-13-1 = 34
+    const int W = 34;
+    auto fit = [&](std::string s) -> std::string {
+        if ((int)s.size() > W) return s.substr(0, W - 3) + "...";
+        while ((int)s.size() < W) s += " ";
+        return s;
+    };
+
+    auto row = [](std::string content) -> std::string {
+        while ((int)content.size() < 48) content += " ";
+        return "║" + content + "║\n";
+    };
+
+    std::cout << "\n" << Color::CYAN
+              << "╔════════════════════════════════════════════════╗\n"
+              << row("      WAF / FIREWALL DETECTOR")
+              << "╠════════════════════════════════════════════════╣\n"
+              << Color::RESET;
 
     if (result.detected) {
-        std::string name = result.name;
-        while (name.size() < 43) name += " ";
-        std::string ev = result.evidence;
-        if (ev.size() > 43) ev = ev.substr(0, 40) + "...";
-        while (ev.size() < 43) ev += " ";
-
-        std::cout << Color::FAIL;
-        std::cout << "│ WAF     : ОБНАРУЖЕН!                        │\n";
-        std::cout << Color::RESET;
-        std::cout << Color::WARN;
-        std::cout << "│ Тип     : " << name << " │\n";
-        std::cout << "│ Признак : " << ev   << " │\n";
-        std::cout << Color::RESET;
+        std::cout << Color::RED
+                  << row("  Status   : WAF DETECTED  [!]")
+                  << Color::YELLOW
+                  << row("  WAF Name : " + fit(result.name))
+                  << row("  Evidence : " + fit(result.evidence))
+                  << Color::CYAN
+                  << "╠════════════════════════════════════════════════╣\n"
+                  << Color::YELLOW
+                  << row("  [!] Bypass WAF before scanning!       ")
+                  << Color::RESET;
     } else {
-        std::cout << Color::OK;
-        std::cout << "│ WAF     : Не обнаружен                      │\n";
-        std::cout << Color::RESET;
-        std::cout << Color::INFO;
-        std::cout << "│ Внимание: WAF может быть скрыт              │\n";
-        std::cout << Color::RESET;
+        std::cout << Color::GREEN
+                  << row("  Status   : Not Detected  [OK]")
+                  << Color::CYAN
+                  << "╠════════════════════════════════════════════════╣\n"
+                  << Color::WHITE
+                  << row("  [*] WAF может быть скрыт или не активен")
+                  << Color::RESET;
     }
 
-    std::cout << Color::CYAN;
-    std::cout << "└─────────────────────────────────────────────┘\n";
-    std::cout << Color::RESET;
+    std::cout << Color::CYAN
+              << "╚════════════════════════════════════════════════╝\n"
+              << Color::RESET;
 }
