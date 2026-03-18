@@ -558,10 +558,10 @@ WhoisAnalysis Scorecard::check_whois(const std::string& domain) {
     std::string expiry = whois_field(out,
         {"registry expiry date:", "registrar registration expiration date:",
          "expiration date:", "expires:", "expire:", "paid-till:",
-         "expiry date:", "validity:"});
+         "expiry date:", "expires on:", "validity:"});
     // Registrar
     std::string registrar = whois_field(out,
-        {"registrar:", "registrar name:", "sponsoring registrar:"});
+        {"registrar:", "registrar name:", "sponsoring registrar:", "admin-c:"});
     // Country
     std::string country = whois_field(out,
         {"registrant country:", "country:", "registrant: country"});
@@ -715,7 +715,10 @@ HTTPAnalysis Scorecard::check_http(const std::string& host) {
         headers = run_cmd(
             "curl -sIL --max-time 5 http://" + host + " 2>/dev/null");
 
-    if (headers.empty()) return r;
+    if (headers.empty()) {
+        r.penalty = 0;
+        return r;
+    }
 
     auto has_hdr = [&headers](const std::string& key) {
         std::string lkey = key;
@@ -837,15 +840,20 @@ std::vector<CVEFinding> Scorecard::check_cve(const std::string& host,
         filled.banner = grab_banner_raw(host, filled.port, filled.service);
         parse_banner(filled);
 
-        auto it = svc_meta.find(filled.service);
-        if (it == svc_meta.end() || should_replace_banner(it->second, filled))
-            svc_meta[filled.service] = filled;
+        std::string svc_key = (filled.service == "HTTPS") ? "HTTP" : filled.service;
+        PortsAnalysis::ServiceBanner stored = filled;
+        if (stored.service == "HTTPS") stored.service = "HTTP";
+
+        auto it = svc_meta.find(svc_key);
+        if (it == svc_meta.end() || should_replace_banner(it->second, stored))
+            svc_meta[svc_key] = stored;
         ports.banners[i] = filled;
     }
 
     std::set<std::string> seen_services;
     for (int p : ports.open_list) {
         std::string svc = port_to_service(p);
+        if (svc == "HTTPS") svc = "HTTP";
         if (svc.empty() || seen_services.count(svc)) continue;
         seen_services.insert(svc);
 
@@ -1019,9 +1027,11 @@ static void print_report(
             if (diff > 0)       hs << G  << "↑ +" << diff << " улучшение" << R;
             else if (diff < 0)  hs << RE << "↓ "  << diff << " ухудшение" << R;
             else                hs << C  << "→ без изменений"              << R;
-            int plain_len = static_cast<int>(
-                ("История: " + std::to_string(prev_score) + " pts → " +
-                 std::to_string(score) + " pts  ").size());
+            int plain_len = display_len("История: ")
+                          + static_cast<int>(std::to_string(prev_score).size())
+                          + display_len(" pts → ")
+                          + static_cast<int>(std::to_string(score).size())
+                          + display_len(" pts  ");
             std::string arrow_txt = (diff > 0) ? ("↑ +" + std::to_string(diff) + " улучшение") :
                                     (diff < 0) ? ("↓ "  + std::to_string(diff) + " ухудшение") :
                                                  "→ без изменений";
@@ -1142,6 +1152,21 @@ static void print_report(
         if (cves.empty()) {
             brow("  Уязвимостей не найдено в data/cve.json", 42);
         } else {
+            auto safe_truncate = [](const std::string& s, int max_vis) {
+                if (display_len(s) <= max_vis) return s;
+                std::string result;
+                int len = 0;
+                for (size_t i = 0; i < s.size(); ) {
+                    unsigned char c = static_cast<unsigned char>(s[i]);
+                    int bytes = (c < 0x80) ? 1 : (c < 0xE0) ? 2 :
+                                (c < 0xF0) ? 3 : 4;
+                    if (len + 1 > max_vis - 3) break;
+                    result += s.substr(i, static_cast<size_t>(bytes));
+                    len++;
+                    i += static_cast<size_t>(bytes);
+                }
+                return result + "...";
+            };
             std::ostringstream ss;
             ss << "Avg CVSS: " << std::fixed << std::setprecision(1) << avg
                << "   \u25a0 Critical: " << crit
@@ -1153,7 +1178,7 @@ static void print_report(
             for (size_t i = 0; i < cves.size() && i < 10; i++) {
                 auto& c = cves[i];
                 std::string desc = c.desc;
-                if (static_cast<int>(desc.size()) > 26) desc = desc.substr(0, 23) + "...";
+                desc = safe_truncate(desc, 26);
                 std::ostringstream ls;
                 ls << std::left << std::setw(16) << c.id
                    << "CVSS " << std::fixed << std::setprecision(1) << c.cvss
@@ -1371,6 +1396,8 @@ void Scorecard::run(const std::string& target) {
     std::cout << "\n" << Color::INFO
               << "Security Scorecard: " << Color::CYAN << target
               << Color::RESET << "\n\n";
+    std::string safe_target = target;
+    std::replace(safe_target.begin(), safe_target.end(), '.', '_');
 
     // ── Sequential steps with accurate progress ────────────────────────────
     PortsAnalysis ports = check_ports(target);
@@ -1383,11 +1410,10 @@ void Scorecard::run(const std::string& target) {
     print_progress(7, "Анализируем заголовки...");
     std::vector<CVEFinding> cves = check_cve(target, ports);
     print_progress(9, "Сопоставляем CVE...");
-    print_progress(10, "Готово!");
-    std::cout << "\n";
-
     bool firewall = check_firewall(target);
     WhoisAnalysis whois = check_whois(target);
+    print_progress(10, "Готово!");
+    std::cout << "\n";
 
     double elapsed = std::chrono::duration<double>(
         std::chrono::steady_clock::now() - t_start).count();
@@ -1400,7 +1426,7 @@ void Scorecard::run(const std::string& target) {
         try {
             std::string latest_file;
             int latest_score = 0;
-            std::string prefix = "scorecard_" + target + "_";
+            std::string prefix = "scorecard_" + safe_target + "_";
             for (auto& entry : std::filesystem::directory_iterator("logs")) {
                 std::string name = entry.path().filename().string();
                 if (name.rfind(prefix, 0) == 0
@@ -1459,7 +1485,7 @@ void Scorecard::run(const std::string& target) {
         struct tm* tm_info = localtime(&now);
         char date_buf[16];
         strftime(date_buf, sizeof(date_buf), "%Y-%m-%d", tm_info);
-        std::string log_path = "logs/scorecard_" + target + "_" +
+        std::string log_path = "logs/scorecard_" + safe_target + "_" +
                                std::string(date_buf) + ".txt";
         try {
             std::ofstream f(log_path);
