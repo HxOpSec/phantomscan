@@ -20,6 +20,8 @@
 #include <ctime>
 #include <cctype>
 #include <set>
+#include <regex>
+#include <map>
 
 #include <sys/socket.h>
 #include <netdb.h>
@@ -157,6 +159,218 @@ static std::string port_to_service(int port) {
         case 27017: return "MongoDB";
         default:   return "";
     }
+}
+
+// Lowercase helper
+static std::string to_lower(const std::string& s) {
+    std::string out = s;
+    for (char& ch : out) ch = std::tolower(static_cast<unsigned char>(ch));
+    return out;
+}
+
+// Trim leading/trailing whitespace
+static std::string trim(const std::string& s) {
+    size_t start = s.find_first_not_of(" \t\r\n");
+    size_t end   = s.find_last_not_of(" \t\r\n");
+    if (start == std::string::npos || end == std::string::npos) return "";
+    return s.substr(start, end - start + 1);
+}
+
+static std::string format_port_token(const PortsAnalysis::ServiceBanner& sb) {
+    std::string service = sb.service.empty() ? "port" : sb.service;
+    std::string product = sb.product;
+    std::string version = sb.version;
+
+    if (!product.empty()) {
+        std::string product_l = to_lower(product);
+        std::string service_l = to_lower(service);
+        // Prefer product for HTTP-like services
+        if (service_l == "http" || service_l == "https" || service_l == "tomcat") {
+            std::string token = product;
+            if (sb.version_known && !version.empty())
+                token += "/" + version;
+            return token;
+        }
+        // SSH -> keep service prefix
+        if (service_l == "ssh" && product_l == "openssh") {
+            std::string token = "SSH-OpenSSH";
+            if (sb.version_known && !version.empty())
+                token += "_" + version;
+            return token;
+        }
+        std::string token = service + "-" + product;
+        if (sb.version_known && !version.empty())
+            token += "/" + version;
+        return token;
+    }
+    if (sb.version_known && !version.empty())
+        return service + "-" + version;
+    return service;
+}
+
+static bool should_replace_banner(const PortsAnalysis::ServiceBanner& current,
+                                  const PortsAnalysis::ServiceBanner& candidate) {
+    if (current.service.empty()) return true;
+    if (candidate.version_known && !current.version_known) return true;
+    if (current.banner.empty() && !candidate.banner.empty()) return true;
+    return false;
+}
+
+// Extract banner for given port/service using lightweight commands (3-5s timeout)
+static std::string grab_banner_raw(const std::string& host, int port, const std::string& svc) {
+    // Basic sanitization to avoid shell injection in helper commands
+    static const std::regex host_re(
+        R"(^([A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*)$|^(\[?[A-Fa-f0-9:]+\]?)$)");
+    if (!std::regex_match(host, host_re))
+        return "";
+    if (host.find_first_of("'\"`$") != std::string::npos)
+        return "";
+    if (host.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-:[]") != std::string::npos)
+        return "";
+    std::string cmd;
+    std::string safe_host = host;
+    if (port == 22 || svc == "SSH") {
+        cmd = "echo '' | timeout 3 nc -w 2 " + safe_host + " 22 2>/dev/null";
+    } else if (port == 21 || svc == "FTP") {
+        cmd = "echo '' | timeout 3 nc -w 2 " + safe_host + " 21 2>/dev/null";
+    } else if (port == 25 || svc == "SMTP") {
+        cmd = "echo '' | timeout 3 nc -w 2 " + safe_host + " 25 2>/dev/null";
+    } else if (port == 80 || port == 8080 || svc == "HTTP" || svc == "Tomcat") {
+        cmd = "curl -sI --max-time 5 --url http://" + safe_host + " 2>/dev/null";
+    } else if (port == 443 || port == 8443 || svc == "HTTPS") {
+        cmd = "curl -sI --max-time 5 --url https://" + safe_host + " 2>/dev/null";
+    } else {
+        return "";
+    }
+    return trim(run_cmd(cmd));
+}
+
+// Parse banner into product + version token
+static void parse_banner(PortsAnalysis::ServiceBanner& sb) {
+    if (sb.banner.empty()) return;
+    std::string lower = to_lower(sb.banner);
+
+    if (sb.service == "SSH") {
+        std::regex re("openssh[_-]?([0-9]+(?:\\.[0-9]+)*)", std::regex::icase);
+        std::smatch m;
+        if (std::regex_search(sb.banner, m, re) && m.size() >= 2) {
+            sb.product = "OpenSSH";
+            sb.version = m.str(1);
+            sb.version_known = true;
+            return;
+        }
+    }
+
+    if (sb.service == "HTTP" || sb.service == "HTTPS" || sb.service == "Tomcat") {
+        std::istringstream ss(sb.banner);
+        std::string line;
+        while (std::getline(ss, line)) {
+            std::string l = to_lower(line);
+            if (l.rfind("server:", 0) == 0) {
+                std::regex re("server:\\s*([A-Za-z0-9_.-]+)[/ ]?([0-9]+(?:\\.[0-9A-Za-z_-]+)*)?", std::regex::icase);
+                std::smatch m;
+                if (std::regex_search(line, m, re) && m.size() >= 2) {
+                    sb.product = m.str(1);
+                    std::string ver = (m.size() >= 3) ? m.str(2) : "";
+                    if (!ver.empty()) {
+                        sb.version = ver;
+                        sb.version_known = true;
+                    } else {
+                        sb.version.clear();
+                        sb.version_known = false;
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
+    if (sb.service == "FTP" || sb.service == "SMTP") {
+        std::regex re("^\\s*\\d{3}\\s+([A-Za-z0-9_.-]+)[ /]?([A-Za-z0-9_.-]+)?", std::regex::icase);
+        std::smatch m;
+        if (std::regex_search(sb.banner, m, re) && m.size() >= 2) {
+            sb.product = m.str(1);
+            std::string ver = (m.size() >= 3) ? m.str(2) : "";
+            if (!ver.empty()) {
+                sb.version = ver;
+                sb.version_known = true;
+            } else {
+                sb.version.clear();
+                sb.version_known = false;
+            }
+        }
+    }
+}
+
+// Determine if CVE entry year is recent enough
+static bool cve_recent(const std::string& id) {
+    std::regex re("CVE-(\\d{4})-");
+    std::smatch m;
+    if (std::regex_search(id, m, re) && m.size() >= 2) {
+        try {
+            int year = std::stoi(m.str(1));
+            return year >= 2015;
+        } catch (...) {
+            return false;
+        }
+    }
+    return false;
+}
+
+static std::pair<int, int> cve_id_order(const std::string& id) {
+    std::regex re("CVE-(\\d{4})-(\\d+)");
+    std::smatch m;
+    if (std::regex_search(id, m, re) && m.size() >= 3) {
+        try {
+            return {std::stoi(m.str(1)), std::stoi(m.str(2))};
+        } catch (...) {}
+    }
+    return {0, 0};
+}
+
+// Check if CVE description matches detected version (heuristic)
+static bool cve_matches_version(const CVEEntry& e,
+                                const PortsAnalysis::ServiceBanner& sb) {
+    if (!sb.version_known || sb.version.empty())
+        return true; // unknown version -> keep
+
+    std::string desc_l = to_lower(e.description + " " + e.id);
+    std::string prod_l = to_lower(sb.product.empty() ? sb.service : sb.product);
+
+    // require product mention to avoid cross-product noise
+    if (!prod_l.empty() && desc_l.find(prod_l) == std::string::npos)
+        return false;
+
+    // match major version
+    std::string ver = sb.version;
+    size_t dot = ver.find('.');
+    std::string major = (dot == std::string::npos) ? ver : ver.substr(0, dot);
+
+    if (!major.empty()) {
+        // If description mentions another version number, ensure major matches
+        size_t prod_pos = desc_l.find(prod_l);
+        if (prod_pos != std::string::npos) {
+            size_t digit_pos = desc_l.find_first_of("0123456789", prod_pos);
+            if (digit_pos != std::string::npos && digit_pos - prod_pos < 10) {
+                std::string found;
+                while (digit_pos < desc_l.size()) {
+                    unsigned char uch = static_cast<unsigned char>(desc_l[digit_pos]);
+                    if (!(std::isdigit(uch) || uch == static_cast<unsigned char>('.')))
+                        break;
+                    found.push_back(static_cast<char>(uch));
+                    digit_pos++;
+                }
+                if (!found.empty()) {
+                    size_t fdot = found.find('.');
+                    std::string found_major = (fdot == std::string::npos) ? found : found.substr(0, fdot);
+                    return found_major == major;
+                }
+            }
+        }
+        // No explicit version in description -> allow if product matched
+        return true;
+    }
+    return true;
 }
 
 // Grade + verdict from final score
@@ -577,6 +791,13 @@ PortsAnalysis Scorecard::check_ports(const std::string& host) {
         if (!futs[i].get()) continue;
         int p = SCAN_PORTS[i];
         r.open_list.push_back(p);
+        std::string svc_name = port_to_service(p);
+        if (!svc_name.empty()) {
+            PortsAnalysis::ServiceBanner sb;
+            sb.port = p;
+            sb.service = svc_name;
+            r.banners.push_back(sb);
+        }
         if (p == 21)   r.port_21   = true;
         if (p == 23)   r.port_23   = true;
         if (p == 25)   r.port_25   = true;
@@ -605,22 +826,48 @@ PortsAnalysis Scorecard::check_ports(const std::string& host) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  check_cve — lookup CVEs for open services in data/cve.json
 // ─────────────────────────────────────────────────────────────────────────────
-std::vector<CVEFinding> Scorecard::check_cve(const PortsAnalysis& ports) {
+std::vector<CVEFinding> Scorecard::check_cve(const std::string& host,
+                                             PortsAnalysis& ports) {
     std::vector<CVEFinding> findings;
     CVEScanner cve_db;
-    std::set<std::string> seen_services;
+    std::map<std::string, PortsAnalysis::ServiceBanner> svc_meta;
 
+    for (size_t i = 0; i < ports.banners.size(); i++) {
+        PortsAnalysis::ServiceBanner filled = ports.banners[i];
+        filled.banner = grab_banner_raw(host, filled.port, filled.service);
+        parse_banner(filled);
+
+        auto it = svc_meta.find(filled.service);
+        if (it == svc_meta.end() || should_replace_banner(it->second, filled))
+            svc_meta[filled.service] = filled;
+        ports.banners[i] = filled;
+    }
+
+    std::set<std::string> seen_services;
     for (int p : ports.open_list) {
         std::string svc = port_to_service(p);
         if (svc.empty() || seen_services.count(svc)) continue;
         seen_services.insert(svc);
 
+        auto meta_it = svc_meta.find(svc);
+        PortsAnalysis::ServiceBanner meta = (meta_it != svc_meta.end())
+                                            ? meta_it->second
+                                            : PortsAnalysis::ServiceBanner{};
+        if (meta.service.empty()) {
+            meta.service = svc;
+            meta.port    = p;
+        }
+
         auto entries = cve_db.search(svc);
         for (auto& e : entries) {
+            if (!cve_recent(e.id)) continue;
+            if (!cve_matches_version(e, meta)) continue;
+
             CVEFinding f;
-            f.id   = e.id;
-            f.cvss = e.cvss;
-            f.desc = e.description;
+            f.id      = e.id;
+            f.cvss    = e.cvss;
+            f.desc    = e.description;
+            f.service = svc;
 
             if (e.cvss >= 9.0)      f.penalty = 15;
             else if (e.cvss >= 7.0) f.penalty = 8;
@@ -631,11 +878,18 @@ std::vector<CVEFinding> Scorecard::check_cve(const PortsAnalysis& ports) {
         }
     }
 
-    // Sort by CVSS descending
+    // Sort by CVSS descending and limit to top 10
     std::sort(findings.begin(), findings.end(),
         [](const CVEFinding& a, const CVEFinding& b) {
+            if (a.cvss == b.cvss) {
+                auto oa = cve_id_order(a.id);
+                auto ob = cve_id_order(b.id);
+                return oa > ob;
+            }
             return a.cvss > b.cvss;
         });
+    if (findings.size() > 10)
+        findings.resize(10);
 
     return findings;
 }
@@ -837,19 +1091,41 @@ static void print_report(
              display_len("  Открытых портов не обнаружено              OK"));
         brow("  CVE штраф: 0 pts",
              display_len("  CVE штраф: 0 pts"));
-    } else if (cves.empty()) {
-        brow("  Уязвимостей не найдено в data/cve.json", 42);
     } else {
+        // Build port description with banners/versions
+        std::map<int, PortsAnalysis::ServiceBanner> port_map;
+        for (const auto& b : ports.banners) port_map[b.port] = b;
+
         std::ostringstream port_line;
-        port_line << "  Только для открытых портов: ";
+        port_line << "  Открытые порты: ";
+        bool any_known = false;
         for (size_t i = 0; i < ports.open_list.size(); i++) {
             int p = ports.open_list[i];
+            auto it = port_map.find(p);
             std::string svc = port_to_service(p);
-            if (svc.empty()) svc = "port";
-            port_line << p << "(" << svc << ")";
+            std::string token = std::to_string(p) + "(";
+            if (it != port_map.end()) {
+                const auto& sb = it->second;
+                token += format_port_token(sb);
+                if (sb.version_known && !sb.version.empty())
+                    any_known = true;
+            } else {
+                token += (svc.empty() ? "port" : svc);
+            }
+            token += ")";
+            port_line << token;
             if (i + 1 < ports.open_list.size()) port_line << ", ";
         }
+
+        if (!any_known) {
+            port_line << " - версии неизвестны";
+        }
         brow(port_line.str());
+        brow("  CVE >= 2015; фильтрация по версиям баннера");
+        if (!any_known) {
+            brow("  [?] Захват баннера не дал результата");
+            brow("  Показаны CVE >= 2015 для найденных сервисов");
+        }
 
         int crit = 0, high = 0, med = 0, low = 0;
         double avg = 0.0;
@@ -860,31 +1136,35 @@ static void print_report(
             else if (c.cvss >= 4.0) med++;
             else                    low++;
         }
-        avg /= static_cast<double>(cves.size());
+        if (!cves.empty())
+            avg /= static_cast<double>(cves.size());
 
-        std::ostringstream ss;
-        ss << "Avg CVSS: " << std::fixed << std::setprecision(1) << avg
-           << "   \u25a0 Critical: " << crit
-           << "  \u25a0 High: "     << high
-           << "  \u25a0 Medium: "   << med;
-        brow(ss.str());
+        if (cves.empty()) {
+            brow("  Уязвимостей не найдено в data/cve.json", 42);
+        } else {
+            std::ostringstream ss;
+            ss << "Avg CVSS: " << std::fixed << std::setprecision(1) << avg
+               << "   \u25a0 Critical: " << crit
+               << "  \u25a0 High: "     << high
+               << "  \u25a0 Medium: "   << med;
+            brow(ss.str());
 
-        // Show top CVEs (up to 5)
-        int shown = 0;
-        for (auto& c : cves) {
-            if (shown++ >= 5) break;
-            std::string desc = c.desc;
-            if (static_cast<int>(desc.size()) > 26) desc = desc.substr(0, 23) + "...";
-            std::ostringstream ls;
-            ls << std::left << std::setw(16) << c.id
-               << "CVSS " << std::fixed << std::setprecision(1) << c.cvss
-               << "  " << std::setw(26) << desc
-               << " -" << c.penalty << " pts";
-            brow(ls.str());
+            // Show top CVEs (up to 10 already limited)
+            for (size_t i = 0; i < cves.size() && i < 10; i++) {
+                auto& c = cves[i];
+                std::string desc = c.desc;
+                if (static_cast<int>(desc.size()) > 26) desc = desc.substr(0, 23) + "...";
+                std::ostringstream ls;
+                ls << std::left << std::setw(16) << c.id
+                   << "CVSS " << std::fixed << std::setprecision(1) << c.cvss
+                   << "  " << std::setw(26) << desc
+                   << " -" << c.penalty << " pts";
+                brow(ls.str());
+            }
+            std::ostringstream pp;
+            pp << "Общий штраф CVE: -" << cve_pen << " pts";
+            brow(RE + B + pp.str() + R, display_len(pp.str()));
         }
-        std::ostringstream pp;
-        pp << "Общий штраф CVE: -" << cve_pen << " pts";
-        brow(RE + B + pp.str() + R, display_len(pp.str()));
     }
 
     // ── DNS SECURITY ────────────────────────────────────────────────────────
@@ -1101,7 +1381,7 @@ void Scorecard::run(const std::string& target) {
     print_progress(5, "Проверяем TLS...");
     HTTPAnalysis http = check_http(target);
     print_progress(7, "Анализируем заголовки...");
-    std::vector<CVEFinding> cves = check_cve(ports);
+    std::vector<CVEFinding> cves = check_cve(target, ports);
     print_progress(9, "Сопоставляем CVE...");
     print_progress(10, "Готово!");
     std::cout << "\n";
