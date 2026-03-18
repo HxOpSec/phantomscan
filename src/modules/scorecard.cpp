@@ -232,9 +232,9 @@ static std::string grab_banner_raw(const std::string& host, int port, const std:
     } else if (port == 25 || svc == "SMTP") {
         cmd = "echo '' | timeout 3 nc -w 2 " + quoted + " 25 2>/dev/null";
     } else if (port == 80 || port == 8080 || svc == "HTTP" || svc == "Tomcat") {
-        cmd = "curl -sI --max-time 5 \"http://" + host + "\" 2>/dev/null";
+        cmd = "curl -sI --max-time 5 --url \"http://" + host + "\" 2>/dev/null";
     } else if (port == 443 || port == 8443 || svc == "HTTPS") {
-        cmd = "curl -sI --max-time 5 \"https://" + host + "\" 2>/dev/null";
+        cmd = "curl -sI --max-time 5 --url \"https://" + host + "\" 2>/dev/null";
     } else {
         return "";
     }
@@ -267,8 +267,14 @@ static void parse_banner(PortsAnalysis::ServiceBanner& sb) {
                 std::smatch m;
                 if (std::regex_search(line, m, re) && m.size() >= 2) {
                     sb.product = m.str(1);
-                    if (m.size() >= 3) sb.version = m.str(2);
-                    sb.version_known = !sb.version.empty();
+                    std::string ver = (m.size() >= 3) ? m.str(2) : "";
+                    if (!ver.empty()) {
+                        sb.version = ver;
+                        sb.version_known = true;
+                    } else {
+                        sb.version.clear();
+                        sb.version_known = false;
+                    }
                     return;
                 }
             }
@@ -280,8 +286,14 @@ static void parse_banner(PortsAnalysis::ServiceBanner& sb) {
         std::smatch m;
         if (std::regex_search(sb.banner, m, re) && m.size() >= 2) {
             sb.product = m.str(1);
-            if (m.size() >= 3) sb.version = m.str(2);
-            sb.version_known = !sb.version.empty();
+            std::string ver = (m.size() >= 3) ? m.str(2) : "";
+            if (!ver.empty()) {
+                sb.version = ver;
+                sb.version_known = true;
+            } else {
+                sb.version.clear();
+                sb.version_known = false;
+            }
         }
     }
 }
