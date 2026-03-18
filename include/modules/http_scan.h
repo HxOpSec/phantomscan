@@ -9,12 +9,15 @@ struct HTTPPath {
     std::string desc;
 };
 
+class KeepAliveClient; // forward decl (implemented in cpp)
+
 class HTTPScanner {
 public:
     std::vector<HTTPPath> scan(const std::string& target, int port = 80);
     void print_results(const std::vector<HTTPPath>& results);
 
 private:
-    int  check_path(const std::string& host, int port, const std::string& path);
+    int  check_path(const std::string& host, int port, const std::string& path,
+                    KeepAliveClient& client);
     bool try_https = false;
 };

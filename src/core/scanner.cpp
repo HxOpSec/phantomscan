@@ -1,7 +1,12 @@
 #include "utils/colors.h"
 #include "core/scanner.h"
 #include "modules/service_detect.h"
+#include <deque>
+#include <future>
 #include <iostream>
+#include <optional>
+#include <thread>
+#include <unordered_map>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -49,14 +54,39 @@ bool Scanner::check_port(int port) {
 
 std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
     std::vector<PortResult> results;
+    std::unordered_map<int, std::string> service_cache;
     auto start_time = std::chrono::steady_clock::now();
     int  total      = end_port - start_port + 1;
     ServiceDetector detector;
 
-    for (int port = start_port; port <= end_port; port++) {
+    const unsigned int concurrency =
+        std::max(4u, std::thread::hardware_concurrency());
+    const int batch_size = static_cast<int>(concurrency * 4);
 
-        if (port % 50 == 0) {
-            int done    = port - start_port;
+    struct Task {
+        int port;
+        std::future<std::optional<PortResult>> fut;
+    };
+    std::deque<Task> tasks;
+
+    auto launch_task = [&](int port) {
+        tasks.push_back(Task{
+            port,
+            std::async(std::launch::async, [this, port, &detector]() {
+                if (!check_port(port)) return std::optional<PortResult>{};
+                PortResult result;
+                result.port    = port;
+                result.is_open = true;
+                result.service = detector.detect(target_ip, port);
+                return std::optional<PortResult>(result);
+            })
+        });
+    };
+
+    auto process_task = [&](Task& task, int processed) {
+        auto res = task.fut.get();
+        if (processed % 50 == 0) {
+            int done    = processed;
             int percent = (done * 100) / total;
             auto now    = std::chrono::steady_clock::now();
             int elapsed = std::chrono::duration_cast<std::chrono::seconds>
@@ -71,24 +101,45 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
 
             std::cout << "\r" << Color::MAGENTA
                       << bar << " " << percent << "% | "
-                      << "Порт: " << port << "/" << end_port << " | "
+                      << "Порт: " << task.port << "/" << end_port << " | "
                       << elapsed << "с"
                       << Color::RESET << std::flush;
         }
 
-        if (check_port(port)) {
-            PortResult result;
-            result.port    = port;
-            result.is_open = true;
-            result.service = detector.detect(target_ip, port);
-            results.push_back(result);
+        if (res) {
+            const auto cache_it = service_cache.find(res->port);
+            if (cache_it != service_cache.end())
+                res->service = cache_it->second;
+            else
+                service_cache[res->port] = res->service;
+
+            results.push_back(*res);
 
             std::cout << "\r" << Color::OK
-                      << "Порт " << Color::BOLD << result.port << Color::RESET
+                      << "Порт " << Color::BOLD << res->port << Color::RESET
                       << Color::GREEN << " ОТКРЫТ" << Color::RESET
-                      << " | " << Color::YELLOW << result.service << Color::RESET
+                      << " | " << Color::YELLOW << res->service << Color::RESET
                       << std::string(20, ' ') << "\n";
         }
+    };
+
+    int processed = 0;
+    for (int port = start_port; port <= end_port; port++) {
+        launch_task(port);
+
+        if (static_cast<int>(tasks.size()) >= batch_size) {
+            Task task = std::move(tasks.front());
+            tasks.pop_front();
+            processed++;
+            process_task(task, processed);
+        }
+    }
+
+    while (!tasks.empty()) {
+        Task task = std::move(tasks.front());
+        tasks.pop_front();
+        processed++;
+        process_task(task, processed);
     }
 
     auto end_time  = std::chrono::steady_clock::now();
