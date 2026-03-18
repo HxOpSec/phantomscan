@@ -867,7 +867,7 @@ static void print_report(
            << "   \u25a0 Critical: " << crit
            << "  \u25a0 High: "     << high
            << "  \u25a0 Medium: "   << med;
-        brow(ss.str());  // uses default display_len calculation
+        brow(ss.str());
 
         // Show top CVEs (up to 5)
         int shown = 0;
@@ -903,7 +903,7 @@ static void print_report(
         if ((pos = colored.find(CROSS)) != std::string::npos)
             colored.replace(pos, CROSS.size(), RE + CROSS + R);
 
-        int txt_dlen = display_len(txt);  // display width (ANSI stripped, UTF-8 aware)
+        int txt_dlen = display_len(txt);
 
         std::string pts_str;
         int pts_dlen = 0;
