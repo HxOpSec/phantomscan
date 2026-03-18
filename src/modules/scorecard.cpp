@@ -10,6 +10,8 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <fstream>
+#include <filesystem>
 #include <algorithm>
 #include <future>
 #include <thread>
@@ -37,10 +39,37 @@ static const char BOX_BOT[] =
 // inner width between the ║ characters
 static const int BOX_I = 62;
 
-// Print a box row: ║  <text><padding>║
-// display_len = visible char count in text (pass when text has ANSI codes)
+// Returns visible display width of a string, stripping ANSI escapes
+// and counting UTF-8 code points (each = 1 display column here).
+static int str_display_len(const std::string& text) {
+    int len = 0;
+    size_t i = 0;
+    while (i < text.size()) {
+        unsigned char c = static_cast<unsigned char>(text[i]);
+        if (c == '\033') {                        // ANSI escape sequence: skip entirely
+            ++i;
+            if (i < text.size() && text[i] == '[') {
+                ++i;
+                // skip parameter bytes (0x30-0x3F) and intermediate bytes (0x20-0x2F)
+                while (i < text.size() &&
+                       (static_cast<unsigned char>(text[i]) < 0x40 ||
+                        static_cast<unsigned char>(text[i]) > 0x7E))
+                    ++i;
+                if (i < text.size()) ++i;  // skip final byte (e.g. 'm', 'H', 'J' …)
+            }
+        } else if (c < 0x80) { ++len; ++i;       // ASCII (1 byte, 1 col)
+        } else if (c < 0xC0) { ++i;              // UTF-8 continuation byte (skip)
+        } else if (c < 0xE0) { ++len; i += 2;   // 2-byte sequence (Cyrillic etc.)
+        } else if (c < 0xF0) { ++len; i += 3;   // 3-byte sequence (box-drawing, ✓, █)
+        } else               { ++len; i += 4; }  // 4-byte sequence
+    }
+    return len;
+}
+
+// Print a box row: ║  <text><padding>║  — always 64 display cols wide
+// display_len = visible char count in text (auto-detected when < 0)
 static void brow(const std::string& text, int display_len = -1) {
-    int dlen = (display_len >= 0) ? display_len : static_cast<int>(text.size());
+    int dlen = (display_len >= 0) ? display_len : str_display_len(text);
     int pad  = BOX_I - 2 - dlen;
     if (pad < 0) pad = 0;
     std::cout << "║  " << text << std::string(static_cast<size_t>(pad), ' ') << "║\n";
@@ -138,10 +167,10 @@ static std::string score_bar(int score) {
 
 // ANSI color for score
 static std::string score_color(int score) {
-    if (score >= 80) return "\033[32m";
-    if (score >= 60) return "\033[33m";
-    if (score >= 40) return "\033[38;5;208m";
-    return "\033[31m";
+    if (score >= 90) return "\033[32m";          // green
+    if (score >= 70) return "\033[33m";          // yellow
+    if (score >= 50) return "\033[38;5;208m";    // orange
+    return "\033[31m";                           // red
 }
 
 // Print real-time progress bar (overwrites current line)
@@ -171,11 +200,19 @@ DNSAnalysis Scorecard::check_dns(const std::string& domain) {
     auto f_caa    = std::async(std::launch::async, [domain] {
         return run_cmd("dig +short CAA " + domain + " 2>/dev/null");
     });
+    auto f_dkim   = std::async(std::launch::async, [domain] {
+        return run_cmd("dig +short TXT default._domainkey." + domain + " 2>/dev/null");
+    });
+    auto f_mx     = std::async(std::launch::async, [domain] {
+        return run_cmd("dig +short MX " + domain + " 2>/dev/null");
+    });
 
     std::string spf    = f_spf.get();
     std::string dmarc  = f_dmarc.get();
     std::string dnssec = f_dnssec.get();
     std::string caa    = f_caa.get();
+    std::string dkim   = f_dkim.get();
+    std::string mx     = f_mx.get();
 
     // SPF
     if (spf.find("v=spf1") != std::string::npos) {
@@ -202,10 +239,16 @@ DNSAnalysis Scorecard::check_dns(const std::string& domain) {
     r.has_caa = (!caa.empty() && caa != "\n" &&
                  static_cast<int>(caa.size()) > 1);
 
+    // DKIM (default._domainkey selector): non-empty = present
+    r.has_dkim = (!dkim.empty() && dkim != "\n" && dkim.find("v=DKIM1") != std::string::npos);
+
+    // MX: non-empty = at least one MX record
+    r.has_mx = (!mx.empty() && mx != "\n" && static_cast<int>(mx.size()) > 1);
+
     // Penalty
     int pen = 0;
-    if (!r.has_spf)         pen += 8;
-    else if (r.spf_plusall) pen += 8;
+    if (!r.has_spf)          pen += 8;
+    else if (r.spf_plusall)  pen += 8;
     else if (r.spf_softfail) pen += 4;
 
     if (!r.has_dmarc)       pen += 7;
@@ -213,8 +256,121 @@ DNSAnalysis Scorecard::check_dns(const std::string& domain) {
 
     if (!r.has_dnssec) pen += 3;
     if (!r.has_caa)    pen += 2;
+    if (!r.has_dkim)   pen += 3;
+    if (!r.has_mx)     pen += 2;
 
-    r.penalty = std::min(pen, 20);
+    r.penalty = std::min(pen, 25);
+    return r;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  check_whois — parse whois output for age, expiry, registrar, country
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Try to parse a date string (multiple formats) into a time_t. Returns -1 on failure.
+static time_t parse_whois_date(const std::string& val) {
+    if (val.empty()) return -1;
+    struct tm t{};
+    // ISO 8601: 2020-01-15T... or 2020-01-15
+    if (strptime(val.c_str(), "%Y-%m-%dT%H:%M:%S", &t) ||
+        strptime(val.c_str(), "%Y-%m-%d", &t))
+        return timegm(&t);
+    // dd-Mon-YYYY
+    if (strptime(val.c_str(), "%d-%b-%Y", &t))
+        return timegm(&t);
+    // Mon Jan 15 ...
+    if (strptime(val.c_str(), "%a %b %d %H:%M:%S %Z %Y", &t))
+        return timegm(&t);
+    return -1;
+}
+
+// Extract first field value matching one of the given keys (case-insensitive)
+static std::string whois_field(const std::string& whois,
+                               const std::vector<std::string>& keys) {
+    std::istringstream ss(whois);
+    std::string line;
+    while (std::getline(ss, line)) {
+        std::string lline = line;
+        for (char& ch : lline)
+            ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+        for (const auto& key : keys) {
+            std::string lkey = key;
+            for (char& ch : lkey)
+                ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+            if (lline.rfind(lkey, 0) == 0) {
+                // find colon in original line
+                size_t colon = line.find(':');
+                if (colon == std::string::npos) continue;
+                std::string val = line.substr(colon + 1);
+                // trim leading/trailing whitespace
+                size_t s = val.find_first_not_of(" \t\r");
+                size_t e = val.find_last_not_of(" \t\r");
+                if (s == std::string::npos) continue;
+                return val.substr(s, e - s + 1);
+            }
+        }
+    }
+    return "";
+}
+
+WhoisAnalysis Scorecard::check_whois(const std::string& domain) {
+    WhoisAnalysis r;
+    std::string out = run_cmd("whois " + domain + " 2>/dev/null");
+    if (out.empty()) return r;
+
+    // Creation date
+    std::string created = whois_field(out,
+        {"creation date:", "created on:", "created:", "registration time:",
+         "registered:", "domain registered:", "commencement date:"});
+    // Expiry date
+    std::string expiry = whois_field(out,
+        {"registry expiry date:", "registrar registration expiration date:",
+         "expiration date:", "expires:", "expire:", "paid-till:",
+         "expiry date:", "validity:"});
+    // Registrar
+    std::string registrar = whois_field(out,
+        {"registrar:", "registrar name:", "sponsoring registrar:"});
+    // Country
+    std::string country = whois_field(out,
+        {"registrant country:", "country:", "registrant: country"});
+
+    time_t now = time(nullptr);
+
+    // Trim ISO timezone suffix (Z or +00:00) before parsing
+    auto trim_tz = [](const std::string& s) -> std::string {
+        if (s.empty()) return s;
+        std::string t = s;
+        if (t.back() == 'Z') t.pop_back();
+        size_t plus = t.rfind('+');
+        if (plus != std::string::npos && plus > 10) t = t.substr(0, plus);
+        return t;
+    };
+
+    time_t t_created = parse_whois_date(trim_tz(created));
+    time_t t_expiry  = parse_whois_date(trim_tz(expiry));
+
+    if (t_created > 0 && t_created <= now)
+        r.domain_age_days = static_cast<int>((now - t_created) / 86400);
+    if (t_expiry  > 0)
+        r.days_until_expiry = static_cast<int>((t_expiry - now) / 86400);
+
+    // Trim registrar to fit in box
+    if (!registrar.empty() && registrar.size() > 30)
+        registrar = registrar.substr(0, 27) + "...";
+    r.registrar = registrar;
+
+    // Country: take only first token
+    if (!country.empty()) {
+        size_t sp = country.find(' ');
+        r.country = (sp != std::string::npos) ? country.substr(0, sp) : country;
+        if (r.country.size() > 20) r.country = r.country.substr(0, 20);
+    }
+
+    // Penalties
+    int pen = 0;
+    if (r.domain_age_days >= 0 && r.domain_age_days < 365) pen += 5;  // young domain
+    if (r.days_until_expiry >= 0 && r.days_until_expiry < 30) pen += 8; // expiring soon
+    r.penalty = pen;
     return r;
 }
 
@@ -531,15 +687,20 @@ static void print_report(
     int                         tls_pen,
     const HTTPAnalysis&         http,
     const PortsAnalysis&        ports,
-    bool                        firewall)
+    bool                        firewall,
+    const WhoisAnalysis&        whois,
+    bool                        has_prev,
+    int                         prev_score)
 {
     std::string col = score_color(score);
-    const std::string R = "\033[0m";
-    const std::string B = "\033[1m";
-    const std::string C = "\033[36m";
-    const std::string G = "\033[32m";
-    const std::string Y = "\033[33m";
-    const std::string RE = "\033[31m";
+    const std::string R  = "\033[0m";
+    const std::string B  = "\033[1m";
+    const std::string C  = "\033[36m";
+    const std::string G  = "\033[1;32m";    // bold green  (✓)
+    const std::string Y  = "\033[1;33m";    // bold yellow ([HIGH])
+    const std::string RE = "\033[1;31m";    // bold red    ([CRITICAL] / ✗)
+    const std::string BL = "\033[1;34m";    // bold blue   ([MEDIUM])
+    const std::string GR = "\033[0;37m";    // grey        ([LOW])
 
     // Grade colour
     std::string gc = (grade == "A+" || grade == "A") ? G :
@@ -550,14 +711,14 @@ static void print_report(
 
     // Title
     {
-        std::string title = "  SECURITY SCORECARD — " + target;
+        std::string title = "SECURITY SCORECARD — " + target;
         brow(B + C + title + R, static_cast<int>(title.size()));
     }
     {
         std::ostringstream ss;
         ss << std::fixed << std::setprecision(1) << elapsed;
-        std::string sub = "  Анализ завершён за " + ss.str() + " сек";
-        brow(sub, static_cast<int>(sub.size()));
+        std::string sub = "Анализ завершён за " + ss.str() + " сек";
+        brow(sub);
     }
 
     std::cout << B << C << BOX_SEP << R;
@@ -565,17 +726,93 @@ static void print_report(
     // Score line
     {
         std::ostringstream ss;
-        ss << "SCORE: " << score << " / 100          Grade: " << grade;
-        std::string txt = ss.str();
-        brow(col + B + txt + R + "  " + gc + B + grade + R,
-             static_cast<int>(txt.size()) + 2 + static_cast<int>(grade.size()));
+        ss << "SCORE: " << score << " / 100    Grade: ";
+        std::string pre  = ss.str();
+        std::string line = col + B + pre + R + gc + B + grade + R
+                         + "   " + col + verdict + R;
+        brow(line, static_cast<int>(pre.size()) + static_cast<int>(grade.size())
+                   + 3 + static_cast<int>(verdict.size()));
     }
-    // Score bar — use verdict as the risk label
+    // Score bar
     {
-        std::string bar  = score_bar(score);
-        // bar = 32 "█"/"░" chars (each is 3 bytes but 1 col => display=32)
-        std::string line = col + bar + R + "  " + col + B + verdict + R;
-        brow(line, 32 + 2 + static_cast<int>(verdict.size()));
+        std::string bar   = score_bar(score);
+        std::string line  = col + bar + R;
+        brow(line, 32);  // bar is 32 display cols (█/░ are 3-byte, 1 col each)
+    }
+    // History row
+    {
+        if (has_prev) {
+            int diff = score - prev_score;
+            std::ostringstream hs;
+            hs << "История: " << prev_score << " pts → " << score << " pts  ";
+            if (diff > 0)       hs << G  << "↑ +" << diff << " улучшение" << R;
+            else if (diff < 0)  hs << RE << "↓ "  << diff << " ухудшение" << R;
+            else                hs << C  << "→ без изменений"              << R;
+            int plain_len = static_cast<int>(
+                ("История: " + std::to_string(prev_score) + " pts → " +
+                 std::to_string(score) + " pts  ").size());
+            std::string arrow_txt = (diff > 0) ? ("↑ +" + std::to_string(diff) + " улучшение") :
+                                    (diff < 0) ? ("↓ "  + std::to_string(diff) + " ухудшение") :
+                                                 "→ без изменений";
+            brow(hs.str(), plain_len + str_display_len(arrow_txt));
+        } else {
+            brow(C + "Первый скан домена" + R, 18);
+        }
+    }
+
+    // ── WHOIS ───────────────────────────────────────────────────────────────
+    std::cout << B << C << BOX_SEP << R;
+    brow(B + "WHOIS" + R, 5);
+    {
+        // Domain age
+        if (whois.domain_age_days < 0) {
+            brow("Возраст домена:  неизвестно");
+        } else {
+            int years  = whois.domain_age_days / 365;
+            int months = (whois.domain_age_days % 365) / 30;
+            std::ostringstream as;
+            as << "Возраст домена:  ";
+            if (years > 0)  as << years  << " " << (years  == 1 ? "год" :
+                                                     years  < 5  ? "года" : "лет") << " ";
+            if (months > 0 || years == 0)
+                as << months << " " << (months == 1 ? "месяц" :
+                                        months  < 5  ? "месяца" : "месяцев");
+            std::string age_txt = as.str();
+            bool age_ok = (whois.domain_age_days >= 365);
+            std::string status_str = age_ok ? (G + "OK" + R) : (Y + "-5 pts" + R);
+            int status_dlen = age_ok ? 2 : 6;
+            int pad = BOX_I - 2 - str_display_len(age_txt) - status_dlen;
+            if (pad < 1) pad = 1;
+            std::cout << "║  " << age_txt << std::string(static_cast<size_t>(pad), ' ')
+                      << status_str << "║\n";
+        }
+
+        // Days until expiry
+        if (whois.days_until_expiry < 0) {
+            brow("Истекает через:  неизвестно");
+        } else {
+            std::ostringstream es;
+            es << "Истекает через:  " << whois.days_until_expiry << " дней";
+            std::string exp_txt = es.str();
+            bool exp_ok = (whois.days_until_expiry >= 30);
+            std::string status_str = exp_ok ? (G + "OK" + R) : (RE + "-8 pts" + R);
+            int status_dlen = exp_ok ? 2 : 6;
+            int pad = BOX_I - 2 - str_display_len(exp_txt) - status_dlen;
+            if (pad < 1) pad = 1;
+            std::cout << "║  " << exp_txt << std::string(static_cast<size_t>(pad), ' ')
+                      << status_str << "║\n";
+        }
+
+        // Registrar
+        if (!whois.registrar.empty()) {
+            std::string reg_txt = "Регистратор:     " + whois.registrar;
+            brow(reg_txt);
+        }
+        // Country
+        if (!whois.country.empty()) {
+            std::string ctr_txt = "Страна:          " + whois.country;
+            brow(ctr_txt);
+        }
     }
 
     // ── CVSS ANALYSIS ──────────────────────────────────────────────────────
@@ -602,46 +839,59 @@ static void print_report(
            << "   \u25a0 Critical: " << crit
            << "  \u25a0 High: "     << high
            << "  \u25a0 Medium: "   << med;
-        brow(ss.str(), static_cast<int>(ss.str().size()));
+        brow(ss.str());  // str_display_len auto-detected
 
         // Show top CVEs (up to 5)
         int shown = 0;
         for (auto& c : cves) {
             if (shown++ >= 5) break;
-            std::ostringstream ls;
             std::string desc = c.desc;
             if (static_cast<int>(desc.size()) > 26) desc = desc.substr(0, 23) + "...";
+            std::ostringstream ls;
             ls << std::left << std::setw(16) << c.id
-               << "  CVSS " << std::fixed << std::setprecision(1) << c.cvss
-               << "  " << std::setw(28) << desc
-               << "  -" << c.penalty << " pts";
-            brow(ls.str(), static_cast<int>(ls.str().size()));
+               << "CVSS " << std::fixed << std::setprecision(1) << c.cvss
+               << "  " << std::setw(26) << desc
+               << " -" << c.penalty << " pts";
+            brow(ls.str());
         }
         std::ostringstream pp;
         pp << "Общий штраф CVE: -" << cve_pen << " pts";
-        brow(RE + B + pp.str() + R, static_cast<int>(pp.str().size()));
+        brow(RE + B + pp.str() + R, str_display_len(pp.str()));
     }
 
     // ── DNS SECURITY ────────────────────────────────────────────────────────
+    // yn: prints a status row without a leading extra mark.
+    // txt must already contain ✓ or ✗ as part of the label.
     auto yn = [&](bool ok, const std::string& good_txt, const std::string& bad_txt,
                   int penalty) {
-        std::string mark = ok ? (G + "\u2713" + R) : (RE + "\u2717" + R);
-        std::string txt  = ok ? good_txt : bad_txt;
-        int pts_len = 0;
+        std::string txt = ok ? good_txt : bad_txt;
+        // Add ANSI color to the ✓/✗ already embedded in txt
+        const std::string TICK  = "\u2713";
+        const std::string CROSS = "\u2717";
+        std::string colored = txt;
+        size_t pos;
+        if ((pos = colored.find(TICK))  != std::string::npos)
+            colored.replace(pos, TICK.size(),  G  + TICK  + R);
+        if ((pos = colored.find(CROSS)) != std::string::npos)
+            colored.replace(pos, CROSS.size(), RE + CROSS + R);
+
+        int txt_dlen = str_display_len(txt);  // display width without ANSI
+
         std::string pts_str;
+        int pts_dlen = 0;
         if (!ok && penalty > 0) {
             std::ostringstream ps; ps << "-" << penalty << " pts";
-            pts_str = Y + ps.str() + R;
-            pts_len = static_cast<int>(ps.str().size());
+            pts_str  = Y + ps.str() + R;
+            pts_dlen = static_cast<int>(ps.str().size());
         } else {
-            pts_str = G + "OK" + R;
-            pts_len = 2;
+            pts_str  = G + "OK" + R;
+            pts_dlen = 2;
         }
-        // Layout: mark(1) + " " + label(text, max 44) + spacing + pts
-        int content_display = 1 + 1 + static_cast<int>(txt.size()) + 4 + pts_len;
-        int pad = 58 - content_display;
+
+        // "║  " (3) + txt (txt_dlen) + pad + pts (pts_dlen) + "║" (1) = 64
+        int pad = BOX_I - 2 - txt_dlen - pts_dlen;
         if (pad < 1) pad = 1;
-        std::cout << "║  " << mark << " " << txt
+        std::cout << "║  " << colored
                   << std::string(static_cast<size_t>(pad), ' ')
                   << pts_str << "║\n";
     };
@@ -668,6 +918,10 @@ static void print_report(
            "DNSSEC  \u2717 отключён", 3);
         yn(dns.has_caa,    "CAA     \u2713 Настроен",
            "CAA     \u2717 отсутствует", 2);
+        yn(dns.has_dkim,   "DKIM    \u2713 Настроен",
+           "DKIM    \u2717 отсутствует", 3);
+        yn(dns.has_mx,     "MX      \u2713 Настроен",
+           "MX      \u2717 отсутствует", 2);
     }
 
     // ── SSL/TLS ─────────────────────────────────────────────────────────────
@@ -675,7 +929,7 @@ static void print_report(
     brow(B + "SSL/TLS" + R, 7);
 
     if (!tls.has_https) {
-        brow(Y + "  HTTPS (порт 443) недоступен" + R, 29);
+        brow(Y + "HTTPS (порт 443) недоступен" + R, 27);
     } else {
         yn(!tls.tls10, "TLS 1.0  \u2713 Отключён",
            "TLS 1.0  \u2717 ВКЛЮЧЁН — УСТАРЕЛ", 10);
@@ -687,7 +941,7 @@ static void print_report(
            "TLS 1.3  \u2717 Отсутствует", 3);
 
         if (tls.days_left < 0) {
-            brow(Y + "  Сертификат: не удалось получить" + R, 33);
+            brow(Y + "Сертификат: не удалось получить" + R, 31);
         } else {
             std::ostringstream ss;
             ss << "  Сертификат истекает через: " << tls.days_left << " дней";
@@ -698,16 +952,16 @@ static void print_report(
             yn(cert_ok, ss.str(), ss.str(), cert_pen);
         }
         if (tls.self_signed)
-            brow(RE + "  \u2717 Самоподписанный сертификат       -10 pts" + R, 44);
+            brow(RE + "\u2717 Самоподписанный сертификат       -10 pts" + R, 44);
         if (tls.weak_ciphers)
-            brow(RE + "  \u2717 Слабые шифры RC4/DES              -8 pts" + R, 43);
+            brow(RE + "\u2717 Слабые шифры RC4/DES              -8 pts" + R, 42);
         yn(http.has_hsts, "HSTS     \u2713 Включён",
            "HSTS     \u2717 отсутствует", 3);
     }
     {
         std::ostringstream pp;
         pp << "Штраф TLS: -" << tls_pen << " pts";
-        brow(RE + B + pp.str() + R, static_cast<int>(pp.str().size()));
+        brow(RE + B + pp.str() + R, str_display_len(pp.str()));
     }
 
     // ── HTTP SECURITY HEADERS ───────────────────────────────────────────────
@@ -741,12 +995,12 @@ static void print_report(
     brow(B + "РЕКОМЕНДАЦИИ (по приоритету)" + R, 28);
 
     bool any_rec = false;
-    auto rec = [&](const std::string& level, const std::string& col_s,
+    auto rec = [&](const std::string& level, const std::string& level_col,
                    const std::string& msg) {
-        std::string line = col_s + B + "[" + level + "]" + R + " " + msg;
-        int dlen = 1 + static_cast<int>(level.size()) + 1 + 1 +
-                   static_cast<int>(msg.size());
-        brow(line, dlen);
+        std::string bracket = level_col + "[" + level + "]\033[0m ";
+        int dlen = 1 + static_cast<int>(level.size()) + 2  // "[LEVEL] "
+                   + str_display_len(msg);
+        brow(bracket + msg, dlen);
         any_rec = true;
     };
 
@@ -755,39 +1009,48 @@ static void print_report(
         if (c.cvss >= 9.0) {
             std::string short_desc = c.desc.size() > 28
                 ? c.desc.substr(0, 25) + "..." : c.desc;
-            rec("CRITICAL", RE, "Устрани " + c.id + " (" + short_desc + ")");
+            rec("CRITICAL", "\033[1;31m", "Устрани " + c.id + " (" + short_desc + ")");
         }
     }
     if (tls.has_https && tls.tls10)
-        rec("CRITICAL", RE, "Отключи TLS 1.0: ssl_protocols TLSv1.2 TLSv1.3");
+        rec("CRITICAL", "\033[1;31m", "Отключи TLS 1.0: ssl_protocols TLSv1.2 TLSv1.3");
     if (tls.has_https && tls.tls11)
-        rec("CRITICAL", RE, "Отключи TLS 1.1: ssl_protocols TLSv1.2 TLSv1.3");
+        rec("CRITICAL", "\033[1;31m", "Отключи TLS 1.1: ssl_protocols TLSv1.2 TLSv1.3");
     if (ports.port_23)
-        rec("CRITICAL", RE, "Отключи Telnet (порт 23) — используй SSH");
+        rec("CRITICAL", "\033[1;31m", "Отключи Telnet (порт 23) — используй SSH");
     if (!dns.has_spf || dns.spf_plusall)
-        rec("HIGH", Y, "Добавь SPF: v=spf1 include:_spf.google.com ~all");
+        rec("HIGH", "\033[1;33m", "Добавь SPF: v=spf1 include:_spf.google.com ~all");
     if (!dns.has_dmarc)
-        rec("HIGH", Y, "Добавь DMARC: v=DMARC1; p=reject; rua=mailto:admin@" + target);
+        rec("HIGH", "\033[1;33m", "Добавь DMARC: v=DMARC1; p=reject; rua=mailto:admin@" + target);
     if (tls.has_https && tls.self_signed)
-        rec("HIGH", Y, "Замени самоподписанный сертификат на доверенный CA");
+        rec("HIGH", "\033[1;33m", "Замени самоподписанный сертификат на доверенный CA");
     if (ports.port_21)
-        rec("HIGH", Y, "Отключи FTP (порт 21) — используй SFTP");
+        rec("HIGH", "\033[1;33m", "Отключи FTP (порт 21) — используй SFTP");
     if (ports.port_3389)
-        rec("HIGH", Y, "Закрой RDP (3389) от интернета, используй VPN");
+        rec("HIGH", "\033[1;33m", "Закрой RDP (3389) от интернета, используй VPN");
+    if (whois.days_until_expiry >= 0 && whois.days_until_expiry < 30)
+        rec("HIGH", "\033[1;33m", "Продли домен — истекает через " +
+            std::to_string(whois.days_until_expiry) + " дней!");
     if (!http.has_hsts)
-        rec("MEDIUM", C, "Добавь HSTS: Strict-Transport-Security: max-age=31536000");
+        rec("MEDIUM", "\033[1;34m", "Добавь HSTS: Strict-Transport-Security: max-age=31536000");
     if (!http.csp)
-        rec("MEDIUM", C, "Добавь CSP: Content-Security-Policy header");
+        rec("MEDIUM", "\033[1;34m", "Добавь CSP: Content-Security-Policy header");
     if (!dns.has_dnssec)
-        rec("MEDIUM", C, "Включи DNSSEC в настройках DNS-провайдера");
+        rec("MEDIUM", "\033[1;34m", "Включи DNSSEC в настройках DNS-провайдера");
+    if (!dns.has_dkim)
+        rec("MEDIUM", "\033[1;34m", "Добавь DKIM запись для домена");
+    if (whois.domain_age_days >= 0 && whois.domain_age_days < 365)
+        rec("MEDIUM", "\033[1;34m", "Молодой домен — риск (менее года)");
     if (!dns.has_caa)
-        rec("LOW", G, "Добавь CAA: 0 issue \"letsencrypt.org\"");
+        rec("LOW", "\033[0;37m", "Добавь CAA: 0 issue \"letsencrypt.org\"");
     if (!http.x_frame_options)
-        rec("LOW", G, "Добавь X-Frame-Options: DENY или SAMEORIGIN");
+        rec("LOW", "\033[0;37m", "Добавь X-Frame-Options: DENY или SAMEORIGIN");
     if (!http.referrer_policy)
-        rec("LOW", G, "Добавь Referrer-Policy: strict-origin-when-cross-origin");
+        rec("LOW", "\033[0;37m", "Добавь Referrer-Policy: strict-origin-when-cross-origin");
+    if (!dns.has_mx)
+        rec("LOW", "\033[0;37m", "Настрой MX запись для приёма почты");
     if (!any_rec)
-        brow(G + "  Отличная защита! Продолжай следить за CVE." + R, 44);
+        brow(G + "\u2713 Отличная защита! Продолжай следить за CVE." + R, 44);
 
     std::cout << B << C << BOX_BOT << R << "\n";
 }
@@ -823,6 +1086,9 @@ void Scorecard::run(const std::string& target) {
     auto f_fw    = std::async(std::launch::async,
         [this, &target] { return check_firewall(target); });
 
+    auto f_whois = std::async(std::launch::async,
+        [this, &target] { return check_whois(target); });
+
     // ── Progress bar while tasks run ───────────────────────────────────────
     using ms = std::chrono::milliseconds;
     for (;;) {
@@ -831,36 +1097,59 @@ void Scorecard::run(const std::string& target) {
         bool http_done  = f_http.wait_for(ms(0))      == std::future_status::ready;
         bool pcve_done  = f_ports_cve.wait_for(ms(0)) == std::future_status::ready;
         bool fw_done    = f_fw.wait_for(ms(0))        == std::future_status::ready;
+        bool whois_done = f_whois.wait_for(ms(0))     == std::future_status::ready;
 
-        int done = static_cast<int>(dns_done) + static_cast<int>(tls_done) +
-                   static_cast<int>(http_done) + static_cast<int>(pcve_done) +
-                   static_cast<int>(fw_done);
+        int done = static_cast<int>(dns_done)   + static_cast<int>(tls_done) +
+                   static_cast<int>(http_done)  + static_cast<int>(pcve_done) +
+                   static_cast<int>(fw_done)    + static_cast<int>(whois_done);
 
-        std::string msg = dns_done  ? (tls_done ? (http_done ? (pcve_done ?
-                          (fw_done ? "Готово!           " :
-                           "Проверяем firewall...") :
-                           "Ищем CVE...        ") :
-                           "Проверяем заголовки...") :
-                           "Анализируем TLS...    ") :
-                           "Проверяем DNS...      ";
-
-        print_progress(done, 5, msg);
-        if (done == 5) break;
+        std::string msg = !dns_done   ? "Проверяем DNS...      " :
+                          !tls_done   ? "Анализируем TLS...    " :
+                          !http_done  ? "Проверяем заголовки..." :
+                          !pcve_done  ? "Ищем CVE...           " :
+                          !whois_done ? "WHOIS анализ...       " :
+                          !fw_done    ? "Проверяем firewall... " :
+                                        "Готово!               ";
+        print_progress(done, 6, msg);
+        if (done == 6) break;
         std::this_thread::sleep_for(ms(300));
     }
     std::cout << "\n";
 
     // ── Collect results ────────────────────────────────────────────────────
-    DNSAnalysis             dns  = f_dns.get();
-    TLSAnalysis             tls  = f_tls.get();
-    HTTPAnalysis            http = f_http.get();
-    auto                    pc   = f_ports_cve.get();
+    DNSAnalysis             dns   = f_dns.get();
+    TLSAnalysis             tls   = f_tls.get();
+    HTTPAnalysis            http  = f_http.get();
+    auto                    pc    = f_ports_cve.get();
     PortsAnalysis           ports = pc.first;
     std::vector<CVEFinding> cves  = pc.second;
     bool                    firewall = f_fw.get();
+    WhoisAnalysis           whois = f_whois.get();
 
     double elapsed = std::chrono::duration<double>(
         std::chrono::steady_clock::now() - t_start).count();
+
+    // ── Load scan history ──────────────────────────────────────────────────
+    bool has_prev   = false;
+    int  prev_score = 0;
+    {
+        std::filesystem::create_directories("logs");
+        try {
+            for (auto& entry : std::filesystem::directory_iterator("logs")) {
+                std::string name = entry.path().filename().string();
+                if (name.rfind("scorecard_" + target + "_", 0) == 0 &&
+                    entry.path().extension() == ".txt") {
+                    std::ifstream f(entry.path());
+                    int s = 0;
+                    if (f >> s) {
+                        has_prev   = true;
+                        prev_score = s;
+                    }
+                    break;  // use first file found (one per date per domain)
+                }
+            }
+        } catch (...) {}
+    }
 
     // ── Calculate final score ──────────────────────────────────────────────
     int score = 100;
@@ -890,13 +1179,32 @@ void Scorecard::run(const std::string& target) {
     if (firewall)  score += 5;
     else           score -= 5;
 
+    // WHOIS penalty (max -13)
+    score -= std::min(whois.penalty, 13);
+
     score = std::max(0, std::min(100, score));
 
     auto [grade, verdict] = score_grade(score);
 
+    // ── Save scan result ───────────────────────────────────────────────────
+    {
+        // Build date string YYYY-MM-DD
+        time_t now = time(nullptr);
+        struct tm* tm_info = localtime(&now);
+        char date_buf[16];
+        strftime(date_buf, sizeof(date_buf), "%Y-%m-%d", tm_info);
+        std::string log_path = "logs/scorecard_" + target + "_" +
+                               std::string(date_buf) + ".txt";
+        try {
+            std::ofstream f(log_path);
+            if (f) f << score << "\n";
+        } catch (...) {}
+    }
+
     // ── Print report ───────────────────────────────────────────────────────
     print_report(target, elapsed, score, grade, verdict,
-                 cves, cve_pen, dns, tls, tls_pen, http, ports, firewall);
+                 cves, cve_pen, dns, tls, tls_pen, http, ports, firewall,
+                 whois, has_prev, prev_score);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
