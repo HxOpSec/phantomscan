@@ -28,51 +28,55 @@
 #include <sys/select.h>
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Box-drawing constants (64 chars wide: ║ + 62 inner + ║)
+//  Box helpers — every line passes through box_row() (64 visible chars)
 // ─────────────────────────────────────────────────────────────────────────────
-static const char BOX_TOP[] =
-    "╔══════════════════════════════════════════════════════════════╗\n";
-static const char BOX_SEP[] =
-    "╠══════════════════════════════════════════════════════════════╣\n";
-static const char BOX_BOT[] =
-    "╚══════════════════════════════════════════════════════════════╝\n";
-// inner width between the ║ characters
-static const int BOX_I = 62;
+static const int BOX_INNER = 62;
+static const std::string BOX_TOP = "╔══════════════════════════════════════════════════════════════╗";
+static const std::string BOX_SEP = "╠══════════════════════════════════════════════════════════════╣";
+static const std::string BOX_BOT = "╚══════════════════════════════════════════════════════════════╝";
 
-// Returns visible display width of a string, stripping ANSI escapes
-// and counting UTF-8 code points (each = 1 display column here).
-static int str_display_len(const std::string& text) {
+// Считает реальную ширину строки БЕЗ ANSI кодов
+static int display_len(const std::string& s) {
     int len = 0;
-    size_t i = 0;
-    while (i < text.size()) {
-        unsigned char c = static_cast<unsigned char>(text[i]);
-        if (c == '\033') {                        // ANSI escape sequence: skip entirely
-            ++i;
-            if (i < text.size() && text[i] == '[') {
-                ++i;
-                // skip parameter bytes (0x30-0x3F) and intermediate bytes (0x20-0x2F)
-                while (i < text.size() &&
-                       (static_cast<unsigned char>(text[i]) < 0x40 ||
-                        static_cast<unsigned char>(text[i]) > 0x7E))
-                    ++i;
-                if (i < text.size()) ++i;  // skip final byte (e.g. 'm', 'H', 'J' …)
-            }
-        } else if (c < 0x80) { ++len; ++i;       // ASCII (1 byte, 1 col)
-        } else if (c < 0xC0) { ++i;              // UTF-8 continuation byte (skip)
-        } else if (c < 0xE0) { ++len; i += 2;   // 2-byte sequence (Cyrillic etc.)
-        } else if (c < 0xF0) { ++len; i += 3;   // 3-byte sequence (box-drawing, ✓, █)
-        } else               { ++len; i += 4; }  // 4-byte sequence
+    bool in_escape = false;
+    for (size_t i = 0; i < s.size(); ++i) {
+        if (s[i] == '\033') { in_escape = true; continue; }
+        if (in_escape) {
+            if (s[i] == 'm') in_escape = false;
+            continue;
+        }
+        // UTF-8: считаем только первый байт символа
+        unsigned char c = static_cast<unsigned char>(s[i]);
+        if ((c & 0xC0) != 0x80) len++;
     }
     return len;
 }
 
-// Print a box row: ║  <text><padding>║  — always 64 display cols wide
-// display_len = visible char count in text (auto-detected when < 0)
-static void brow(const std::string& text, int display_len = -1) {
-    int dlen = (display_len >= 0) ? display_len : str_display_len(text);
-    int pad  = BOX_I - 2 - dlen;
+// Строит одну строку рамки РОВНО 64 символа
+static std::string box_row(const std::string& content) {
+    int visible = display_len(content);
+    int pad = BOX_INNER - visible; // 64 - 2 (для ║ слева и справа)
     if (pad < 0) pad = 0;
-    std::cout << "║  " << text << std::string(static_cast<size_t>(pad), ' ') << "║\n";
+    return "║" + content + std::string(static_cast<size_t>(pad), ' ') + "║";
+}
+
+// Print helper that optionally left-pads with two spaces like старый формат
+static void brow(const std::string& text, int custom_display_len = -1) {
+    std::string txt = text;
+    int dlen = (custom_display_len >= 0) ? custom_display_len : display_len(txt);
+    if (dlen > BOX_INNER - 2) {
+        // truncate and add ellipsis to stay inside the box
+        while (dlen > BOX_INNER - 5 && !txt.empty()) {
+            txt.pop_back();
+            dlen = display_len(txt);
+        }
+        txt += "...";
+        dlen = display_len(txt);
+    }
+    int pad = BOX_INNER - 2 - dlen;
+    if (pad < 0) pad = 0;
+    std::string row = "  " + txt + std::string(static_cast<size_t>(pad), ' ');
+    std::cout << box_row(row) << "\n";
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,7 +122,13 @@ static bool tcp_connect(const std::string& host, int port_num, int timeout_sec) 
     tv.tv_sec  = static_cast<long>(timeout_sec);
     tv.tv_usec = 0;
 
-    bool ok = (select(sock + 1, nullptr, &wset, nullptr, &tv) > 0);
+    bool ok = false;
+    if (select(sock + 1, nullptr, &wset, nullptr, &tv) > 0) {
+        int err = 0;
+        socklen_t len = sizeof(err);
+        if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &err, &len) == 0)
+            ok = (err == 0);
+    }
     close(sock);
     return ok;
 }
@@ -130,6 +140,7 @@ static std::string port_to_service(int port) {
         case 22:   return "SSH";
         case 23:   return "Telnet";
         case 25:   return "SMTP";
+        case 53:   return "DNS";
         case 80:   return "HTTP";
         case 110:  return "POP3";
         case 143:  return "IMAP";
@@ -140,8 +151,9 @@ static std::string port_to_service(int port) {
         case 5432: return "PostgreSQL";
         case 5900: return "VNC";
         case 6379: return "Redis";
-        case 8080: return "HTTP";
+        case 8080: return "Tomcat";
         case 8443: return "HTTPS";
+        case 27017:return "MongoDB";
         default:   return "";
     }
 }
@@ -173,12 +185,13 @@ static std::string score_color(int score) {
     return "\033[31m";                           // red
 }
 
-// Print real-time progress bar (overwrites current line)
-static void print_progress(int done, int total, const std::string& msg) {
-    int bars = (total > 0) ? (done * 10 / total) : 0;
+// Print real-time progress bar for fixed 6 steps
+static void print_progress(int filled_blocks, const std::string& msg) {
+    if (filled_blocks < 0) filled_blocks = 0;
+    if (filled_blocks > 10) filled_blocks = 10;
     std::cout << "\r  \033[36m[";
     for (int i = 0; i < 10; i++)
-        std::cout << (i < bars ? "■" : "░");
+        std::cout << (i < filled_blocks ? "■" : "░");
     std::cout << "] \033[0m" << msg << "          " << std::flush;
 }
 
@@ -275,6 +288,9 @@ static time_t parse_whois_date(const std::string& val) {
     if (strptime(val.c_str(), "%Y-%m-%dT%H:%M:%S", &t) ||
         strptime(val.c_str(), "%Y-%m-%d", &t))
         return timegm(&t);
+    // MM/DD/YYYY
+    if (strptime(val.c_str(), "%m/%d/%Y", &t))
+        return timegm(&t);
     // dd-Mon-YYYY
     if (strptime(val.c_str(), "%d-%b-%Y", &t))
         return timegm(&t);
@@ -321,7 +337,8 @@ WhoisAnalysis Scorecard::check_whois(const std::string& domain) {
     // Creation date
     std::string created = whois_field(out,
         {"creation date:", "created on:", "created:", "registration time:",
-         "registered:", "domain registered:", "commencement date:"});
+         "registered:", "domain registered:", "commencement date:",
+         "registration date:", "domain registration date:"});
     // Expiry date
     std::string expiry = whois_field(out,
         {"registry expiry date:", "registrar registration expiration date:",
@@ -538,15 +555,14 @@ PortsAnalysis Scorecard::check_ports(const std::string& host) {
     PortsAnalysis r;
 
     static const std::vector<int> SCAN_PORTS = {
-        21, 22, 23, 25, 53, 80, 110, 139, 143, 443,
-        445, 465, 587, 993, 995, 3306, 3389, 5432, 5900,
-        6379, 8080, 8443, 8888, 27017
+        21, 22, 23, 25, 53, 80, 110, 143, 443, 445,
+        3306, 3389, 5432, 5900, 6379, 8080, 8443, 27017
     };
 
     // Safe ports (don't count as "extra")
     static const std::set<int> SAFE_PORTS = {22, 80, 443, 53};
     // Dangerous ports that have specific penalties
-    static const std::set<int> DANGER_PORTS = {21, 23, 25, 139, 445, 3389};
+    static const std::set<int> DANGER_PORTS = {21, 23, 25, 445, 3389};
 
     // Launch all TCP checks in parallel
     std::vector<std::future<bool>> futs;
@@ -707,7 +723,7 @@ static void print_report(
                      (grade == "B")                  ? C :
                      (grade == "C")                  ? Y : RE;
 
-    std::cout << "\n" << B << C << BOX_TOP << R;
+    std::cout << "\n" << B << C << BOX_TOP << R << "\n";
 
     // Title
     {
@@ -721,7 +737,7 @@ static void print_report(
         brow(sub);
     }
 
-    std::cout << B << C << BOX_SEP << R;
+    std::cout << B << C << BOX_SEP << R << "\n";
 
     // Score line
     {
@@ -754,20 +770,20 @@ static void print_report(
             std::string arrow_txt = (diff > 0) ? ("↑ +" + std::to_string(diff) + " улучшение") :
                                     (diff < 0) ? ("↓ "  + std::to_string(diff) + " ухудшение") :
                                                  "→ без изменений";
-            brow(hs.str(), plain_len + str_display_len(arrow_txt));
+            brow(hs.str(), plain_len + display_len(arrow_txt));
         } else {
             brow(C + "Первый скан домена" + R, 18);
         }
     }
 
     // ── WHOIS ───────────────────────────────────────────────────────────────
-    std::cout << B << C << BOX_SEP << R;
-    brow(B + "WHOIS" + R, 5);
-    {
+    bool whois_available = (whois.domain_age_days >= 0 || whois.days_until_expiry >= 0 ||
+                            !whois.registrar.empty() || !whois.country.empty());
+    if (whois_available) {
+        std::cout << B << C << BOX_SEP << R << "\n";
+        brow(B + "WHOIS" + R, 5);
         // Domain age
-        if (whois.domain_age_days < 0) {
-            brow("Возраст домена:  неизвестно");
-        } else {
+        if (whois.domain_age_days >= 0) {
             int years  = whois.domain_age_days / 365;
             int months = (whois.domain_age_days % 365) / 30;
             std::ostringstream as;
@@ -781,26 +797,22 @@ static void print_report(
             bool age_ok = (whois.domain_age_days >= 365);
             std::string status_str = age_ok ? (G + "OK" + R) : (Y + "-5 pts" + R);
             int status_dlen = age_ok ? 2 : 6;
-            int pad = BOX_I - 2 - str_display_len(age_txt) - status_dlen;
+            int pad = BOX_INNER - 2 - display_len(age_txt) - status_dlen;
             if (pad < 1) pad = 1;
-            std::cout << "║  " << age_txt << std::string(static_cast<size_t>(pad), ' ')
-                      << status_str << "║\n";
+            std::cout << box_row("  " + age_txt + std::string(static_cast<size_t>(pad), ' ') + status_str) << "\n";
         }
 
         // Days until expiry
-        if (whois.days_until_expiry < 0) {
-            brow("Истекает через:  неизвестно");
-        } else {
+        if (whois.days_until_expiry >= 0) {
             std::ostringstream es;
             es << "Истекает через:  " << whois.days_until_expiry << " дней";
             std::string exp_txt = es.str();
             bool exp_ok = (whois.days_until_expiry >= 30);
             std::string status_str = exp_ok ? (G + "OK" + R) : (RE + "-8 pts" + R);
             int status_dlen = exp_ok ? 2 : 6;
-            int pad = BOX_I - 2 - str_display_len(exp_txt) - status_dlen;
+            int pad = BOX_INNER - 2 - display_len(exp_txt) - status_dlen;
             if (pad < 1) pad = 1;
-            std::cout << "║  " << exp_txt << std::string(static_cast<size_t>(pad), ' ')
-                      << status_str << "║\n";
+            std::cout << box_row("  " + exp_txt + std::string(static_cast<size_t>(pad), ' ') + status_str) << "\n";
         }
 
         // Registrar
@@ -816,13 +828,28 @@ static void print_report(
     }
 
     // ── CVSS ANALYSIS ──────────────────────────────────────────────────────
-    std::cout << B << C << BOX_SEP << R;
+    std::cout << B << C << BOX_SEP << R << "\n";
     brow(B + "CVSS ANALYSIS" + R, 13);
 
-    if (cves.empty()) {
-        brow("  Уязвимостей не найдено в data/cve.json",
-             42);
+    if (ports.open_list.empty()) {
+        brow("  Открытых портов не обнаружено              " + G + "OK" + R,
+             display_len("  Открытых портов не обнаружено              OK"));
+        brow("  CVE штраф: 0 pts",
+             display_len("  CVE штраф: 0 pts"));
+    } else if (cves.empty()) {
+        brow("  Уязвимостей не найдено в data/cve.json", 42);
     } else {
+        std::ostringstream port_line;
+        port_line << "  Только для открытых портов: ";
+        for (size_t i = 0; i < ports.open_list.size(); i++) {
+            int p = ports.open_list[i];
+            std::string svc = port_to_service(p);
+            if (svc.empty()) svc = "port";
+            port_line << p << "(" << svc << ")";
+            if (i + 1 < ports.open_list.size()) port_line << ", ";
+        }
+        brow(port_line.str());
+
         int crit = 0, high = 0, med = 0, low = 0;
         double avg = 0.0;
         for (auto& c : cves) {
@@ -839,7 +866,7 @@ static void print_report(
            << "   \u25a0 Critical: " << crit
            << "  \u25a0 High: "     << high
            << "  \u25a0 Medium: "   << med;
-        brow(ss.str());  // str_display_len auto-detected
+        brow(ss.str());  // display_len auto-detected
 
         // Show top CVEs (up to 5)
         int shown = 0;
@@ -856,7 +883,7 @@ static void print_report(
         }
         std::ostringstream pp;
         pp << "Общий штраф CVE: -" << cve_pen << " pts";
-        brow(RE + B + pp.str() + R, str_display_len(pp.str()));
+        brow(RE + B + pp.str() + R, display_len(pp.str()));
     }
 
     // ── DNS SECURITY ────────────────────────────────────────────────────────
@@ -875,7 +902,7 @@ static void print_report(
         if ((pos = colored.find(CROSS)) != std::string::npos)
             colored.replace(pos, CROSS.size(), RE + CROSS + R);
 
-        int txt_dlen = str_display_len(txt);  // display width without ANSI
+        int txt_dlen = display_len(txt);  // display width without ANSI
 
         std::string pts_str;
         int pts_dlen = 0;
@@ -888,15 +915,14 @@ static void print_report(
             pts_dlen = 2;
         }
 
-        // "║  " (3) + txt (txt_dlen) + pad + pts (pts_dlen) + "║" (1) = 64
-        int pad = BOX_I - 2 - txt_dlen - pts_dlen;
+        int pad = BOX_INNER - 2 - txt_dlen - pts_dlen;
         if (pad < 1) pad = 1;
-        std::cout << "║  " << colored
-                  << std::string(static_cast<size_t>(pad), ' ')
-                  << pts_str << "║\n";
+        std::cout << box_row("  " + colored
+                  + std::string(static_cast<size_t>(pad), ' ')
+                  + pts_str) << "\n";
     };
 
-    std::cout << B << C << BOX_SEP << R;
+    std::cout << B << C << BOX_SEP << R << "\n";
     brow(B + "DNS SECURITY" + R, 12);
     {
         std::string spf_good = "SPF     \u2713 Настроен";
@@ -925,7 +951,7 @@ static void print_report(
     }
 
     // ── SSL/TLS ─────────────────────────────────────────────────────────────
-    std::cout << B << C << BOX_SEP << R;
+    std::cout << B << C << BOX_SEP << R << "\n";
     brow(B + "SSL/TLS" + R, 7);
 
     if (!tls.has_https) {
@@ -961,11 +987,11 @@ static void print_report(
     {
         std::ostringstream pp;
         pp << "Штраф TLS: -" << tls_pen << " pts";
-        brow(RE + B + pp.str() + R, str_display_len(pp.str()));
+        brow(RE + B + pp.str() + R, display_len(pp.str()));
     }
 
     // ── HTTP SECURITY HEADERS ───────────────────────────────────────────────
-    std::cout << B << C << BOX_SEP << R;
+    std::cout << B << C << BOX_SEP << R << "\n";
     brow(B + "HTTP SECURITY HEADERS" + R, 21);
     yn(http.x_frame_options,
        "X-Frame-Options          \u2713 Настроен",
@@ -984,7 +1010,7 @@ static void print_report(
        "Server версия            \u2717 Раскрыта", 2);
 
     // ── FIREWALL ────────────────────────────────────────────────────────────
-    std::cout << B << C << BOX_SEP << R;
+    std::cout << B << C << BOX_SEP << R << "\n";
     brow(B + "FIREWALL" + R, 8);
     yn(firewall,
        "Firewall  \u2713 Обнаружен  (+5 pts)",
@@ -999,7 +1025,7 @@ static void print_report(
                    const std::string& msg) {
         std::string bracket = level_col + "[" + level + "]\033[0m ";
         int dlen = 1 + static_cast<int>(level.size()) + 2  // "[LEVEL] "
-                   + str_display_len(msg);
+                   + display_len(msg);
         brow(bracket + msg, dlen);
         any_rec = true;
     };
@@ -1065,66 +1091,22 @@ void Scorecard::run(const std::string& target) {
               << "Security Scorecard: " << Color::CYAN << target
               << Color::RESET << "\n\n";
 
-    // ── Launch all checks in parallel ──────────────────────────────────────
-    auto f_dns   = std::async(std::launch::async,
-        [this, &target] { return check_dns(target); });
-
-    auto f_tls   = std::async(std::launch::async,
-        [this, &target] { return check_tls(target); });
-
-    auto f_http  = std::async(std::launch::async,
-        [this, &target] { return check_http(target); });
-
-    // Ports + CVE: CVE lookup runs after port scan, same async task
-    auto f_ports_cve = std::async(std::launch::async,
-        [this, &target] {
-            PortsAnalysis pa = check_ports(target);
-            std::vector<CVEFinding> cv = check_cve(pa);
-            return std::make_pair(pa, cv);
-        });
-
-    auto f_fw    = std::async(std::launch::async,
-        [this, &target] { return check_firewall(target); });
-
-    auto f_whois = std::async(std::launch::async,
-        [this, &target] { return check_whois(target); });
-
-    // ── Progress bar while tasks run ───────────────────────────────────────
-    using ms = std::chrono::milliseconds;
-    for (;;) {
-        bool dns_done   = f_dns.wait_for(ms(0))       == std::future_status::ready;
-        bool tls_done   = f_tls.wait_for(ms(0))       == std::future_status::ready;
-        bool http_done  = f_http.wait_for(ms(0))      == std::future_status::ready;
-        bool pcve_done  = f_ports_cve.wait_for(ms(0)) == std::future_status::ready;
-        bool fw_done    = f_fw.wait_for(ms(0))        == std::future_status::ready;
-        bool whois_done = f_whois.wait_for(ms(0))     == std::future_status::ready;
-
-        int done = static_cast<int>(dns_done)   + static_cast<int>(tls_done) +
-                   static_cast<int>(http_done)  + static_cast<int>(pcve_done) +
-                   static_cast<int>(fw_done)    + static_cast<int>(whois_done);
-
-        std::string msg = !dns_done   ? "Проверяем DNS...      " :
-                          !tls_done   ? "Анализируем TLS...    " :
-                          !http_done  ? "Проверяем заголовки..." :
-                          !pcve_done  ? "Ищем CVE...           " :
-                          !whois_done ? "WHOIS анализ...       " :
-                          !fw_done    ? "Проверяем firewall... " :
-                                        "Готово!               ";
-        print_progress(done, 6, msg);
-        if (done == 6) break;
-        std::this_thread::sleep_for(ms(300));
-    }
+    // ── Sequential steps with accurate progress ────────────────────────────
+    PortsAnalysis ports = check_ports(target);
+    print_progress(1, "Проверяем порты...");
+    DNSAnalysis dns = check_dns(target);
+    print_progress(3, "Анализируем DNS...");
+    TLSAnalysis tls = check_tls(target);
+    print_progress(5, "Проверяем TLS...");
+    HTTPAnalysis http = check_http(target);
+    print_progress(7, "Анализируем заголовки...");
+    std::vector<CVEFinding> cves = check_cve(ports);
+    print_progress(9, "Сопоставляем CVE...");
+    print_progress(10, "Готово!");
     std::cout << "\n";
 
-    // ── Collect results ────────────────────────────────────────────────────
-    DNSAnalysis             dns   = f_dns.get();
-    TLSAnalysis             tls   = f_tls.get();
-    HTTPAnalysis            http  = f_http.get();
-    auto                    pc    = f_ports_cve.get();
-    PortsAnalysis           ports = pc.first;
-    std::vector<CVEFinding> cves  = pc.second;
-    bool                    firewall = f_fw.get();
-    WhoisAnalysis           whois = f_whois.get();
+    bool firewall = check_firewall(target);
+    WhoisAnalysis whois = check_whois(target);
 
     double elapsed = std::chrono::duration<double>(
         std::chrono::steady_clock::now() - t_start).count();
@@ -1158,30 +1140,21 @@ void Scorecard::run(const std::string& target) {
     int cve_pen = 0;
     for (auto& c : cves) cve_pen += c.penalty;
     cve_pen = std::min(cve_pen, 40);
-    score -= cve_pen;
-
-    // Ports penalty (max -20)
-    score -= std::min(ports.penalty, 20);
-
-    // DNS penalty (max -20)
-    score -= std::min(dns.penalty, 20);
 
     // TLS penalty (max -15) — includes HSTS
     int tls_pen = tls.penalty;
     if (tls.has_https && !http.has_hsts) tls_pen += 3;
+    if (!tls.has_https) tls_pen = 0;
     tls_pen = std::min(tls_pen, 15);
+
+    int firewall_bonus = firewall ? 5 : -5;
+
+    score -= std::min(cve_pen, 40);
+    score -= std::min(ports.penalty, 20);
+    score -= std::min(dns.penalty, 20);
     score -= tls_pen;
-
-    // HTTP headers penalty (max -10, HSTS already in TLS)
     score -= std::min(http.penalty, 10);
-
-    // Firewall
-    if (firewall)  score += 5;
-    else           score -= 5;
-
-    // WHOIS penalty (max -13)
-    score -= std::min(whois.penalty, 13);
-
+    score += firewall_bonus;
     score = std::max(0, std::min(100, score));
 
     auto [grade, verdict] = score_grade(score);
@@ -1319,4 +1292,3 @@ void Scorecard::print(const ScoreCard& sc, const std::string& target) {
     std::cout << " ╚══════════════════════════════════════════════════════════════╝\n";
     std::cout << "\033[0m\n";
 }
-
