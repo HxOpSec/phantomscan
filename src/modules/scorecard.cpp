@@ -164,7 +164,7 @@ static std::string port_to_service(int port) {
 // Lowercase helper
 static std::string to_lower(const std::string& s) {
     std::string out = s;
-    for (char& ch : out) ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+    for (char& ch : out) ch = std::tolower(static_cast<unsigned char>(ch));
     return out;
 }
 
@@ -208,14 +208,21 @@ static std::string format_port_token(const PortsAnalysis::ServiceBanner& sb) {
     return service;
 }
 
+static bool should_replace_banner(const PortsAnalysis::ServiceBanner& current,
+                                  const PortsAnalysis::ServiceBanner& candidate) {
+    if (current.service.empty()) return true;
+    if (candidate.version_known && !current.version_known) return true;
+    if (current.banner.empty() && !candidate.banner.empty()) return true;
+    return false;
+}
+
 // Extract banner for given port/service using lightweight commands (3-5s timeout)
 static std::string grab_banner_raw(const std::string& host, int port, const std::string& svc) {
     // Basic sanitization to avoid shell injection in helper commands
-    for (char ch : host) {
-        if (!(std::isalnum(static_cast<unsigned char>(ch)) ||
-              ch == '.' || ch == '-' || ch == ':' || ch == '[' || ch == ']'))
-            return "";
-    }
+    static const std::regex host_re(
+        R"(^([A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*)$|^(\[?[A-Fa-f0-9:]+\]?)$)");
+    if (!std::regex_match(host, host_re))
+        return "";
     std::string cmd;
     if (port == 22 || svc == "SSH") {
         cmd = "echo '' | timeout 3 nc -w 2 " + host + " 22 2>/dev/null";
@@ -283,10 +290,25 @@ static bool cve_recent(const std::string& id) {
     std::regex re("CVE-(\\d{4})-");
     std::smatch m;
     if (std::regex_search(id, m, re) && m.size() >= 2) {
-        int year = std::stoi(m.str(1));
-        return year >= 2015;
+        try {
+            int year = std::stoi(m.str(1));
+            return year >= 2015;
+        } catch (...) {
+            return false;
+        }
     }
     return false;
+}
+
+static std::pair<int, int> cve_id_order(const std::string& id) {
+    std::regex re("CVE-(\\d{4})-(\\d+)");
+    std::smatch m;
+    if (std::regex_search(id, m, re) && m.size() >= 3) {
+        try {
+            return {std::stoi(m.str(1)), std::stoi(m.str(2))};
+        } catch (...) {}
+    }
+    return {0, 0};
 }
 
 // Check if CVE description matches detected version (heuristic)
@@ -788,16 +810,8 @@ std::vector<CVEFinding> Scorecard::check_cve(const std::string& host,
         parse_banner(filled);
 
         auto it = svc_meta.find(sb.service);
-        if (it == svc_meta.end()) {
+        if (it == svc_meta.end() || should_replace_banner(it->second, filled))
             svc_meta[sb.service] = filled;
-        } else {
-            // Prefer entry with known version/banner
-            bool replace = false;
-            if (filled.version_known && !it->second.version_known) replace = true;
-            else if (!it->second.version_known && !it->second.banner.empty() && filled.banner.empty()) replace = false;
-            else if (it->second.banner.empty() && !filled.banner.empty()) replace = true;
-            if (replace) svc_meta[sb.service] = filled;
-        }
         sb = filled;
     }
 
@@ -839,7 +853,11 @@ std::vector<CVEFinding> Scorecard::check_cve(const std::string& host,
     // Sort by CVSS descending and limit to top 10
     std::sort(findings.begin(), findings.end(),
         [](const CVEFinding& a, const CVEFinding& b) {
-            if (a.cvss == b.cvss) return a.id < b.id;
+            if (a.cvss == b.cvss) {
+                auto oa = cve_id_order(a.id);
+                auto ob = cve_id_order(b.id);
+                return oa > ob;
+            }
             return a.cvss > b.cvss;
         });
     if (findings.size() > 10)
@@ -1076,7 +1094,7 @@ static void print_report(
         }
         brow(port_line.str());
         if (!any_known) {
-            brow("  [?] Banner grabbing не дал результата");
+            brow("  [?] Захват баннера не дал результата");
             brow("  Показаны CVE >= 2015 для найденных сервисов");
         }
 
