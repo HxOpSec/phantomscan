@@ -44,7 +44,18 @@ struct DNSAnalysis {
     bool dmarc_none   = false;   // p=none
     bool has_dnssec   = false;
     bool has_caa      = false;
+    bool has_dkim     = false;   // default._domainkey TXT
+    bool has_mx       = false;   // MX record
     int  penalty      = 0;
+};
+
+// ─── WHOIS analysis ───────────────────────────────────────────────────────
+struct WhoisAnalysis {
+    int         domain_age_days    = -1;   // -1 = unknown
+    int         days_until_expiry  = -1;   // -1 = unknown
+    std::string registrar;
+    std::string country;
+    int         penalty            = 0;
 };
 
 struct TLSAnalysis {
@@ -98,4 +109,5 @@ private:
     PortsAnalysis           check_ports(const std::string& host);
     std::vector<CVEFinding> check_cve(const PortsAnalysis& ports);
     bool                    check_firewall(const std::string& host);
+    WhoisAnalysis           check_whois(const std::string& domain);
 };
