@@ -223,8 +223,10 @@ static std::string grab_banner_raw(const std::string& host, int port, const std:
         R"(^([A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*)$|^(\[?[A-Fa-f0-9:]+\]?)$)");
     if (!std::regex_match(host, host_re))
         return "";
+    if (host.find_first_of("'\"`$") != std::string::npos)
+        return "";
     std::string cmd;
-    std::string quoted = "'" + host + "'";
+    std::string quoted = "\"" + host + "\"";
     if (port == 22 || svc == "SSH") {
         cmd = "echo '' | timeout 3 nc -w 2 " + quoted + " 22 2>/dev/null";
     } else if (port == 21 || svc == "FTP") {
@@ -263,7 +265,7 @@ static void parse_banner(PortsAnalysis::ServiceBanner& sb) {
         while (std::getline(ss, line)) {
             std::string l = to_lower(line);
             if (l.rfind("server:", 0) == 0) {
-                std::regex re("server:\\s*([A-Za-z0-9._-]+)[/ ]?([0-9]+(?:\\.[0-9A-Za-z_-]+)*)?", std::regex::icase);
+                std::regex re("server:\\s*([A-Za-z0-9_.-]+)[/ ]?([0-9]+(?:\\.[0-9A-Za-z_-]+)*)?", std::regex::icase);
                 std::smatch m;
                 if (std::regex_search(line, m, re) && m.size() >= 2) {
                     sb.product = m.str(1);
@@ -282,7 +284,7 @@ static void parse_banner(PortsAnalysis::ServiceBanner& sb) {
     }
 
     if (sb.service == "FTP" || sb.service == "SMTP") {
-        std::regex re("^\\s*\\d{3}\\s+([A-Za-z0-9._-]+)[ /]?([A-Za-z0-9._-]+)?", std::regex::icase);
+        std::regex re("^\\s*\\d{3}\\s+([A-Za-z0-9_.-]+)[ /]?([A-Za-z0-9_.-]+)?", std::regex::icase);
         std::smatch m;
         if (std::regex_search(sb.banner, m, re) && m.size() >= 2) {
             sb.product = m.str(1);
@@ -350,10 +352,10 @@ static bool cve_matches_version(const CVEEntry& e,
             if (digit_pos != std::string::npos && digit_pos - prod_pos < 10) {
                 std::string found;
                 while (digit_pos < desc_l.size()) {
-                    char ch = desc_l[digit_pos];
-                    if (!(std::isdigit(static_cast<unsigned char>(ch)) || ch == '.'))
+                    unsigned char uch = static_cast<unsigned char>(desc_l[digit_pos]);
+                    if (!(std::isdigit(uch) || uch == static_cast<unsigned char>('.')))
                         break;
-                    found.push_back(ch);
+                    found.push_back(static_cast<char>(uch));
                     digit_pos++;
                 }
                 if (!found.empty()) {
@@ -1117,7 +1119,7 @@ static void print_report(
             port_line << " — версии неизвестны";
         }
         brow(port_line.str());
-        brow("  CVE >= 2015; фильтр по версиям баннера");
+        brow("  CVE >= 2015; фильтрация по версиям баннера");
         if (!any_known) {
             brow("  [?] Захват баннера не дал результата");
             brow("  Показаны CVE >= 2015 для найденных сервисов");
