@@ -65,8 +65,9 @@ static void brow(const std::string& text, int custom_display_len = -1) {
     std::string txt = text;
     int dlen = (custom_display_len >= 0) ? custom_display_len : display_len(txt);
     if (dlen > BOX_INNER - 2) {
-        // truncate and add ellipsis to stay inside the box
-        while (dlen > BOX_INNER - 5 && !txt.empty()) {
+        // leave room for two leading spaces and "..." (BOX_INNER - 5 visible chars)
+        const int max_visible = BOX_INNER - 5;
+        while (dlen > max_visible && !txt.empty()) {
             txt.pop_back();
             dlen = display_len(txt);
         }
@@ -153,7 +154,7 @@ static std::string port_to_service(int port) {
         case 6379: return "Redis";
         case 8080: return "Tomcat";
         case 8443: return "HTTPS";
-        case 27017:return "MongoDB";
+        case 27017: return "MongoDB";
         default:   return "";
     }
 }
@@ -185,7 +186,7 @@ static std::string score_color(int score) {
     return "\033[31m";                           // red
 }
 
-// Print real-time progress bar for fixed 6 steps
+// Print real-time progress bar for fixed 6 steps (fills 1,3,5,7,9,10 blocks)
 static void print_progress(int filled_blocks, const std::string& msg) {
     if (filled_blocks < 0) filled_blocks = 0;
     if (filled_blocks > 10) filled_blocks = 10;
@@ -866,7 +867,7 @@ static void print_report(
            << "   \u25a0 Critical: " << crit
            << "  \u25a0 High: "     << high
            << "  \u25a0 Medium: "   << med;
-        brow(ss.str());  // display_len auto-detected
+        brow(ss.str());  // uses default display_len calculation
 
         // Show top CVEs (up to 5)
         int shown = 0;
@@ -902,7 +903,7 @@ static void print_report(
         if ((pos = colored.find(CROSS)) != std::string::npos)
             colored.replace(pos, CROSS.size(), RE + CROSS + R);
 
-        int txt_dlen = display_len(txt);  // display width without ANSI
+        int txt_dlen = display_len(txt);  // display width (ANSI stripped, UTF-8 aware)
 
         std::string pts_str;
         int pts_dlen = 0;
@@ -1143,8 +1144,11 @@ void Scorecard::run(const std::string& target) {
 
     // TLS penalty (max -15) — includes HSTS
     int tls_pen = tls.penalty;
-    if (tls.has_https && !http.has_hsts) tls_pen += 3;
-    if (!tls.has_https) tls_pen = 0;
+    if (!tls.has_https) {
+        tls_pen = 0;
+    } else if (!http.has_hsts) {
+        tls_pen += 3;
+    }
     tls_pen = std::min(tls_pen, 15);
 
     int firewall_bonus = firewall ? 5 : -5;
@@ -1154,6 +1158,7 @@ void Scorecard::run(const std::string& target) {
     score -= std::min(dns.penalty, 20);
     score -= tls_pen;
     score -= std::min(http.penalty, 10);
+    // WHOIS penalties are shown in the report for context only (not included in score)
     score += firewall_bonus;
     score = std::max(0, std::min(100, score));
 
