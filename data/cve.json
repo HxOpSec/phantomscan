@@ -2105,6 +2105,24 @@
   ],
   "Tomcat": [
     {
+      "id": "CVE-2025-24813",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Tomcat partial PUT request RCE"
+    },
+    {
+      "id": "CVE-2024-50379",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "Tomcat race condition RCE"
+    },
+    {
+      "id": "CVE-2023-46589",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Tomcat HTTP request smuggling"
+    },
+    {
       "id": "CVE-2020-1938",
       "severity": "CRITICAL",
       "cvss": 9.8,
@@ -2142,6 +2160,24 @@
     }
   ],
   "PHP": [
+    {
+      "id": "CVE-2024-4577",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "PHP CGI argument injection RCE"
+    },
+    {
+      "id": "CVE-2023-3823",
+      "severity": "HIGH",
+      "cvss": 8.1,
+      "desc": "PHP XML external entity injection"
+    },
+    {
+      "id": "CVE-2022-31628",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "PHP phar wrapper DoS"
+    },
     {
       "id": "CVE-2021-21705",
       "severity": "MEDIUM",
@@ -2197,6 +2233,12 @@
       "severity": "HIGH",
       "cvss": 7.1,
       "desc": "WordPress XXE via media upload (admin)"
+    },
+    {
+      "id": "CVE-2020-28032",
+      "severity": "CRITICAL",
+      "cvss": 9.8,
+      "desc": "WordPress object injection RCE"
     },
     {
       "id": "CVE-2019-17671",
@@ -4981,6 +5023,40 @@
       "severity": "LOW",
       "cvss": 2.6,
       "desc": "Cross-site scripting (XSS) vulnerability in the taxonomy module in Drupal 4.6..."
+    }
+  ],
+  "Node.js": [
+    {
+      "id": "CVE-2023-30581",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "Node.js permission model bypass"
+    },
+    {
+      "id": "CVE-2022-32212",
+      "severity": "HIGH",
+      "cvss": 8.1,
+      "desc": "Node.js DNS rebinding attack"
+    }
+  ],
+  "OpenSSL": [
+    {
+      "id": "CVE-2022-0778",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "OpenSSL BN_mod_sqrt infinite loop DoS"
+    },
+    {
+      "id": "CVE-2021-3449",
+      "severity": "MEDIUM",
+      "cvss": 5.9,
+      "desc": "OpenSSL NULL pointer deref DoS"
+    },
+    {
+      "id": "CVE-2014-0160",
+      "severity": "HIGH",
+      "cvss": 7.5,
+      "desc": "OpenSSL Heartbleed memory disclosure"
     }
   ],
   "Log4j": [

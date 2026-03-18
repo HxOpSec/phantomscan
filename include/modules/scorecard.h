@@ -34,6 +34,7 @@ struct CVEFinding {
     double      cvss    = 0.0;
     std::string desc;
     int         penalty = 0;
+    std::string service;
 };
 
 struct DNSAnalysis {
@@ -89,6 +90,15 @@ struct PortsAnalysis {
     bool port_3389 = false;   // RDP
     int  extra_count = 0;     // additional non-standard open ports
     std::vector<int> open_list;
+    struct ServiceBanner {
+        int         port          = 0;
+        std::string service;
+        std::string product;      // detected product name from banner (Apache, nginx, OpenSSH)
+        std::string banner;
+        std::string version;      // parsed version token (e.g., OpenSSH_9.3, Apache/2.4.49)
+        bool        version_known = false;
+    };
+    std::vector<ServiceBanner> banners; // aligned with open ports (unique by service)
     int  penalty = 0;
 };
 
@@ -107,7 +117,7 @@ private:
     TLSAnalysis             check_tls(const std::string& host);
     HTTPAnalysis            check_http(const std::string& host);
     PortsAnalysis           check_ports(const std::string& host);
-    std::vector<CVEFinding> check_cve(const PortsAnalysis& ports);
+    std::vector<CVEFinding> check_cve(const std::string& host, PortsAnalysis& ports);
     bool                    check_firewall(const std::string& host);
     WhoisAnalysis           check_whois(const std::string& domain);
 };
