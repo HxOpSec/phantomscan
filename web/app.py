@@ -31,9 +31,12 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PHANTOMSCAN = os.path.join(BASE_DIR, "..", "builds", "phantomscan")
 REPORTS_DIR = os.path.join(BASE_DIR, "..", "reports")
+# Timeouts are in seconds
 FULL_SCAN_TIMEOUT_SECONDS = 420
 SCORECARD_TIMEOUT_SECONDS = 180
 LOG_LIMIT = 500
+# RFC 1123 hostname with optional subdomains
+HOSTNAME_REGEX = r"(?=.{1,253}$)([A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*"
 
 app = Flask(__name__, static_folder=".")
 CORS(app)
@@ -72,10 +75,7 @@ def is_valid_target(target: str) -> bool:
         return True
     except ValueError:
         pass
-    hostname = re.fullmatch(
-        r"(?=.{1,253}$)([A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*",
-        target,
-    )
+    hostname = re.fullmatch(HOSTNAME_REGEX, target)
     return bool(hostname)
 
 
@@ -105,7 +105,7 @@ def add_history_entry(result: dict) -> None:
         "score": result.get("score"),
         "grade": result.get("grade"),
         "ports": len(result.get("ports", [])) if isinstance(result.get("ports"), list) else 0,
-        "timestamp": result.get("timestamp") or datetime.utcnow().isoformat(),
+        "timestamp": result.get("timestamp") or datetime.now(timezone.utc).isoformat(),
     }
     scan_history.appendleft(entry)
 
@@ -136,7 +136,7 @@ def parse_scorecard_output(stdout: str, target: str) -> dict:
         "http": {},
         "whois": {},
         "recommendations": [],
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
     for line in clean.splitlines():
@@ -232,7 +232,7 @@ def parse_stdout_fallback(stdout: str, target: str) -> dict:
         "city": "",
         "isp": "",
         "firewall": False,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     for line in clean.splitlines():
         if "ОС:" in line:
@@ -414,7 +414,7 @@ def start_scan():
             "ssl": "8",
         }
         menu_choice = mode_map.get(mode, "1")
-        scan_id = f"scan_{safe_target(target)}_{datetime.utcnow().strftime('%H%M%S%f')}"
+        scan_id = f"scan_{safe_target(target)}_{datetime.now(timezone.utc).strftime('%H%M%S%f')}"
         active_scans[scan_id] = {
             "id": scan_id,
             "target": target,
@@ -422,7 +422,7 @@ def start_scan():
             "log": [],
             "result": None,
             "progress": 0,
-            "started": datetime.utcnow().isoformat(),
+            "started": datetime.now(timezone.utc).isoformat(),
         }
         socketio.start_background_task(stream_scan, scan_id, target, menu_choice)
         return jsonify({"scan_id": scan_id, "status": "queued"})

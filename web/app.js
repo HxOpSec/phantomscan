@@ -461,6 +461,7 @@ function renderCompare(a, b) {
 }
 
 function drawRadar(a, b) {
+  // Keep polygons visible even for low scores; scale values between 0.3–1.0
   const radarMinScale = 0.3;
   const radarValueRange = 0.7;
   const ctx = els.cmpRadar?.getContext('2d');
