@@ -225,18 +225,20 @@ static std::string grab_banner_raw(const std::string& host, int port, const std:
         return "";
     if (host.find_first_of("'\"`$") != std::string::npos)
         return "";
+    if (host.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-:[]") != std::string::npos)
+        return "";
     std::string cmd;
-    std::string quoted = "\"" + host + "\"";
+    std::string safe_host = host;
     if (port == 22 || svc == "SSH") {
-        cmd = "echo '' | timeout 3 nc -w 2 " + quoted + " 22 2>/dev/null";
+        cmd = "echo '' | timeout 3 nc -w 2 " + safe_host + " 22 2>/dev/null";
     } else if (port == 21 || svc == "FTP") {
-        cmd = "echo '' | timeout 3 nc -w 2 " + quoted + " 21 2>/dev/null";
+        cmd = "echo '' | timeout 3 nc -w 2 " + safe_host + " 21 2>/dev/null";
     } else if (port == 25 || svc == "SMTP") {
-        cmd = "echo '' | timeout 3 nc -w 2 " + quoted + " 25 2>/dev/null";
+        cmd = "echo '' | timeout 3 nc -w 2 " + safe_host + " 25 2>/dev/null";
     } else if (port == 80 || port == 8080 || svc == "HTTP" || svc == "Tomcat") {
-        cmd = "curl -sI --max-time 5 --url \"http://" + host + "\" 2>/dev/null";
+        cmd = "curl -sI --max-time 5 --url http://" + safe_host + " 2>/dev/null";
     } else if (port == 443 || port == 8443 || svc == "HTTPS") {
-        cmd = "curl -sI --max-time 5 --url \"https://" + host + "\" 2>/dev/null";
+        cmd = "curl -sI --max-time 5 --url https://" + safe_host + " 2>/dev/null";
     } else {
         return "";
     }
@@ -1116,7 +1118,7 @@ static void print_report(
         }
 
         if (!any_known) {
-            port_line << " — версии неизвестны";
+            port_line << " - версии неизвестны";
         }
         brow(port_line.str());
         brow("  CVE >= 2015; фильтрация по версиям баннера");
@@ -1148,8 +1150,7 @@ static void print_report(
             brow(ss.str());
 
             // Show top CVEs (up to 10 already limited)
-            for (size_t i = 0; i < cves.size(); i++) {
-                if (i >= 10) break;
+            for (size_t i = 0; i < cves.size() && i < 10; i++) {
                 auto& c = cves[i];
                 std::string desc = c.desc;
                 if (static_cast<int>(desc.size()) > 26) desc = desc.substr(0, 23) + "...";
