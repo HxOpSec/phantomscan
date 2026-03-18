@@ -12,6 +12,7 @@ import os
 import re
 import subprocess
 import threading
+import ipaddress
 from collections import deque
 from datetime import datetime
 from typing import Dict, Optional, Tuple
@@ -65,15 +66,17 @@ def is_valid_target(target: str) -> bool:
     """Only allow hostname or IPv4/IPv6; block shell metacharacters."""
     if not target or re.search(r"[;&|`$(){}\\]", target):
         return False
-    ip4 = re.fullmatch(r"(?:\d{1,3}\.){3}\d{1,3}", target)
-    if ip4:
-        return all(0 <= int(octet) <= 255 for octet in target.split("."))
+    stripped = target.strip("[]")
+    try:
+        ipaddress.ip_address(stripped)
+        return True
+    except ValueError:
+        pass
     hostname = re.fullmatch(
         r"(?=.{1,253}$)([A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*",
         target,
     )
-    ipv6 = re.fullmatch(r"\[?[A-Fa-f0-9:]+\]?", target)
-    return bool(hostname or ipv6)
+    return bool(hostname)
 
 
 def find_latest_report(target: str) -> Optional[str]:
@@ -420,7 +423,7 @@ def start_scan():
         }
         socketio.start_background_task(stream_scan, scan_id, target, menu_choice)
         return jsonify({"scan_id": scan_id, "status": "queued"})
-    except Exception as exc:  # noqa: BLE001
+    except (ValueError, OSError, RuntimeError) as exc:
         logging.error("start_scan error: %s", exc)
         return jsonify({"error": "Failed to start scan"}), 500
 

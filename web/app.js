@@ -1,5 +1,6 @@
 // PhantomScan Dashboard JS
 const API = '';
+const DEBUG = false;
 let socket = null;
 let currentScanId = null;
 let lastResult = null;
@@ -90,7 +91,7 @@ function tone(seq = []) {
       const start = ac.currentTime + idx * (d / 1000);
       osc.start(start); osc.stop(start + d / 1000);
     });
-  } catch (err) { if (window.DEBUG) console.warn('Audio unavailable:', err); }
+  } catch (err) { if (DEBUG) console.warn('Audio unavailable:', err); }
 }
 const sounds = {
   start: () => tone([{ f: 440 }, { f: 620 }, { f: 760 }]),
@@ -328,8 +329,9 @@ function renderScorecard(data) {
   const grade = data.grade || 'F';
   const circ = 534;
   const offset = circ - (score / 100) * circ;
+  const gradeColors = { 'A+': '#00ff9d', A: '#00ff9d', B: '#00d4ff', C: '#ffd447' };
+  const color = gradeColors[grade] || '#ff2d6b';
   els.ring.style.strokeDashoffset = offset;
-  const color = grade.startsWith('A') ? '#00ff9d' : grade === 'B' ? '#00d4ff' : grade === 'C' ? '#ffd447' : '#ff2d6b';
   els.ring.style.stroke = color;
   els.ringGrade.textContent = grade;
   els.ringScore.textContent = `${score}/100`;
