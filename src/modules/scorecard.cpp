@@ -1002,7 +1002,7 @@ static void print_report(
         std::string line = col + B + pre + R + gc + B + grade + R
                          + "   " + col + verdict + R;
         brow(line, static_cast<int>(pre.size()) + static_cast<int>(grade.size())
-                   + 3 + static_cast<int>(verdict.size()));
+                    + 3 + display_len(verdict));
     }
     // Score bar
     {
@@ -1298,7 +1298,7 @@ static void print_report(
        "Firewall  \u2717 Не обнаружен  (-5 pts)", 5);
 
     // ── RECOMMENDATIONS ─────────────────────────────────────────────────────
-    std::cout << B << C << BOX_SEP << R;
+    std::cout << B << C << BOX_SEP << R << "\n";
     brow(B + "РЕКОМЕНДАЦИИ (по приоритету)" + R, 28);
 
     bool any_rec = false;
@@ -1398,18 +1398,26 @@ void Scorecard::run(const std::string& target) {
     {
         std::filesystem::create_directories("logs");
         try {
+            std::string latest_file;
+            int latest_score = 0;
+            std::string prefix = "scorecard_" + target + "_";
             for (auto& entry : std::filesystem::directory_iterator("logs")) {
                 std::string name = entry.path().filename().string();
-                if (name.rfind("scorecard_" + target + "_", 0) == 0 &&
-                    entry.path().extension() == ".txt") {
-                    std::ifstream f(entry.path());
-                    int s = 0;
-                    if (f >> s) {
-                        has_prev   = true;
-                        prev_score = s;
+                if (name.rfind(prefix, 0) == 0
+                    && entry.path().extension() == ".txt") {
+                    if (name > latest_file) {
+                        std::ifstream f(entry.path());
+                        int s = 0;
+                        if (f >> s) {
+                            latest_file  = name;
+                            latest_score = s;
+                        }
                     }
-                    break;  // use first file found (one per date per domain)
                 }
+            }
+            if (!latest_file.empty()) {
+                has_prev   = true;
+                prev_score = latest_score;
             }
         } catch (...) {}
     }
