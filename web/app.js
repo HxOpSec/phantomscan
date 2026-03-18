@@ -212,7 +212,7 @@ function classifyLog(text) {
 }
 
 // Toast
-const TOAST_DURATION = 3600;
+const TOAST_DURATION = 4000;
 let toastTimer = null;
 function toast(msg) {
   if (!els.toast) return;
@@ -461,6 +461,8 @@ function renderCompare(a, b) {
 }
 
 function drawRadar(a, b) {
+  const RADAR_MIN_SCALE = 0.3;
+  const RADAR_VALUE_RANGE = 0.7;
   const ctx = els.cmpRadar?.getContext('2d');
   if (!ctx) return;
   const metrics = [
@@ -488,8 +490,8 @@ function drawRadar(a, b) {
     ctx.strokeStyle = color.replace('0.35', '0.8');
     ctx.fill(); ctx.stroke();
   };
-  drawPoly(metrics.map(v => 0.3 + v * 0.7), 'rgba(0,212,255,0.35)');
-  drawPoly(metricsB.map(v => 0.3 + v * 0.7), 'rgba(255,45,107,0.35)');
+  drawPoly(metrics.map(v => RADAR_MIN_SCALE + v * RADAR_VALUE_RANGE), 'rgba(0,212,255,0.35)');
+  drawPoly(metricsB.map(v => RADAR_MIN_SCALE + v * RADAR_VALUE_RANGE), 'rgba(255,45,107,0.35)');
 }
 
 // Actions

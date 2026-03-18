@@ -31,8 +31,8 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PHANTOMSCAN = os.path.join(BASE_DIR, "..", "builds", "phantomscan")
 REPORTS_DIR = os.path.join(BASE_DIR, "..", "reports")
-FULL_SCAN_TIMEOUT = 420
-SCORECARD_TIMEOUT = 180
+FULL_SCAN_TIMEOUT_SECONDS = 420
+SCORECARD_TIMEOUT_SECONDS = 180
 LOG_LIMIT = 500
 
 app = Flask(__name__, static_folder=".")
@@ -64,7 +64,7 @@ def safe_target(target: str) -> str:
 
 def is_valid_target(target: str) -> bool:
     """Only allow hostname or IPv4/IPv6; block shell metacharacters."""
-    if not target or re.search(r"[;&|`$(){}\\]", target):
+    if not target or re.search(r"[;&|`$(){}\\]", target) or any(c in target for c in ["\n", "\r", "\0"]):
         return False
     stripped = target.strip("[]")
     try:
@@ -249,6 +249,9 @@ def parse_stdout_fallback(stdout: str, target: str) -> dict:
 
 def launch_process(binary: str, input_data: str) -> Tuple[Optional[subprocess.Popen], Optional[list]]:
     """Try sudo -n first, then plain execution."""
+    if os.path.abspath(binary) != os.path.abspath(PHANTOMSCAN):
+        logging.error("Unexpected binary path: %s", binary)
+        return None, None
     commands = [["sudo", "-n", binary], [binary]]
     for cmd in commands:
         try:
@@ -266,7 +269,7 @@ def launch_process(binary: str, input_data: str) -> Tuple[Optional[subprocess.Po
             return proc, cmd
         except FileNotFoundError:
             continue
-        except Exception as exc:  # noqa: BLE001
+        except (OSError, PermissionError) as exc:
             logging.error("Failed to start process %s: %s", cmd, exc)
             continue
     return None, None
@@ -312,7 +315,7 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
                 room=scan_id,
             )
 
-        proc.wait(timeout=FULL_SCAN_TIMEOUT)
+        proc.wait(timeout=FULL_SCAN_TIMEOUT_SECONDS)
     except subprocess.TimeoutExpired:
         proc.kill()
         scan["status"] = "error"
@@ -330,7 +333,7 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
     if not result:
         try:
             stdout = proc.stdout.read() if proc.stdout else ""
-        except Exception:
+        except (OSError, ValueError):
             stdout = ""
         result = parse_stdout_fallback(stdout, target)
 
@@ -354,7 +357,7 @@ def run_scorecard(target: str) -> dict:
     if not proc:
         raise RuntimeError("scorecard start failed")
     try:
-        stdout, _ = proc.communicate(timeout=SCORECARD_TIMEOUT)
+        stdout, _ = proc.communicate(timeout=SCORECARD_TIMEOUT_SECONDS)
     except subprocess.TimeoutExpired:
         proc.kill()
         raise
@@ -389,7 +392,7 @@ def health():
                 "version": "2.0.0",
             }
         )
-    except Exception as exc:  # noqa: BLE001
+    except OSError as exc:
         logging.error("Health error: %s", exc)
         return jsonify({"error": "health check failed"}), 500
 
@@ -434,7 +437,7 @@ def get_scan(scan_id: str):
         if scan_id not in active_scans:
             return jsonify({"error": "Not found"}), 404
         return jsonify(active_scans[scan_id])
-    except Exception as exc:  # noqa: BLE001
+    except (ValueError, KeyError) as exc:
         logging.error("get_scan error: %s", exc)
         return jsonify({"error": "Failed to get scan"}), 500
 
@@ -463,7 +466,7 @@ def history():
             )
         combined = list(scan_history) + from_files
         return jsonify(combined[:20])
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, ValueError) as exc:
         logging.error("history error: %s", exc)
         return jsonify({"error": "history fetch failed"}), 500
 
@@ -479,7 +482,7 @@ def compare():
         r1 = run_scorecard(t1)
         r2 = run_scorecard(t2)
         return jsonify({"a": r1, "b": r2})
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, ValueError, RuntimeError) as exc:
         logging.error("compare error: %s", exc)
         return jsonify({"error": "compare failed"}), 500
 
@@ -503,7 +506,7 @@ def list_reports():
                 for f in files
             ]
         )
-    except Exception as exc:  # noqa: BLE001
+    except OSError as exc:
         logging.error("list_reports error: %s", exc)
         return jsonify({"error": "Failed to list reports"}), 500
 
@@ -520,7 +523,7 @@ def get_report(filename: str):
         if content is None:
             return jsonify({"error": "Failed to read report"}), 500
         return jsonify(content)
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, ValueError) as exc:
         logging.error("get_report error: %s", exc)
         return jsonify({"error": "Failed to fetch report"}), 500
 
