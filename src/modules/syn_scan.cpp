@@ -102,7 +102,7 @@ std::vector<SYNResult> SYNScanner::scan(const std::string& target,
     int one = 1;
     setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &one, sizeof(one));
 
-    struct timeval tv = {0, 200000}; // 200ms по умолчанию
+    struct timeval tv = {0, 200000}; // 200ms default
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
     // Фиксированный source port для этого скана

@@ -4,6 +4,7 @@
 #include <deque>
 #include <future>
 #include <iostream>
+#include <mutex>
 #include <optional>
 #include <thread>
 #include <unordered_map>
@@ -55,6 +56,7 @@ bool Scanner::check_port(int port) {
 std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
     std::vector<PortResult> results;
     std::unordered_map<int, std::string> service_cache;
+    std::mutex cache_mutex;
     auto start_time = std::chrono::steady_clock::now();
     int  total      = end_port - start_port + 1;
     ServiceDetector detector;
@@ -72,12 +74,28 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
     auto launch_task = [&](int port) {
         tasks.push_back(Task{
             port,
-            std::async(std::launch::async, [this, port, &detector]() {
+            std::async(std::launch::async, [this, port, &detector, &service_cache, &cache_mutex]() {
+                {
+                    std::lock_guard<std::mutex> lock(cache_mutex);
+                    auto cached = service_cache.find(port);
+                    if (cached != service_cache.end()) {
+                        PortResult cached_result;
+                        cached_result.port    = port;
+                        cached_result.is_open = true;
+                        cached_result.service = cached->second;
+                        return std::optional<PortResult>(cached_result);
+                    }
+                }
+
                 if (!check_port(port)) return std::optional<PortResult>{};
                 PortResult result;
                 result.port    = port;
                 result.is_open = true;
                 result.service = detector.detect(target_ip, port);
+                {
+                    std::lock_guard<std::mutex> lock(cache_mutex);
+                    service_cache.emplace(port, result.service);
+                }
                 return std::optional<PortResult>(result);
             })
         });
@@ -107,12 +125,6 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
         }
 
         if (res) {
-            const auto cache_it = service_cache.find(res->port);
-            if (cache_it != service_cache.end())
-                res->service = cache_it->second;
-            else
-                service_cache[res->port] = res->service;
-
             results.push_back(*res);
 
             std::cout << "\r" << Color::OK
