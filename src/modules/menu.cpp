@@ -336,39 +336,8 @@ void Menu::udp_scan() {
 }
 
 void Menu::scorecard_scan() {
-    std::cout << Color::INFO << "Анализируем безопасность цели..."
-              << Color::RESET << std::endl;
-
-    ScanResult sr;
-
-    ThreadScanner scanner(target, 50);
-    auto ports = scanner.scan(1, 1024);
-    sr.open_port_count = ports.size();
-
-    CVEScanner cve;
-    for (const auto& r : ports) {
-        auto cves = cve.search(r.service);
-        for (const auto& c : cves)
-            sr.cve_severities.push_back(c.severity);
-        if (r.service == "Telnet") sr.has_telnet = true;
-        if (r.service == "FTP")    sr.has_ftp    = true;
-        if (r.service == "RDP")    sr.has_rdp    = true;
-    }
-
-    SSLScanner ssl;
-    auto ssl_info  = ssl.scan(original_target);
-    sr.has_ssl     = !ssl_info.subject.empty();
-    sr.ssl_valid   = !ssl_info.expired && !ssl_info.self_signed;
-    sr.ssl_expired = ssl_info.expired;
-
-    WAFDetector waf;
-    sr.waf_detected = waf.detect(original_target).detected;
-
-    FirewallDetector fw;
-    sr.firewall_detected = fw.detect(target).detected;
-
     Scorecard sc;
-    sc.print(sc.calculate(sr), original_target);
+    sc.run(original_target);
 }
 
 void Menu::http_dir_scan() {
