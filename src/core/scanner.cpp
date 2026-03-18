@@ -101,10 +101,10 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
         });
     };
 
-    auto process_task = [&](Task& task, int processed) {
+    auto process_task = [&](Task& task, int processed_count) {
         auto res = task.fut.get();
-        if (processed % 50 == 0) {
-            int done    = processed;
+        if (processed_count % 50 == 0) {
+            int done    = processed_count;
             int percent = (done * 100) / total;
             auto now    = std::chrono::steady_clock::now();
             int elapsed = std::chrono::duration_cast<std::chrono::seconds>
@@ -135,23 +135,23 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
         }
     };
 
-    int processed = 0;
+    int processed_count = 0;
     for (int port = start_port; port <= end_port; port++) {
         launch_task(port);
 
         if (static_cast<int>(tasks.size()) >= batch_size) {
             Task task = std::move(tasks.front());
             tasks.pop_front();
-            processed++;
-            process_task(task, processed);
+            processed_count++;
+            process_task(task, processed_count);
         }
     }
 
     while (!tasks.empty()) {
         Task task = std::move(tasks.front());
         tasks.pop_front();
-        processed++;
-        process_task(task, processed);
+        processed_count++;
+        process_task(task, processed_count);
     }
 
     auto end_time  = std::chrono::steady_clock::now();

@@ -195,7 +195,8 @@ const std::unordered_map<std::string, std::vector<CVEEntry>>& get_cached_db(cons
     return cache;
 }
 
-std::string normalize_key(std::string key) {
+std::string normalize_key(std::string key_in) {
+    std::string key = std::move(key_in);
     for (char stop : {' ', '[', '/', '('}) {
         size_t p = key.find(stop);
         if (p != std::string::npos) {
