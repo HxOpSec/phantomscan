@@ -1,3 +1,4 @@
 reports/*
 builds/*
 src/**/*.o
+*.o
