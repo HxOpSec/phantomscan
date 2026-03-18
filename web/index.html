@@ -3,261 +3,208 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PhantomScan Pro</title>
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+  <title>PhantomScan Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script src="/socket.io/socket.io.js" defer></script>
+  <script src="app.js" defer></script>
 </head>
 <body>
-
-<canvas id="canvas"></canvas>
+<canvas id="bg-canvas" aria-hidden="true"></canvas>
 
 <div class="wrapper">
-
-  <!-- ── HEADER ── -->
   <header>
-    <div class="logo-wrap">
-      <div class="logo-icon">
-        <svg viewBox="0 0 48 48" fill="none">
-          <polygon points="24,2 46,38 2,38" fill="none" stroke="#00d4ff" stroke-width="1.5"
-            style="filter:drop-shadow(0 0 8px #00d4ff)"/>
-          <polygon points="24,10 38,34 10,34" fill="none" stroke="#ff2d6b" stroke-width="1"
-            style="filter:drop-shadow(0 0 6px #ff2d6b)"/>
-          <circle cx="24" cy="26" r="4" fill="#00d4ff"
-            style="filter:drop-shadow(0 0 8px #00d4ff)"/>
-          <line x1="24" y1="10" x2="24" y2="18" stroke="#00d4ff" stroke-width="1.5"/>
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 64 64" role="presentation" aria-hidden="true">
+          <polygon points="32,4 60,52 4,52" class="logo-outer"/>
+          <polygon points="32,12 48,44 16,44" class="logo-inner"/>
+          <circle cx="32" cy="34" r="5" class="logo-dot"/>
         </svg>
       </div>
-      <div class="logo-title">
-        <h1 data-text="PHANTOMSCAN">PHANTOMSCAN</h1>
-        <p>NETWORK RECONNAISSANCE &amp; VULNERABILITY ANALYSIS</p>
+      <div>
+        <h1 class="glitch" data-text="PHANTOMSCAN">PHANTOMSCAN</h1>
+        <p>Network reconnaissance &amp; vulnerability intelligence</p>
       </div>
     </div>
-    <div class="header-right">
-      <div class="status-dot">
-        <div class="dot" id="statusDot"></div>
-        <span id="statusText">SYSTEM ONLINE</span>
-      </div>
-      <div class="version-badge">v1.2.0 PRO</div>
+    <div class="status">
+      <div class="status-indicator" id="statusDot" aria-hidden="true"></div>
+      <span id="statusText">INIT</span>
+      <span class="badge">v2.0</span>
     </div>
   </header>
 
-  <!-- ── SCAN INPUT ── -->
-  <section class="scan-section">
-    <span class="scan-label">[ ВВЕДИТЕ ЦЕЛЬ ДЛЯ АНАЛИЗА ]</span>
-    <div class="scan-box">
-      <span class="scan-prefix">TARGET://</span>
-      <input class="scan-input" id="targetInput"
-        placeholder="192.168.1.1 или example.com"
-        value="google.com" />
-      <button class="scan-btn" id="scanBtn" onclick="startScan()">
-        <span>СКАНИРОВАТЬ</span>
-      </button>
+  <nav class="tabs" aria-label="Navigation tabs">
+    <button class="tab active" data-tab="scan" aria-label="Scan tab">[ SCAN ]</button>
+    <button class="tab" data-tab="scorecard" aria-label="Scorecard tab">[ SCORECARD ]</button>
+    <button class="tab" data-tab="ports" aria-label="Ports tab">[ PORTS ]</button>
+    <button class="tab" data-tab="history" aria-label="History tab">[ HISTORY ]</button>
+    <button class="tab" data-tab="compare" aria-label="Compare tab">[ COMPARE ]</button>
+  </nav>
+
+  <!-- SCAN TAB -->
+  <section class="tab-panel active" id="tab-scan">
+    <div class="card input-card">
+      <div class="input-row">
+        <label class="prefix" for="targetInput">TARGET //</label>
+        <input id="targetInput" autocomplete="off" placeholder="example.com или 192.168.0.1" aria-label="Target host">
+        <select id="modeSelect" aria-label="Scan mode">
+          <option value="full">Полный</option>
+          <option value="quick">Быстрый</option>
+          <option value="scorecard">Scorecard</option>
+          <option value="ssl">SSL/TLS</option>
+          <option value="subs">Поддомены</option>
+        </select>
+        <button class="primary" id="scanBtn" aria-label="Start scan">Запустить</button>
+      </div>
+      <div class="progress">
+        <div class="progress-head">
+          <span id="progressLabel">Ожидание цели…</span>
+          <span id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div id="progressFill"></div>
+        </div>
+      </div>
+      <div class="log-panel">
+        <div class="log-title">LIVE LOG</div>
+        <ul id="logLines"></ul>
+      </div>
     </div>
-    <div class="scan-options">
-      <div class="opt-chip active" data-mode="full"    onclick="toggleOpt(this)">ПОЛНЫЙ СКАН</div>
-      <div class="opt-chip"        data-mode="quick"   onclick="toggleOpt(this)">БЫСТРЫЙ</div>
-      <div class="opt-chip"        data-mode="scorecard" onclick="toggleOpt(this)">SCORECARD</div>
-      <div class="opt-chip"        data-mode="ssl"     onclick="toggleOpt(this)">SSL/TLS</div>
-      <div class="opt-chip"        data-mode="subs"    onclick="toggleOpt(this)">ПОДДОМЕНЫ</div>
+
+    <div class="grid two">
+      <div class="card stats">
+        <div class="stat" id="statPorts">
+          <div class="stat-value">0</div>
+          <div class="stat-label">PORTS</div>
+        </div>
+        <div class="stat" id="statCve">
+          <div class="stat-value">0</div>
+          <div class="stat-label">CVE</div>
+        </div>
+        <div class="stat" id="statSubs">
+          <div class="stat-value">0</div>
+          <div class="stat-label">SUBDOMAINS</div>
+        </div>
+        <div class="stat" id="statScore">
+          <div class="stat-value">—</div>
+          <div class="stat-label">SCORE</div>
+        </div>
+      </div>
+      <div class="card map-card">
+        <div class="panel-title">GEOMAP</div>
+        <div class="map">
+          <div id="mapLine"></div>
+          <div class="map-dot origin"></div>
+          <div class="map-dot target" id="mapTarget"></div>
+        </div>
+        <div class="map-info" id="mapInfo">
+          <div>TARGET: <span>—</span></div>
+          <div>COUNTRY: <span>—</span></div>
+          <div>ORG: <span>—</span></div>
+        </div>
+      </div>
     </div>
   </section>
 
-  <!-- ── PROGRESS ── -->
-  <div class="progress-section" id="progressSection">
-    <div class="progress-header">
-      <span class="progress-title">СКАНИРОВАНИЕ: <span id="progressTarget"></span></span>
-      <span class="progress-pct" id="progressPct">0%</span>
-    </div>
-    <div class="progress-bar-outer">
-      <div class="progress-bar-inner" id="progressBar" style="width:0%"></div>
-    </div>
-    <div class="progress-log" id="progressLog"></div>
-  </div>
-
-  <!-- ── STATS ROW ── -->
-  <div class="grid" id="resultsGrid">
-    <div class="panel">
-      <div class="panel-title">ОТКРЫТЫХ ПОРТОВ</div>
-      <div class="stat-big neon" id="statPorts">—</div>
-      <div class="stat-label">PORTS DISCOVERED</div>
-      <div class="stat-sub" id="statPortsSub">—</div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">УЯЗВИМОСТЕЙ CVE</div>
-      <div class="stat-big red" id="statCve">—</div>
-      <div class="stat-label">VULNERABILITIES</div>
-      <div class="stat-sub" id="statCveSub">—</div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">ПОДДОМЕНОВ</div>
-      <div class="stat-big green" id="statSubs">—</div>
-      <div class="stat-label">SUBDOMAINS FOUND</div>
-      <div class="stat-sub" id="statSubsSub">—</div>
-    </div>
-  </div>
-
-  <!-- ── MAIN GRID ── -->
-  <div class="grid grid-wide" id="mainGrid">
-
-    <!-- LEFT COLUMN -->
-    <div class="col-left">
-
-      <!-- GEO MAP -->
-      <div class="panel">
-        <div class="panel-title">ГЕОЛОКАЦИЯ ЦЕЛИ</div>
-        <div class="world-map">
-          <svg class="map-svg" viewBox="0 0 1000 500">
-            <rect width="1000" height="500" fill="#040d24"/>
-            <g stroke="#0a2a5e" stroke-width="0.5">
-              <line x1="0" y1="125" x2="1000" y2="125"/>
-              <line x1="0" y1="250" x2="1000" y2="250"/>
-              <line x1="0" y1="375" x2="1000" y2="375"/>
-              <line x1="250" y1="0" x2="250" y2="500"/>
-              <line x1="500" y1="0" x2="500" y2="500"/>
-              <line x1="750" y1="0" x2="750" y2="500"/>
-            </g>
-            <g fill="#0a2a5e" stroke="#1a3a6e" stroke-width="1">
-              <path d="M80,60 L200,50 L240,100 L220,180 L160,200 L100,160 L70,120 Z"/>
-              <path d="M180,220 L240,210 L260,300 L220,380 L160,350 L150,280 Z"/>
-              <path d="M440,50 L520,45 L540,100 L500,130 L450,120 L430,90 Z"/>
-              <path d="M440,150 L530,140 L550,250 L510,340 L450,320 L420,230 Z"/>
-              <path d="M540,40 L800,30 L820,180 L760,200 L600,190 L540,150 Z"/>
-              <path d="M720,280 L820,270 L840,340 L790,370 L720,350 Z"/>
-            </g>
-          </svg>
-          <div class="map-overlay">
-            <svg class="connect-line" viewBox="0 0 1000 500">
-              <defs>
-                <linearGradient id="lineGrad" x1="0%" y1="100%" x2="0%" y2="0%">
-                  <stop offset="0%" stop-color="#00ff9d"/>
-                  <stop offset="100%" stop-color="#ff2d6b"/>
-                </linearGradient>
-                <marker id="arrowHead" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-                  <path d="M0,0 L6,3 L0,6 Z" fill="#00d4ff"/>
-                </marker>
-              </defs>
-              <line id="mapLine" x1="600" y1="400" x2="460" y2="100"
-                stroke="url(#lineGrad)" stroke-width="1.5"
-                stroke-dasharray="5,3" opacity="0.6"
-                marker-end="url(#arrowHead)"/>
-            </svg>
-            <div class="target-dot" id="targetDot" style="left:46%;top:20%"></div>
-            <div class="origin-dot" style="left:62%;top:38%"></div>
-          </div>
-          <div class="map-info" id="mapInfo">
-            TARGET: <span>—</span><br>
-            COUNTRY: <span>—</span><br>
-            ORG: <span>—</span>
-          </div>
+  <!-- SCORECARD TAB -->
+  <section class="tab-panel" id="tab-scorecard">
+    <div class="card scorecard">
+      <div class="score-ring">
+        <svg viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="85" class="ring-bg"></circle>
+          <circle cx="100" cy="100" r="85" class="ring-fg" id="ringFg"></circle>
+        </svg>
+        <div class="ring-center">
+          <div id="ringGrade">—</div>
+          <div id="ringScore">0/100</div>
         </div>
       </div>
-
-      <!-- PORTS TABLE -->
-      <div class="panel">
-        <div class="panel-title">ОТКРЫТЫЕ ПОРТЫ</div>
-        <table class="ports-table">
-          <thead>
-            <tr>
-              <th>ПОРТ</th>
-              <th>ПРОТОКОЛ</th>
-              <th>СЕРВИС</th>
-              <th>ВЕРСИЯ</th>
-              <th>СТАТУС</th>
-            </tr>
-          </thead>
-          <tbody id="portsBody">
-            <tr><td colspan="5" style="text-align:center;color:var(--dim);padding:20px">
-              Запустите сканирование
-            </td></tr>
-          </tbody>
-        </table>
-      </div>
-
-    </div><!-- /col-left -->
-
-    <!-- RIGHT COLUMN -->
-    <div class="col-right">
-
-      <!-- SCORECARD RING -->
-      <div class="panel">
-        <div class="panel-title">SECURITY SCORECARD</div>
-        <div class="score-ring">
-          <div class="ring-wrap">
-            <svg viewBox="0 0 160 160">
-              <circle class="ring-bg" cx="80" cy="80" r="70"/>
-              <circle class="ring-fg" id="ringFg" cx="80" cy="80" r="70"/>
-            </svg>
-            <div class="ring-grade">
-              <div class="grade-letter" id="gradeLetter">—</div>
-              <div class="grade-score" id="gradeScore">—/100</div>
-            </div>
-          </div>
-          <div class="score-legend">
-            <div class="legend-item">
-              <span><span class="legend-dot" style="background:var(--neon2)"></span>Критические</span>
-              <span class="legend-val sev-critical" id="legCrit">—</span>
-            </div>
-            <div class="legend-item">
-              <span><span class="legend-dot" style="background:#ff8c42"></span>Высокие</span>
-              <span class="legend-val sev-high" id="legHigh">—</span>
-            </div>
-            <div class="legend-item">
-              <span><span class="legend-dot" style="background:var(--yellow)"></span>Средние</span>
-              <span class="legend-val sev-medium" id="legMed">—</span>
-            </div>
-            <div class="legend-item">
-              <span><span class="legend-dot" style="background:var(--neon3)"></span>Низкие</span>
-              <span class="legend-val sev-low" id="legLow">—</span>
-            </div>
-          </div>
+      <div class="grid three score-sections">
+        <div class="panel">
+          <div class="panel-title">DNS SECURITY</div>
+          <ul id="dnsList" class="checklist"></ul>
+        </div>
+        <div class="panel">
+          <div class="panel-title">SSL / TLS</div>
+          <ul id="tlsList" class="checklist"></ul>
+        </div>
+        <div class="panel">
+          <div class="panel-title">HTTP HEADERS</div>
+          <ul id="httpList" class="checklist"></ul>
+        </div>
+        <div class="panel">
+          <div class="panel-title">WHOIS</div>
+          <ul id="whoisList" class="checklist"></ul>
+        </div>
+        <div class="panel">
+          <div class="panel-title">RECOMMENDATIONS</div>
+          <div id="recList" class="rec-list"></div>
         </div>
       </div>
+    </div>
+  </section>
 
-      <!-- CVE LIST -->
-      <div class="panel">
-        <div class="panel-title">CVE УЯЗВИМОСТИ</div>
-        <div id="cveList">
-          <div style="text-align:center;color:var(--dim);padding:20px;font-family:'Share Tech Mono',monospace;font-size:12px">
-            Данные появятся после сканирования
+  <!-- PORTS TAB -->
+  <section class="tab-panel" id="tab-ports">
+    <div class="card">
+      <div class="panel-title">Ports &amp; Services</div>
+      <table id="portsTable">
+        <thead>
+          <tr>
+            <th>Port</th><th>Proto</th><th>Service</th><th>Version</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- HISTORY TAB -->
+  <section class="tab-panel" id="tab-history">
+    <div class="card">
+      <div class="panel-title">Last 20 scans</div>
+      <div class="history-grid" id="historyGrid"></div>
+    </div>
+  </section>
+
+  <!-- COMPARE TAB -->
+  <section class="tab-panel" id="tab-compare">
+    <div class="card compare-card">
+      <div class="compare-inputs">
+        <div>
+          <label for="cmpA">Target A</label>
+          <input id="cmpA" placeholder="site-a.com">
+        </div>
+        <div>
+          <label for="cmpB">Target B</label>
+          <input id="cmpB" placeholder="site-b.com">
+        </div>
+        <button class="primary" id="compareBtn" aria-label="Compare targets">Compare</button>
+      </div>
+      <div class="compare-results">
+        <div class="panel">
+          <div class="panel-title">Radar</div>
+          <canvas id="cmpRadar" width="360" height="360" aria-label="Radar chart"></canvas>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Scores</div>
+          <div class="cmp-stats">
+            <div id="cmpAScore" class="cmp-score">—</div>
+            <div id="cmpBScore" class="cmp-score">—</div>
           </div>
+          <div id="cmpLegend" class="checklist"></div>
         </div>
       </div>
+    </div>
+  </section>
 
-      <!-- SUBDOMAINS -->
-      <div class="panel">
-        <div class="panel-title">ПОДДОМЕНЫ</div>
-        <div id="subList">
-          <div style="text-align:center;color:var(--dim);padding:20px;font-family:'Share Tech Mono',monospace;font-size:12px">
-            Данные появятся после сканирования
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /col-right -->
-
-  </div><!-- /mainGrid -->
-
-  <!-- ── ACTIONS ── -->
-  <div class="actions" id="actionsBar" style="display:none">
-    <button class="btn-primary" onclick="downloadReport()">
-      <span>📄 СКАЧАТЬ JSON ОТЧЁТ</span>
-    </button>
-    <button class="btn-secondary" onclick="resetScan()">
-      ↺ НОВОЕ СКАНИРОВАНИЕ
-    </button>
-  </div>
-
-  <!-- ── FOOTER ── -->
   <footer>
-    <span>PHANTOMSCAN PRO // BY UMEDJON (HxOpSec)</span>
-    <span>TAJIKISTAN // 2026</span>
+    <span>PHANTOMSCAN PRO // HxOpSec</span>
     <span id="clock">--:--:--</span>
   </footer>
+</div>
 
-</div><!-- /wrapper -->
-
-<div class="toast" id="toast"></div>
-
-<script src="app.js"></script>
+<div id="toast" role="alert"></div>
 </body>
 </html>
