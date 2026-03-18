@@ -102,16 +102,21 @@ std::vector<SYNResult> SYNScanner::scan(const std::string& target,
     int one = 1;
     setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &one, sizeof(one));
 
-    struct timeval tv = {1, 0};
+    struct timeval tv = {0, 200000}; // 200ms default
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
     // Фиксированный source port для этого скана
     uint16_t src_port = 54321;
     ServiceDetector detector;
 
-    for (int port = port_start; port <= port_end; port++) {
+    char packet[4096];
+    char psh[4096];
+    char recv_buf[4096];
+    struct sockaddr_in dest{};
+    struct sockaddr_in from{};
+    socklen_t from_len = sizeof(from);
 
-        char packet[4096];
+    for (int port = port_start; port <= port_end; port++) {
         memset(packet, 0, sizeof(packet));
 
         // IP заголовок
@@ -141,7 +146,7 @@ std::vector<SYNResult> SYNScanner::scan(const std::string& target,
         tcph->urg_ptr = 0;
 
         // Pseudo header для checksum
-        char psh[4096];
+        memset(psh, 0, sizeof(psh));
         struct pseudo_header* pshdr = (struct pseudo_header*)psh;
         pshdr->src_addr    = iph->saddr;
         pshdr->dst_addr    = iph->daddr;
@@ -156,18 +161,17 @@ std::vector<SYNResult> SYNScanner::scan(const std::string& target,
         // IP checksum
         iph->check = checksum(iph, sizeof(struct iphdr));
 
-        struct sockaddr_in dest;
         memset(&dest, 0, sizeof(dest));
         dest.sin_family = AF_INET;
+        dest.sin_port   = htons(port);
         dest.sin_addr   = dest_addr;
 
         sendto(sock, packet, sizeof(struct iphdr) + sizeof(struct tcphdr),
                0, (struct sockaddr*)&dest, sizeof(dest));
 
         // Ждём ответ — цикл пока не получим наш пакет
-        char recv_buf[4096];
-        struct sockaddr_in from;
-        socklen_t from_len = sizeof(from);
+        memset(recv_buf, 0, sizeof(recv_buf));
+        from_len = sizeof(from);
         bool found = false;
 
         for (int attempt = 0; attempt < 10 && !found; attempt++) {
