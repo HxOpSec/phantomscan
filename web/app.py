@@ -30,6 +30,9 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PHANTOMSCAN = os.path.join(BASE_DIR, "..", "builds", "phantomscan")
 REPORTS_DIR = os.path.join(BASE_DIR, "..", "reports")
+FULL_SCAN_TIMEOUT = 420
+SCORECARD_TIMEOUT = 180
+LOG_LIMIT = 500
 
 app = Flask(__name__, static_folder=".")
 CORS(app)
@@ -60,7 +63,7 @@ def safe_target(target: str) -> str:
 
 def is_valid_target(target: str) -> bool:
     """Only allow hostname or IPv4/IPv6; block shell metacharacters."""
-    if not target or re.search(r"[;&|`$(){}]", target):
+    if not target or re.search(r"[;&|`$(){}\\]", target):
         return False
     ip4 = re.fullmatch(r"(?:\d{1,3}\.){3}\d{1,3}", target)
     if ip4:
@@ -88,7 +91,7 @@ def load_report_file(path: str) -> Optional[dict]:
     try:
         with open(path, "r", encoding="utf-8") as fh:
             return json.load(fh)
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, json.JSONDecodeError) as exc:
         logging.error("Failed to read report %s: %s", path, exc)
         return None
 
@@ -137,8 +140,8 @@ def parse_scorecard_output(stdout: str, target: str) -> dict:
         if "SCORE:" in line and "/" in line:
             try:
                 result["score"] = int(re.findall(r"SCORE:\s*([0-9]+)", line)[0])
-            except Exception:
-                pass
+            except (IndexError, ValueError):
+                result["score"] = 0
             grade_match = re.search(r"Grade:\s*([A-F][+]?)", line)
             if grade_match:
                 result["grade"] = grade_match.group(1).strip()
@@ -297,8 +300,8 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
             if not clean:
                 continue
             scan["log"].append(clean)
-            if len(scan["log"]) > 500:
-                scan["log"] = scan["log"][-500:]
+            if len(scan["log"]) > LOG_LIMIT:
+                scan["log"] = scan["log"][-LOG_LIMIT:]
             scan["progress"] = backend_progress_from_line(clean, scan.get("progress", 0))
             socketio.emit(
                 "log_line",
@@ -306,13 +309,13 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
                 room=scan_id,
             )
 
-        proc.wait(timeout=420)
+        proc.wait(timeout=FULL_SCAN_TIMEOUT)
     except subprocess.TimeoutExpired:
         proc.kill()
         scan["status"] = "error"
         socketio.emit("scan_error", {"scan_id": scan_id, "error": "Таймаут сканирования"}, room=scan_id)
         return
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, ValueError) as exc:
         scan["status"] = "error"
         socketio.emit("scan_error", {"scan_id": scan_id, "error": str(exc)}, room=scan_id)
         return
@@ -348,7 +351,7 @@ def run_scorecard(target: str) -> dict:
     if not proc:
         raise RuntimeError("scorecard start failed")
     try:
-        stdout, _ = proc.communicate(timeout=180)
+        stdout, _ = proc.communicate(timeout=SCORECARD_TIMEOUT)
     except subprocess.TimeoutExpired:
         proc.kill()
         raise

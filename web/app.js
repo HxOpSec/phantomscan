@@ -90,7 +90,7 @@ function tone(seq = []) {
       const start = ac.currentTime + idx * (d / 1000);
       osc.start(start); osc.stop(start + d / 1000);
     });
-  } catch (_) { /* audio optional */ }
+  } catch (err) { if (window.DEBUG) console.warn('Audio unavailable:', err); }
 }
 const sounds = {
   start: () => tone([{ f: 440 }, { f: 620 }, { f: 760 }]),
@@ -211,13 +211,14 @@ function classifyLog(text) {
 }
 
 // Toast
+const TOAST_DURATION = 3600;
 let toastTimer = null;
 function toast(msg) {
   if (!els.toast) return;
   els.toast.textContent = msg;
   els.toast.style.display = 'block';
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => els.toast.style.display = 'none', 3600);
+  toastTimer = setTimeout(() => els.toast.style.display = 'none', TOAST_DURATION);
 }
 
 // Stats
@@ -359,7 +360,7 @@ function renderScorecard(data) {
     { label: `TLS1.2 ${okBad(data.tls?.tls12)}`, state: data.tls?.tls12 ? 'ok' : 'bad' },
     { label: `TLS1.3 ${okBad(data.tls?.tls13)}`, state: data.tls?.tls13 ? 'ok' : 'bad' },
     { label: `HSTS ${okBad(data.tls?.hsts)}`, state: data.tls?.hsts ? 'ok' : 'bad' },
-    { label: `Cert days: ${data.tls?.days_left ?? '—'}`, state: (data.tls?.days_left ?? 0) > 0 ? 'ok' : 'warn' },
+    { label: `Cert days: ${data.tls?.days_left ?? '—'}`, state: (data.tls?.days_left ?? 0) > 30 ? 'ok' : 'warn' },
   ]);
 
   setList(els.httpList, [
