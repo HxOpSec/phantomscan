@@ -224,16 +224,17 @@ static std::string grab_banner_raw(const std::string& host, int port, const std:
     if (!std::regex_match(host, host_re))
         return "";
     std::string cmd;
+    std::string quoted = "'" + host + "'";
     if (port == 22 || svc == "SSH") {
-        cmd = "echo '' | timeout 3 nc -w 2 " + host + " 22 2>/dev/null";
+        cmd = "echo '' | timeout 3 nc -w 2 " + quoted + " 22 2>/dev/null";
     } else if (port == 21 || svc == "FTP") {
-        cmd = "echo '' | timeout 3 nc -w 2 " + host + " 21 2>/dev/null";
+        cmd = "echo '' | timeout 3 nc -w 2 " + quoted + " 21 2>/dev/null";
     } else if (port == 25 || svc == "SMTP") {
-        cmd = "echo '' | timeout 3 nc -w 2 " + host + " 25 2>/dev/null";
+        cmd = "echo '' | timeout 3 nc -w 2 " + quoted + " 25 2>/dev/null";
     } else if (port == 80 || port == 8080 || svc == "HTTP" || svc == "Tomcat") {
-        cmd = "curl -sI --max-time 5 http://" + host + " 2>/dev/null";
+        cmd = "curl -sI --max-time 5 \"http://" + host + "\" 2>/dev/null";
     } else if (port == 443 || port == 8443 || svc == "HTTPS") {
-        cmd = "curl -sI --max-time 5 https://" + host + " 2>/dev/null";
+        cmd = "curl -sI --max-time 5 \"https://" + host + "\" 2>/dev/null";
     } else {
         return "";
     }
@@ -262,7 +263,7 @@ static void parse_banner(PortsAnalysis::ServiceBanner& sb) {
         while (std::getline(ss, line)) {
             std::string l = to_lower(line);
             if (l.rfind("server:", 0) == 0) {
-                std::regex re("server:\\s*([A-Za-z0-9._-]+)[/ ]?([A-Za-z0-9._-]+)?", std::regex::icase);
+                std::regex re("server:\\s*([A-Za-z0-9._-]+)[/ ]?([0-9]+(?:\\.[0-9A-Za-z_-]+)*)?", std::regex::icase);
                 std::smatch m;
                 if (std::regex_search(line, m, re) && m.size() >= 2) {
                     sb.product = m.str(1);
@@ -331,13 +332,24 @@ static bool cve_matches_version(const CVEEntry& e,
 
     if (!major.empty()) {
         // If description mentions another version number, ensure major matches
-        std::regex version_re(prod_l + "[^0-9]{0,5}(\\d+(?:\\.\\d+)*)");
-        std::smatch m;
-        if (std::regex_search(desc_l, m, version_re) && m.size() >= 2) {
-            std::string found = m.str(1);
-            size_t fdot = found.find('.');
-            std::string found_major = (fdot == std::string::npos) ? found : found.substr(0, fdot);
-            return found_major == major;
+        size_t prod_pos = desc_l.find(prod_l);
+        if (prod_pos != std::string::npos) {
+            size_t digit_pos = desc_l.find_first_of("0123456789", prod_pos);
+            if (digit_pos != std::string::npos && digit_pos - prod_pos < 10) {
+                std::string found;
+                while (digit_pos < desc_l.size()) {
+                    char ch = desc_l[digit_pos];
+                    if (!(std::isdigit(static_cast<unsigned char>(ch)) || ch == '.'))
+                        break;
+                    found.push_back(ch);
+                    digit_pos++;
+                }
+                if (!found.empty()) {
+                    size_t fdot = found.find('.');
+                    std::string found_major = (fdot == std::string::npos) ? found : found.substr(0, fdot);
+                    return found_major == major;
+                }
+            }
         }
         // No explicit version in description -> allow if product matched
         return true;
@@ -804,15 +816,15 @@ std::vector<CVEFinding> Scorecard::check_cve(const std::string& host,
     CVEScanner cve_db;
     std::map<std::string, PortsAnalysis::ServiceBanner> svc_meta;
 
-    for (auto& sb : ports.banners) {
-        PortsAnalysis::ServiceBanner filled = sb;
-        filled.banner = grab_banner_raw(host, sb.port, sb.service);
+    for (size_t i = 0; i < ports.banners.size(); i++) {
+        PortsAnalysis::ServiceBanner filled = ports.banners[i];
+        filled.banner = grab_banner_raw(host, filled.port, filled.service);
         parse_banner(filled);
 
-        auto it = svc_meta.find(sb.service);
+        auto it = svc_meta.find(filled.service);
         if (it == svc_meta.end() || should_replace_banner(it->second, filled))
-            svc_meta[sb.service] = filled;
-        sb = filled;
+            svc_meta[filled.service] = filled;
+        ports.banners[i] = filled;
     }
 
     std::set<std::string> seen_services;
@@ -1093,6 +1105,7 @@ static void print_report(
             port_line << " — версии неизвестны";
         }
         brow(port_line.str());
+        brow("  CVE >= 2015; фильтр по версиям баннера");
         if (!any_known) {
             brow("  [?] Захват баннера не дал результата");
             brow("  Показаны CVE >= 2015 для найденных сервисов");
