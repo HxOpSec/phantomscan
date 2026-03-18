@@ -1028,9 +1028,9 @@ static void print_report(
             else if (diff < 0)  hs << RE << "↓ "  << diff << " ухудшение" << R;
             else                hs << C  << "→ без изменений"              << R;
             int plain_len = display_len("История: ")
-                          + static_cast<int>(std::to_string(prev_score).size())
+                          + display_len(std::to_string(prev_score))
                           + display_len(" pts → ")
-                          + static_cast<int>(std::to_string(score).size())
+                          + display_len(std::to_string(score))
                           + display_len(" pts  ");
             std::string arrow_txt = (diff > 0) ? ("↑ +" + std::to_string(diff) + " улучшение") :
                                     (diff < 0) ? ("↓ "  + std::to_string(diff) + " ухудшение") :
@@ -1158,8 +1158,12 @@ static void print_report(
                 int len = 0;
                 for (size_t i = 0; i < s.size(); ) {
                     unsigned char c = static_cast<unsigned char>(s[i]);
-                    int bytes = (c < 0x80) ? 1 : (c < 0xE0) ? 2 :
-                                (c < 0xF0) ? 3 : 4;
+                    int bytes = 1;
+                    if (c >= 0xF0)      bytes = 4;
+                    else if (c >= 0xE0) bytes = 3;
+                    else if (c >= 0xC0) bytes = 2;
+                    if (i + static_cast<size_t>(bytes) > s.size())
+                        bytes = static_cast<int>(s.size() - i);
                     if (len + 1 > max_vis - 3) break;
                     result += s.substr(i, static_cast<size_t>(bytes));
                     len++;
@@ -1397,7 +1401,11 @@ void Scorecard::run(const std::string& target) {
               << "Security Scorecard: " << Color::CYAN << target
               << Color::RESET << "\n\n";
     std::string safe_target = target;
-    std::replace(safe_target.begin(), safe_target.end(), '.', '_');
+    for (char& ch : safe_target) {
+        unsigned char uch = static_cast<unsigned char>(ch);
+        if (!(std::isalnum(uch) || ch == '-' || ch == '_'))
+            ch = '_';
+    }
 
     // ── Sequential steps with accurate progress ────────────────────────────
     PortsAnalysis ports = check_ports(target);
