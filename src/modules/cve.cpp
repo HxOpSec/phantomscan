@@ -5,6 +5,9 @@
 #include <sstream>
 #include <algorithm>
 #include <iomanip>
+#include <cctype>
+#include <mutex>
+#include <unordered_map>
 
 CVEScanner::CVEScanner() {}
 
@@ -17,92 +20,204 @@ static std::string read_file(const std::string& path) {
     return buf.str();
 }
 
-// ── вспомогательно: извлечь строку между кавычками ──
-static std::string extract_str(const std::string& s, size_t from) {
-    size_t start = s.find('"', from);
-    if (start == std::string::npos) return "";
-    start++;
-    size_t end = s.find('"', start);
-    if (end == std::string::npos) return "";
-    return s.substr(start, end - start);
+// ── Простенький токенизатор JSON (ограничен форматом файла cve.json) ──────
+namespace {
+struct Tokenizer {
+    explicit Tokenizer(const std::string& data_) : data(data_), pos(0) {}
+    const std::string& data;
+    size_t pos;
+
+    void skip_ws() {
+        while (pos < data.size() && std::isspace(static_cast<unsigned char>(data[pos])))
+            ++pos;
+    }
+
+    bool consume(char ch) {
+        skip_ws();
+        if (pos < data.size() && data[pos] == ch) { ++pos; return true; }
+        return false;
+    }
+
+    bool parse_string(std::string& out) {
+        skip_ws();
+        if (pos >= data.size() || data[pos] != '"') return false;
+        ++pos;
+        out.clear();
+        while (pos < data.size()) {
+            char ch = data[pos++];
+            if (ch == '\\') {
+                if (pos >= data.size()) return false;
+                char esc = data[pos++];
+                switch (esc) {
+                    case '"': out.push_back('"'); break;
+                    case '\\': out.push_back('\\'); break;
+                    case '/': out.push_back('/'); break;
+                    case 'b': out.push_back('\b'); break;
+                    case 'f': out.push_back('\f'); break;
+                    case 'n': out.push_back('\n'); break;
+                    case 'r': out.push_back('\r'); break;
+                    case 't': out.push_back('\t'); break;
+                    default: out.push_back(esc); break;
+                }
+            } else if (ch == '"') {
+                return true;
+            } else {
+                out.push_back(ch);
+            }
+        }
+        return false;
+    }
+
+    bool parse_number(double& out) {
+        skip_ws();
+        size_t start = pos;
+        while (pos < data.size() &&
+               (std::isdigit(static_cast<unsigned char>(data[pos])) || data[pos] == '.' || data[pos] == '-'))
+            ++pos;
+        if (start == pos) return false;
+        try {
+            out = std::stod(data.substr(start, pos - start));
+            return true;
+        } catch (...) {
+            return false;
+        }
+    }
+
+    bool skip_value() {
+        skip_ws();
+        if (pos >= data.size()) return false;
+        if (data[pos] == '"') {
+            std::string dummy;
+            return parse_string(dummy);
+        }
+        if (data[pos] == '{') {
+            int depth = 0;
+            do {
+                if (data[pos] == '{') depth++;
+                else if (data[pos] == '}') depth--;
+                ++pos;
+            } while (pos < data.size() && depth > 0);
+            return depth == 0;
+        }
+        if (data[pos] == '[') {
+            int depth = 0;
+            do {
+                if (data[pos] == '[') depth++;
+                else if (data[pos] == ']') depth--;
+                ++pos;
+            } while (pos < data.size() && depth > 0);
+            return depth == 0;
+        }
+        // number / literal
+        double num;
+        return parse_number(num);
+    }
+};
+
+bool parse_entry(Tokenizer& tk, CVEEntry& entry) {
+    if (!tk.consume('{')) return false;
+    while (true) {
+        tk.skip_ws();
+        if (tk.consume('}')) break;
+        std::string key;
+        if (!tk.parse_string(key)) return false;
+        if (!tk.consume(':')) return false;
+
+        if (key == "id") {
+            if (!tk.parse_string(entry.id)) return false;
+        } else if (key == "severity") {
+            if (!tk.parse_string(entry.severity)) return false;
+        } else if (key == "cvss") {
+            if (!tk.parse_number(entry.cvss)) return false;
+        } else if (key == "desc") {
+            if (!tk.parse_string(entry.description)) return false;
+        } else {
+            if (!tk.skip_value()) return false;
+        }
+
+        tk.skip_ws();
+        if (tk.consume('}')) break;
+        if (tk.consume(',')) continue;
+        break;
+    }
+    return !entry.id.empty();
 }
 
-// ── вспомогательно: извлечь число (cvss) ────────────
-static double extract_double(const std::string& s, size_t from) {
-    size_t colon = s.find(':', from);
-    if (colon == std::string::npos) return 0.0;
-    size_t num_start = s.find_first_of("0123456789", colon);
-    if (num_start == std::string::npos) return 0.0;
-    return std::stod(s.substr(num_start));
+bool parse_array(Tokenizer& tk, std::vector<CVEEntry>& out) {
+    if (!tk.consume('[')) return false;
+    while (true) {
+        tk.skip_ws();
+        if (tk.consume(']')) break;
+        CVEEntry e;
+        if (!parse_entry(tk, e)) return false;
+        out.push_back(std::move(e));
+        tk.skip_ws();
+        if (tk.consume(']')) break;
+        if (!tk.consume(',')) break;
+    }
+    return true;
 }
 
-// ── парсим секцию сервиса из JSON ────────────────────
+bool parse_database(const std::string& json,
+                    std::unordered_map<std::string, std::vector<CVEEntry>>& out) {
+    Tokenizer tk(json);
+    if (!tk.consume('{')) return false;
+    while (true) {
+        tk.skip_ws();
+        if (tk.consume('}')) break;
+        std::string key;
+        if (!tk.parse_string(key)) return false;
+        if (!tk.consume(':')) return false;
+        std::vector<CVEEntry> entries;
+        if (!parse_array(tk, entries)) return false;
+        // сортируем по CVSS убыванию
+        std::sort(entries.begin(), entries.end(),
+                  [](const CVEEntry& a, const CVEEntry& b) {
+                      return a.cvss > b.cvss;
+                  });
+        out[key] = std::move(entries);
+        tk.skip_ws();
+        if (tk.consume('}')) break;
+        if (!tk.consume(',')) break;
+    }
+    return true;
+}
+
+const std::unordered_map<std::string, std::vector<CVEEntry>>& get_cached_db(const std::string& path) {
+    static std::unordered_map<std::string, std::vector<CVEEntry>> cache;
+    static std::once_flag loaded;
+    std::call_once(loaded, [&] {
+        std::string json = read_file(path);
+        if (!json.empty()) {
+            parse_database(json, cache);
+        }
+    });
+    return cache;
+}
+
+std::string normalize_key(std::string key_in) {
+    std::string key = std::move(key_in);
+    for (char stop : {' ', '[', '/', '('}) {
+        size_t p = key.find(stop);
+        if (p != std::string::npos) {
+            key = key.substr(0, p);
+            break;
+        }
+    }
+    for (char& c : key) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    return key;
+}
+} // namespace
+
+// ── парсим секцию сервиса из JSON (используем кэш) ─────────────────────────
 std::vector<CVEEntry> CVEScanner::parse(const std::string& json,
                                          const std::string& service) {
-    std::vector<CVEEntry> results;
-
-    std::string key = "\"" + service + "\"";
-    size_t pos = json.find(key);
-    if (pos == std::string::npos) return results;
-
-    size_t arr_start = json.find('[', pos);
-    if (arr_start == std::string::npos) return results;
-
-    // считаем вложенность скобок чтобы найти правильный ]
-    int depth = 1;
-    size_t cur = arr_start + 1;
-    while (cur < json.size() && depth > 0) {
-        if (json[cur] == '[') depth++;
-        else if (json[cur] == ']') depth--;
-        cur++;
-    }
-    std::string section = json.substr(arr_start, cur - arr_start);
-
-    // парсим каждый { ... }
-    size_t obj_pos = 0;
-    while (true) {
-        size_t obj_start = section.find('{', obj_pos);
-        if (obj_start == std::string::npos) break;
-        size_t obj_end = section.find('}', obj_start);
-        if (obj_end == std::string::npos) break;
-
-        std::string obj = section.substr(obj_start, obj_end - obj_start + 1);
-        CVEEntry entry;
-
-        // id
-        size_t id_pos = obj.find("\"id\"");
-        if (id_pos != std::string::npos)
-            entry.id = extract_str(obj, id_pos + 4);
-
-        // severity
-        size_t sev_pos = obj.find("\"severity\"");
-        if (sev_pos != std::string::npos)
-            entry.severity = extract_str(obj, sev_pos + 10);
-
-        // cvss
-        size_t cvss_pos = obj.find("\"cvss\"");
-        entry.cvss = (cvss_pos != std::string::npos)
-                     ? extract_double(obj, cvss_pos + 6)
-                     : 0.0;
-
-        // desc
-        size_t desc_pos = obj.find("\"desc\"");
-        if (desc_pos != std::string::npos)
-            entry.description = extract_str(obj, desc_pos + 6);
-
-        if (!entry.id.empty())
-            results.push_back(entry);
-
-        obj_pos = obj_end + 1;
-    }
-
-    // сортируем по CVSS убыванию
-    std::sort(results.begin(), results.end(),
-              [](const CVEEntry& a, const CVEEntry& b) {
-                  return a.cvss > b.cvss;
-              });
-
-    return results;
+    (void)json;
+    const auto& db = get_cached_db(cve_file);
+    auto key = normalize_key(service);
+    auto it  = db.find(key);
+    if (it == db.end()) return {};
+    return it->second;
 }
 
 // ── поиск с очисткой имени сервиса ──────────────────
@@ -117,21 +232,17 @@ std::vector<CVEEntry> CVEScanner::search(const std::string& service) {
 
     // первая буква заглавная (SSH, Http → HTTP)
     if (!clean.empty()) {
-        // пробуем оригинал, потом uppercase первой буквы
+        // пробуем оригинал и варианты регистра
         std::string upper = clean;
-        upper[0] = std::toupper(upper[0]);
+        upper[0] = std::toupper(static_cast<unsigned char>(upper[0]));
 
-        std::string json = read_file(cve_file);
-        if (json.empty()) return {};
+        auto res = parse("", clean);
+        if (res.empty()) res = parse("", upper);
 
-        auto res = parse(json, clean);
-        if (res.empty()) res = parse(json, upper);
-
-        // пробуем uppercase всего слова (http → HTTP)
         if (res.empty()) {
             std::string all_upper = clean;
-            for (char& c : all_upper) c = std::toupper(c);
-            res = parse(json, all_upper);
+            for (char& c : all_upper) c = std::toupper(static_cast<unsigned char>(c));
+            res = parse("", all_upper);
         }
         return res;
     }

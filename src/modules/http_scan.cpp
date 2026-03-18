@@ -3,6 +3,8 @@
 #include <iostream>
 #include <iomanip>
 #include <cstring>
+#include <sstream>
+#include <vector>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -184,76 +186,122 @@ static const PathEntry PATHS[] = {
 
 static const int PATHS_COUNT = sizeof(PATHS) / sizeof(PATHS[0]);
 
+// ── Простое HTTP подключение с keep-alive ─────────────
+class KeepAliveClient {
+public:
+    KeepAliveClient(std::string host_, int port_)
+        : host(std::move(host_)), port(port_), sock(-1) {}
+
+    ~KeepAliveClient() { close_socket(); }
+
+    int request(const std::string& path) {
+        for (int attempt = 0; attempt < 2; ++attempt) {
+            if (!ensure()) continue;
+
+            std::string req =
+                "GET " + path + " HTTP/1.1\r\n"
+                "Host: " + host + "\r\n"
+                "User-Agent: PhantomScan\r\n"
+                "Accept: text/html,*/*\r\n"
+                "Connection: keep-alive\r\n\r\n";
+
+            ssize_t sent = send(sock, req.c_str(), req.size(), 0);
+            if (sent <= 0) { reset(); continue; }
+
+            buffer.clear();
+            char tmp[1024];
+            int reads = 0;
+            while (reads < 4 && buffer.find("\r\n") == std::string::npos) {
+                ssize_t n = recv(sock, tmp, sizeof(tmp), 0);
+                if (n <= 0) { reset(); break; }
+                buffer.append(tmp, static_cast<size_t>(n));
+                reads++;
+            }
+
+            int code = parse_status();
+            if (code > 0) return code;
+            reset();
+        }
+        return -1;
+    }
+
+private:
+    std::string host;
+    int         port;
+    int         sock;
+    std::string buffer;
+
+    bool ensure() {
+        if (sock >= 0) return true;
+        struct addrinfo hints{}, *res = nullptr;
+        hints.ai_family   = AF_INET;
+        hints.ai_socktype = SOCK_STREAM;
+        std::string port_s = std::to_string(port);
+        if (getaddrinfo(host.c_str(), port_s.c_str(), &hints, &res) != 0 || !res)
+            return false;
+
+        sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+        if (sock < 0) { freeaddrinfo(res); return false; }
+
+        struct timeval tv {1, 0};
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+
+        if (connect(sock, res->ai_addr, res->ai_addrlen) < 0) {
+            freeaddrinfo(res);
+            reset();
+            return false;
+        }
+        freeaddrinfo(res);
+        return true;
+    }
+
+    void reset() {
+        close_socket();
+        buffer.clear();
+    }
+
+    void close_socket() {
+        if (sock >= 0) {
+            close(sock);
+            sock = -1;
+        }
+    }
+
+    int parse_status() const {
+        size_t sp1 = buffer.find(' ');
+        if (sp1 == std::string::npos) return -1;
+        size_t sp2 = buffer.find(' ', sp1 + 1);
+        if (sp2 == std::string::npos) return -1;
+        try {
+            return std::stoi(buffer.substr(sp1 + 1, sp2 - sp1 - 1));
+        } catch (...) { return -1; }
+    }
+};
+
 // ── HTTP запрос ───────────────────────────────────────
 int HTTPScanner::check_path(const std::string& host, int port,
-                             const std::string& path) {
-    struct addrinfo hints, *res;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family   = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-
-    std::string port_str = std::to_string(port);
-    if (getaddrinfo(host.c_str(), port_str.c_str(), &hints, &res) != 0)
-        return -1;
-
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) { freeaddrinfo(res); return -1; }
-
-    struct timeval tv = {1, 0};
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-
-    if (connect(sock, res->ai_addr, res->ai_addrlen) < 0) {
-        close(sock); freeaddrinfo(res); return -1;
-    }
-    freeaddrinfo(res);
-
-    std::string request =
-        "GET " + path + " HTTP/1.1\r\n"
-        "Host: " + host + "\r\n"
-        "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36\r\n"
-        "Accept: text/html,*/*\r\n"
-        "Connection: close\r\n\r\n";
-
-    send(sock, request.c_str(), request.size(), 0);
-
-    char buf[512];
-    memset(buf, 0, sizeof(buf));
-    recv(sock, buf, sizeof(buf) - 1, 0);
-    close(sock);
-
-    std::string resp(buf);
-    size_t sp1 = resp.find(' ');
-    if (sp1 == std::string::npos) return -1;
-    size_t sp2 = resp.find(' ', sp1 + 1);
-    if (sp2 == std::string::npos) return -1;
-
-    try {
-        return std::stoi(resp.substr(sp1 + 1, sp2 - sp1 - 1));
-    } catch (...) { return -1; }
+                             const std::string& path, KeepAliveClient& client) {
+    (void)host;
+    (void)port;
+    return client.request(path);
 }
 
 // ── Сканирование ──────────────────────────────────────
 std::vector<HTTPPath> HTTPScanner::scan(const std::string& target, int port) {
     std::vector<HTTPPath> results;
+    KeepAliveClient client(target, port);
+    std::ostringstream log;
 
-    std::cout << Color::INFO << "HTTP directory scan: " << Color::CYAN
-              << target << ":" << port << Color::RESET << "\n";
-    std::cout << Color::INFO << "Checking " << PATHS_COUNT
-              << " paths...\n" << Color::RESET;
-    std::cout << std::string(50, '-') << "\n";
+    log << Color::INFO << "HTTP directory scan: " << Color::CYAN
+        << target << ":" << port << Color::RESET << "\n";
+    log << Color::INFO << "Checking " << PATHS_COUNT
+        << " paths...\n" << Color::RESET;
+    log << std::string(50, '-') << "\n";
 
     for (int i = 0; i < PATHS_COUNT; i++) {
-        // Прогресс каждые 25 путей
-        if ((i + 1) % 25 == 0)
-            std::cout << Color::INFO << "  [" << i+1 << "/"
-                      << PATHS_COUNT << "] checked...\r"
-                      << Color::RESET << std::flush;
-
         std::string path = PATHS[i].path;
-        int code = check_path(target, port, path);
+        int code = check_path(target, port, path, client);
 
         if (code == 200 || code == 301 || code == 302 || code == 403) {
             HTTPPath hp;
@@ -271,14 +319,14 @@ std::vector<HTTPPath> HTTPScanner::scan(const std::string& target, int port) {
             std::string status = (code == 200) ? "OPEN  " :
                                  (code == 403) ? "FORBID" : "REDIR ";
 
-            std::cout << col << "[" << code << "] "
-                      << std::left << std::setw(38) << path
-                      << std::setw(9) << hp.risk
-                      << Color::RESET << hp.desc << "\n";
+            log << col << "[" << code << "] "
+                << std::left << std::setw(38) << path
+                << std::setw(9) << hp.risk
+                << Color::RESET << hp.desc << "\n";
         }
     }
 
-    std::cout << "\n";
+    std::cout << log.str() << "\n";
     return results;
 }
 

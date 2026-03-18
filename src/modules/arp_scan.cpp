@@ -14,9 +14,10 @@ std::vector<ARPHost> ARPScanner::scan(const std::string& subnet) {
               << Color::RESET << std::endl;
 
     // Сначала делаем быстрый ping sweep чтобы заполнить ARP таблицу
-    std::string ping_cmd = "nmap -sn " + subnet + 
+    std::string ping_cmd = "nmap -sn " + subnet +
                            " > /dev/null 2>&1";
-    system(ping_cmd.c_str());
+    int ping_status = system(ping_cmd.c_str());
+    (void)ping_status;
 
     // Читаем ARP таблицу ядра
     std::string arp_cmd = "arp -n 2>/dev/null";
