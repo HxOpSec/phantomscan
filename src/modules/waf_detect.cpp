@@ -63,8 +63,10 @@ WAFResult WAFDetector::detect(const std::string& target) {
     std::string lower = to_lower(all);
 
     // ── Функция поиска (case-insensitive) ─────────────
+    // NOTE: all strings passed to has() must be lowercase — WAF signatures
+    // and additional check literals below are all lowercase by construction.
     auto has = [&](const std::string& s) -> bool {
-        return lower.find(to_lower(s)) != std::string::npos;
+        return lower.find(s) != std::string::npos;
     };
 
     // ── База WAF сигнатур ─────────────────────────────
@@ -179,12 +181,12 @@ void WAFDetector::print_results(const WAFResult& result) {
     const int W = 34;
     auto fit = [&](std::string s) -> std::string {
         if ((int)s.size() > W) return s.substr(0, W - 3) + "...";
-        while ((int)s.size() < W) s += " ";
+        s.resize(W, ' ');
         return s;
     };
 
     auto row = [](std::string content) -> std::string {
-        while ((int)content.size() < 48) content += " ";
+        content.resize(48, ' ');
         return "║" + content + "║\n";
     };
 

@@ -119,9 +119,8 @@ std::string ServiceDetector::parse_version(const std::string& banner, const std:
 
 std::string ServiceDetector::get_version(const std::string& ip, int port) {
     std::string service = "unknown";
-    if (port_table.count(port)) {
-        service = port_table[port];
-    }
+    auto it = port_table.find(port);
+    if (it != port_table.end()) service = it->second;
 
     std::string banner = grab_banner(ip, port);
     return parse_version(banner, service);
@@ -129,9 +128,8 @@ std::string ServiceDetector::get_version(const std::string& ip, int port) {
 
 std::string ServiceDetector::detect(const std::string& ip, int port) {
     std::string service = "unknown";
-    if (port_table.count(port)) {
-        service = port_table[port];
-    }
+    auto it = port_table.find(port);
+    if (it != port_table.end()) service = it->second;
 
     std::string banner = grab_banner(ip, port);
     return parse_version(banner, service);

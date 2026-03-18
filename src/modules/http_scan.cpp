@@ -312,8 +312,8 @@ void HTTPScanner::print_results(const std::vector<HTTPPath>& results) {
                            (r.status_code == 403) ? "FORBID  " : "REDIRECT";
 
         if ((int)path.size() > 36) path = path.substr(0, 33) + "...";
-        while ((int)path.size() < 36) path += " ";
-        while ((int)risk.size() < 8)  risk += " ";
+        path.resize(36, ' ');
+        risk.resize(8, ' ');
 
         std::string col = Color::WHITE;
         if      (r.risk == "CRITICAL") col = Color::RED;
@@ -321,7 +321,7 @@ void HTTPScanner::print_results(const std::vector<HTTPPath>& results) {
         else if (r.risk == "MEDIUM")   col = Color::CYAN;
 
         std::string code_s = std::to_string(r.status_code);
-        while ((int)code_s.size() < 5) code_s += " ";
+        code_s.resize(5, ' ');
         std::cout << col
                   << "║ " << code_s << " ║ "
                   << path << " ║ "

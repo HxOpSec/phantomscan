@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include <map>
+#include <unordered_map>
 
 class ServiceDetector {
 public:
@@ -13,7 +13,7 @@ public:
     std::string get_version(const std::string& ip, int port);
 
 private:
-    std::map<int, std::string> port_table;
+    std::unordered_map<int, std::string> port_table;
     std::string grab_banner(const std::string& ip, int port);
     std::string parse_version(const std::string& banner, const std::string& service);
     void load_port_table();

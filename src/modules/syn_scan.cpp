@@ -107,6 +107,7 @@ std::vector<SYNResult> SYNScanner::scan(const std::string& target,
 
     // Фиксированный source port для этого скана
     uint16_t src_port = 54321;
+    ServiceDetector detector;
 
     for (int port = port_start; port <= port_end; port++) {
 
@@ -190,7 +191,6 @@ std::vector<SYNResult> SYNScanner::scan(const std::string& target,
                 syn_res.port  = port;
                 syn_res.state = "OPEN";
 
-                ServiceDetector detector;
                 syn_res.service = detector.detect(target, port);
                 results.push_back(syn_res);
 
@@ -246,9 +246,9 @@ void SYNScanner::print_results(const std::vector<SYNResult>& results) {
         std::string port_s = std::to_string(r.port);
         std::string state  = r.state;
         std::string svc    = r.service;
-        while (port_s.size() < 8)  port_s += " ";
-        while (state.size()  < 7)  state  += " ";
-        while (svc.size()    < 20) svc    += " ";
+        port_s.resize(8, ' ');
+        state.resize(7, ' ');
+        svc.resize(20, ' ');
 
         std::cout << Color::OK
                   << "│ " << port_s

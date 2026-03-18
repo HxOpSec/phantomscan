@@ -345,10 +345,10 @@ void VulnScanner::print_results(const std::vector<VulnResult>& results) {
         std::string sev = r.severity;
         std::string ver = r.version;
 
-        while ((int)svc.size() < 14) svc += " ";
-        while ((int)sev.size() < 8)  sev += " ";
+        svc.resize(14, ' ');
+        sev.resize(8, ' ');
         if ((int)ver.size() > 30) ver = ver.substr(0, 27) + "...";
-        while ((int)ver.size() < 30) ver += " ";
+        ver.resize(30, ' ');
 
         std::string col = (r.severity == "CRITICAL") ? Color::RED    :
                           (r.severity == "HIGH")     ? Color::YELLOW :
