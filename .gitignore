@@ -2,3 +2,5 @@ reports/*
 builds/*
 src/**/*.o
 *.o
+__pycache__/
+*.pyc
