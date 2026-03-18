@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include "modules/threads.h"
 #include "modules/service_detect.h"
@@ -51,16 +52,14 @@ public:
     void wait_all(int total_tasks) {
         std::unique_lock<std::mutex> lock(done_mutex);
         done_cv.wait(lock, [this, total_tasks] {
-            return completed >= total_tasks;
+            return completed.load() >= total_tasks;
         });
     }
 
     void increment_done() {
-        {
-            std::lock_guard<std::mutex> lock(done_mutex);
-            completed++;
-        }
-        done_cv.notify_all();
+        completed.fetch_add(1);
+        // notify_one is correct here: wait_all() is the only waiter on done_cv.
+        done_cv.notify_one();
     }
 
     ~ThreadPool() {
@@ -80,7 +79,7 @@ private:
     std::mutex                          done_mutex;
     std::condition_variable             done_cv;
     bool                                stop;
-    int                                 completed;
+    std::atomic<int>                    completed;
 };
 
 // ═══════════════════════════════════════════════
@@ -126,13 +125,13 @@ static bool check_port(const std::string& ip, int port) {
 // ── Сканирование диапазона портов (один поток) ─
 void ThreadScanner::scan_range(int start, int end,
                                 std::vector<PortResult>& results) {
+    ServiceDetector detector;
     for (int port = start; port <= end; port++) {
         if (check_port(target_ip, port)) {
             PortResult result;
             result.port    = port;
             result.is_open = true;
 
-            ServiceDetector detector;
             result.service = detector.detect(target_ip, port);
 
             {

@@ -51,6 +51,7 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
     std::vector<PortResult> results;
     auto start_time = std::chrono::steady_clock::now();
     int  total      = end_port - start_port + 1;
+    ServiceDetector detector;
 
     for (int port = start_port; port <= end_port; port++) {
 
@@ -79,7 +80,6 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
             PortResult result;
             result.port    = port;
             result.is_open = true;
-            ServiceDetector detector;
             result.service = detector.detect(target_ip, port);
             results.push_back(result);
 

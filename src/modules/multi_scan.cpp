@@ -191,7 +191,7 @@ void MultiScanner::print_results(const std::vector<TargetResult>& results) {
             // Строка с ошибкой
             std::string t = r.target;
             if (t.size() > 17) t = t.substr(0, 14) + "...";
-            while (t.size() < 17) t += " ";
+            t.resize(17, ' ');
 
             std::cout << Color::FAIL
                       << "║ " << t << " ║ ERROR          ║       ║       ║        ║      ║\n"
@@ -204,9 +204,9 @@ void MultiScanner::print_results(const std::vector<TargetResult>& results) {
         std::string ip = r.ip;     if (ip.size() > 14) ip = ip.substr(0,11)+"...";
         std::string os = r.os;     if (os.size() > 6)  os = os.substr(0,6);
 
-        while (t.size()  < 17) t  += " ";
-        while (ip.size() < 14) ip += " ";
-        while (os.size() < 6)  os += " ";
+        t.resize(17, ' ');
+        ip.resize(14, ' ');
+        os.resize(6, ' ');
 
         std::string fw_str = r.firewall ? " ДА  " : " НЕТ ";
 
