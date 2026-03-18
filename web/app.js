@@ -104,7 +104,7 @@ const sounds = {
 // WebSocket
 function initSocket() {
   if (typeof io === 'undefined') {
-    setStatus(false, 'SOCKET BLOCKED');
+    setStatus(false, 'Socket.IO unavailable');
     return;
   }
   socket = io({ reconnection: true, reconnectionAttempts: 5 });
@@ -461,8 +461,8 @@ function renderCompare(a, b) {
 }
 
 function drawRadar(a, b) {
-  const RADAR_MIN_SCALE = 0.3;
-  const RADAR_VALUE_RANGE = 0.7;
+  const radarMinScale = 0.3;
+  const radarValueRange = 0.7;
   const ctx = els.cmpRadar?.getContext('2d');
   if (!ctx) return;
   const metrics = [
@@ -490,8 +490,8 @@ function drawRadar(a, b) {
     ctx.strokeStyle = color.replace('0.35', '0.8');
     ctx.fill(); ctx.stroke();
   };
-  drawPoly(metrics.map(v => RADAR_MIN_SCALE + v * RADAR_VALUE_RANGE), 'rgba(0,212,255,0.35)');
-  drawPoly(metricsB.map(v => RADAR_MIN_SCALE + v * RADAR_VALUE_RANGE), 'rgba(255,45,107,0.35)');
+  drawPoly(metrics.map(v => radarMinScale + v * radarValueRange), 'rgba(0,212,255,0.35)');
+  drawPoly(metricsB.map(v => radarMinScale + v * radarValueRange), 'rgba(255,45,107,0.35)');
 }
 
 // Actions

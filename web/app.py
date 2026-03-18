@@ -14,7 +14,7 @@ import subprocess
 import threading
 import ipaddress
 from collections import deque
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional, Tuple
 
 import eventlet
@@ -64,7 +64,7 @@ def safe_target(target: str) -> str:
 
 def is_valid_target(target: str) -> bool:
     """Only allow hostname or IPv4/IPv6; block shell metacharacters."""
-    if not target or re.search(r"[;&|`$(){}\\]", target) or any(c in target for c in ["\n", "\r", "\0"]):
+    if not target or re.search(r"[\n\r\x00;&|`$(){}\\]", target):
         return False
     stripped = target.strip("[]")
     try:
@@ -249,7 +249,8 @@ def parse_stdout_fallback(stdout: str, target: str) -> dict:
 
 def launch_process(binary: str, input_data: str) -> Tuple[Optional[subprocess.Popen], Optional[list]]:
     """Try sudo -n first, then plain execution."""
-    if os.path.abspath(binary) != os.path.abspath(PHANTOMSCAN):
+    binary = os.path.abspath(binary)
+    if binary != os.path.abspath(PHANTOMSCAN):
         logging.error("Unexpected binary path: %s", binary)
         return None, None
     commands = [["sudo", "-n", binary], [binary]]
@@ -297,6 +298,7 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
         return
 
     logging.info("Started scan %s with cmd %s", scan_id, cmd_used)
+    captured_output: list[str] = []
 
     try:
         for raw_line in iter(proc.stdout.readline, ""):
@@ -305,6 +307,7 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
             clean = strip_ansi(raw_line.rstrip())
             if not clean:
                 continue
+            captured_output.append(clean)
             scan["log"].append(clean)
             if len(scan["log"]) > LOG_LIMIT:
                 scan["log"] = scan["log"][-LOG_LIMIT:]
@@ -331,10 +334,7 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
     if report_file:
         result = load_report_file(report_file)
     if not result:
-        try:
-            stdout = proc.stdout.read() if proc.stdout else ""
-        except (OSError, ValueError):
-            stdout = ""
+        stdout = "\n".join(captured_output)
         result = parse_stdout_fallback(stdout, target)
 
     scan["status"] = "done"
@@ -461,7 +461,7 @@ def history():
                     "ports": len(content.get("ports", [])),
                     "score": content.get("score"),
                     "grade": content.get("grade"),
-                    "timestamp": datetime.fromtimestamp(os.path.getmtime(path)).isoformat(),
+                    "timestamp": datetime.fromtimestamp(os.path.getmtime(path), tz=timezone.utc).isoformat(),
                 }
             )
         combined = list(scan_history) + from_files
