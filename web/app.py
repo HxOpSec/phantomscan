@@ -12,14 +12,11 @@ import os
 import re
 import subprocess
 import threading
+import time
 import ipaddress
 from collections import deque
 from datetime import datetime, timezone
 from typing import Dict, Optional, Tuple
-
-import eventlet
-
-eventlet.monkey_patch()
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
@@ -32,15 +29,21 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PHANTOMSCAN = os.path.join(BASE_DIR, "..", "builds", "phantomscan")
 REPORTS_DIR = os.path.join(BASE_DIR, "..", "reports")
 # Timeouts are in seconds
-FULL_SCAN_TIMEOUT_SECONDS = 420
-SCORECARD_TIMEOUT_SECONDS = 180
+FULL_SCAN_TIMEOUT_SECONDS = 300
+SCORECARD_TIMEOUT_SECONDS = 300
 LOG_LIMIT = 500
 # RFC 1123 hostname with optional subdomains
 HOSTNAME_REGEX = r"(?=.{1,253}$)([A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*"
 
 app = Flask(__name__, static_folder=".")
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode="threading",
+    logger=False,
+    engineio_logger=False,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -110,18 +113,23 @@ def add_history_entry(result: dict) -> None:
     scan_history.appendleft(entry)
 
 
-def backend_progress_from_line(line: str, current: int) -> int:
+def backend_progress_from_line(line: str, current: int) -> Tuple[int, Optional[str]]:
+    """Map backend stdout to (progress percentage, human-readable step label)."""
     text = line.lower()
     milestones = [
-        (30, ["сканируем порты", "ports"]),
-        (60, ["проверяем cve", "cve", "vuln"]),
-        (80, ["поддомен", "subdomain"]),
-        (100, ["завершено", "готово", "report", "done"]),
+        (15, ["сканируем порты", "scanning ports", "ports"], "Сканируем порты"),
+        (30, ["завершено за", "ports done", "port scan"], "Порты завершены"),
+        (45, ["проверяем cve", "cve", "vuln"], "Проверяем CVE"),
+        (65, ["поддомен", "subdomain"], "Ищем поддомены"),
+        (75, ["tls", "ssl"], "Проверяем TLS"),
+        (85, ["анализ", "analyz", "firewall"], "Анализируем"),
+        (95, ["сохраняем", "report", "отчёт", "отчет"], "Сохраняем отчёты"),
+        (100, ["завершено", "готово", "done", "complete"], "Готово"),
     ]
-    for pct, keys in milestones:
+    for pct, keys, label in milestones:
         if any(k in text for k in keys):
-            return max(current, pct)
-    return current
+            return max(current, pct), label
+    return current, None
 
 
 def parse_scorecard_output(stdout: str, target: str) -> dict:
@@ -281,7 +289,14 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
     scan = active_scans[scan_id]
     scan["status"] = "running"
     scan["progress"] = 0
-    socketio.emit("scan_status", {"scan_id": scan_id, "status": "running", "progress": 0})
+    scan["current_action"] = "Запуск"
+    socketio.emit(
+        "scan_status",
+        {"scan_id": scan_id, "status": "running", "progress": 0, "current_action": scan["current_action"]},
+        room=scan_id,
+    )
+    # Tiny pause prevents the streaming thread from starving SocketIO; required to keep events flowing smoothly.
+    time.sleep(0.01)
 
     binary = os.path.abspath(PHANTOMSCAN)
     if not os.path.exists(binary):
@@ -295,13 +310,25 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
     if not proc:
         scan["status"] = "error"
         socketio.emit("scan_error", {"scan_id": scan_id, "error": "Не удалось запустить phantomscan"}, room=scan_id)
+        time.sleep(0.01)
         return
 
     logging.info("Started scan %s with cmd %s", scan_id, cmd_used)
     captured_output: list[str] = []
+    start_time = time.time()
 
     try:
         for raw_line in iter(proc.stdout.readline, ""):
+            if time.time() - start_time > FULL_SCAN_TIMEOUT_SECONDS:
+                proc.kill()
+                scan["status"] = "error"
+                socketio.emit(
+                    "scan_error",
+                    {"scan_id": scan_id, "error": "Таймаут сканирования"},
+                    room=scan_id,
+                )
+                time.sleep(0.01)
+                return
             if raw_line == "" and proc.poll() is not None:
                 break
             clean = strip_ansi(raw_line.rstrip())
@@ -311,22 +338,33 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
             scan["log"].append(clean)
             if len(scan["log"]) > LOG_LIMIT:
                 scan["log"] = scan["log"][-LOG_LIMIT:]
-            scan["progress"] = backend_progress_from_line(clean, scan.get("progress", 0))
+            scan["progress"], action = backend_progress_from_line(clean, scan.get("progress", 0))
+            if action:
+                scan["current_action"] = action
             socketio.emit(
                 "log_line",
-                {"scan_id": scan_id, "line": clean, "progress": scan["progress"]},
+                {
+                    "scan_id": scan_id,
+                    "line": clean,
+                    "progress": scan["progress"],
+                    "current_action": scan.get("current_action"),
+                },
                 room=scan_id,
             )
+            # Short 10ms pause throttles emit bursts to keep UI responsive while aligning with frontend typewriter pacing.
+            time.sleep(0.01)
 
         proc.wait(timeout=FULL_SCAN_TIMEOUT_SECONDS)
     except subprocess.TimeoutExpired:
         proc.kill()
         scan["status"] = "error"
         socketio.emit("scan_error", {"scan_id": scan_id, "error": "Таймаут сканирования"}, room=scan_id)
+        time.sleep(0.01)
         return
     except (OSError, ValueError) as exc:
         scan["status"] = "error"
         socketio.emit("scan_error", {"scan_id": scan_id, "error": str(exc)}, room=scan_id)
+        time.sleep(0.01)
         return
 
     report_file = find_latest_report(target)
@@ -340,12 +378,19 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
     scan["status"] = "done"
     scan["result"] = result
     scan["progress"] = 100
+    scan["current_action"] = "Готово"
     add_history_entry(result)
     socketio.emit(
         "scan_complete",
-        {"scan_id": scan_id, "result": result, "progress": 100},
+        {
+            "scan_id": scan_id,
+            "result": result,
+            "progress": 100,
+            "current_action": scan.get("current_action"),
+        },
         room=scan_id,
     )
+    time.sleep(0.01)
 
 
 def run_scorecard(target: str) -> dict:
@@ -371,12 +416,20 @@ def run_scorecard(target: str) -> dict:
 
 @app.route("/")
 def index():
-    return send_from_directory(".", "index.html")
+    try:
+        return send_from_directory(".", "index.html")
+    except OSError as exc:
+        logging.error("Index serve error: %s", exc)
+        return jsonify({"error": "index unavailable"}), 500
 
 
 @app.route("/<path:filename>")
 def static_files(filename):
-    return send_from_directory(".", filename)
+    try:
+        return send_from_directory(".", filename)
+    except OSError as exc:
+        logging.error("Static serve error: %s", exc)
+        return jsonify({"error": "static unavailable"}), 500
 
 
 @app.route("/api/health", methods=["GET"])
@@ -424,7 +477,7 @@ def start_scan():
             "progress": 0,
             "started": datetime.now(timezone.utc).isoformat(),
         }
-        socketio.start_background_task(stream_scan, scan_id, target, menu_choice)
+        threading.Thread(target=stream_scan, args=(scan_id, target, menu_choice), daemon=True).start()
         return jsonify({"scan_id": scan_id, "status": "queued"})
     except (ValueError, OSError, RuntimeError) as exc:
         logging.error("start_scan error: %s", exc)
@@ -535,19 +588,25 @@ def get_report(filename: str):
 
 @socketio.on("join_scan")
 def handle_join(data):
-    scan_id = data.get("scan_id") if isinstance(data, dict) else None
-    if not scan_id:
-        emit("error", {"error": "scan_id required"})
-        return
-    join_room(scan_id)
-    emit("joined", {"scan_id": scan_id})
+    try:
+        scan_id = data.get("scan_id") if isinstance(data, dict) else None
+        if not scan_id:
+            emit("error", {"error": "scan_id required"})
+            return
+        join_room(scan_id)
+        emit("joined", {"scan_id": scan_id})
+    except (KeyError, TypeError) as exc:  # pragma: no cover - defensive
+        logging.error("join_scan error: %s", exc)
 
 
 @socketio.on("leave_scan")
 def handle_leave(data):
-    scan_id = data.get("scan_id") if isinstance(data, dict) else None
-    if scan_id:
-        leave_room(scan_id)
+    try:
+        scan_id = data.get("scan_id") if isinstance(data, dict) else None
+        if scan_id:
+            leave_room(scan_id)
+    except (KeyError, TypeError) as exc:  # pragma: no cover - defensive
+        logging.error("leave_scan error: %s", exc)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
