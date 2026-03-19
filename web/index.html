@@ -3,271 +3,314 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PhantomScan — Living Neon Terminal</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>PhantomScan — Shadow Monarch Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.socket.io/4.7.4/socket.io.min.js" defer crossorigin="anonymous"></script>
   <script src="app.js" defer></script>
 </head>
 <body>
-<canvas id="bg-canvas" aria-hidden="true"></canvas>
-<div class="grid-overlay" aria-hidden="true"></div>
-
-<div class="wrapper">
-  <header>
-    <div class="brand">
-      <div class="logo">
-        <svg viewBox="0 0 80 80" role="presentation" aria-hidden="true">
-          <defs>
-            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#00d4ff"/>
-              <stop offset="100%" stop-color="#ff2d6b"/>
-            </linearGradient>
-          </defs>
-          <polygon points="40,6 72,28 60,68 20,68 8,28" fill="none" stroke="url(#g1)" stroke-width="3" class="logo-poly"/>
-          <circle cx="40" cy="38" r="6" class="logo-core"/>
-        </svg>
+  <div id="intro" class="intro active" aria-hidden="true">
+    <div class="intro-bg"></div>
+    <div class="intro-figure">
+      <div class="hood"></div>
+      <div class="face">
+        <span class="eye eye-left"></span>
+        <span class="eye eye-right"></span>
       </div>
-      <div class="brand-text">
-        <h1 class="glitch" data-text="PHANTOMSCAN">PHANTOMSCAN</h1>
-        <p>Adaptive recon &amp; vulnerability intelligence console</p>
-      </div>
+      <div class="torso"></div>
+      <div class="katana"></div>
+      <div class="ink ink-1"></div>
+      <div class="ink ink-2"></div>
+      <div class="ink ink-3"></div>
     </div>
-    <div class="header-right">
-      <div class="status-pill">
-        <span class="pulse-dot" id="statusDot"></span>
-        <span id="statusText">INIT</span>
-      </div>
-      <div class="badge">LIVE</div>
-      <div class="clock" id="clock">--:--:--</div>
+    <div class="intro-title">
+      <span class="subtitle">Shadow Realm</span>
+      <h1>PHANTOMSCAN</h1>
+      <p>Zero-Lag Recon &amp; Offensive Intelligence Node</p>
     </div>
-  </header>
+    <div class="particle-burst"></div>
+  </div>
 
-  <nav class="tabs" aria-label="Navigation tabs">
-    <button class="tab active" data-tab="scan">[ SCAN ]</button>
-    <button class="tab" data-tab="results">[ RESULTS ]</button>
-    <button class="tab" data-tab="scorecard">[ SCORECARD ]</button>
-    <button class="tab" data-tab="history">[ HISTORY ]</button>
-    <button class="tab" data-tab="compare">[ COMPARE ]</button>
-  </nav>
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+  <canvas id="cursor-canvas" aria-hidden="true"></canvas>
+  <div class="grid-overlay" aria-hidden="true"></div>
 
-  <!-- SCAN -->
-  <section class="tab-panel active" id="tab-scan">
-    <div class="panel neon">
-      <div class="control-grid">
-        <div class="input-stack">
-          <label for="targetInput">TARGET</label>
-          <div class="input-row">
-            <input id="targetInput" autocomplete="off" placeholder="example.com или 192.168.0.1" aria-label="Target host">
-            <button id="scanBtn" class="btn-primary" aria-label="Start scan">
-              <span>Start Scan</span>
-              <span class="ripple"></span>
-            </button>
+  <div class="wrapper">
+    <header>
+      <div class="brand">
+        <div class="crest">
+          <div class="crest-core"></div>
+          <div class="crest-lines"></div>
+        </div>
+        <div class="brand-text">
+          <h1 data-text="PHANTOMSCAN" class="glitch">PHANTOMSCAN</h1>
+          <p>Shadow Monarch // Anime-grade Recon</p>
+        </div>
+      </div>
+      <div class="header-meta">
+        <button id="ambientToggle" class="icon-btn" aria-label="Toggle ambience">🔇</button>
+        <div class="status-pill">
+          <span class="pulse-dot" id="statusDot"></span>
+          <span id="statusText">INIT</span>
+        </div>
+        <div class="badge danger">LIVE</div>
+        <div class="clock" id="clock">--:--:--</div>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="Navigation tabs">
+      <button class="tab active" data-tab="scan">[ SCAN ]</button>
+      <button class="tab" data-tab="results">[ RESULTS ]</button>
+      <button class="tab" data-tab="scorecard">[ SCORECARD ]</button>
+      <button class="tab" data-tab="history">[ HISTORY ]</button>
+      <button class="tab" data-tab="compare">[ COMPARE ]</button>
+    </nav>
+
+    <!-- SCAN -->
+    <section class="tab-panel active" id="tab-scan">
+      <div class="panel neon">
+        <div class="input-row">
+          <div class="input-stack">
+            <label for="targetInput">TARGET</label>
+            <input id="targetInput" autocomplete="off" placeholder="example.com / 192.168.0.1">
           </div>
-          <div class="chips" id="modeChips">
-            <button class="chip active" data-mode="full">FULL</button>
-            <button class="chip" data-mode="quick">QUICK</button>
-            <button class="chip" data-mode="scorecard">SCORECARD</button>
-            <button class="chip" data-mode="ssl">SSL</button>
-            <button class="chip" data-mode="subs">SUBDOMAINS</button>
+          <div class="input-stack compact">
+            <label>MODULE</label>
+            <div id="selectedModule" class="chip active">Full Scan</div>
+          </div>
+          <button id="scanBtn" class="btn-primary">
+            <span>RUN</span>
+            <span class="ripple"></span>
+          </button>
+        </div>
+
+        <div class="category-grid">
+          <div class="cat-block">
+            <div class="cat-head">RECONNAISSANCE</div>
+            <div class="card-grid" id="cat-recon"></div>
+          </div>
+          <div class="cat-block">
+            <div class="cat-head">VULNERABILITY</div>
+            <div class="card-grid" id="cat-vuln"></div>
+          </div>
+          <div class="cat-block">
+            <div class="cat-head">NETWORK</div>
+            <div class="card-grid" id="cat-net"></div>
+          </div>
+          <div class="cat-block">
+            <div class="cat-head">OSINT</div>
+            <div class="card-grid" id="cat-osint"></div>
           </div>
         </div>
-        <div class="scan-visual">
-          <div class="rings" id="scanIndicator">
-            <div class="ring ring-1"></div>
-            <div class="ring ring-2"></div>
-            <div class="ring center-dot"></div>
+
+        <div class="progress-wrap" id="progressSection">
+          <div class="progress-head">
+            <div class="progress-title">
+              <span class="live-dot"></span>
+              <span id="progressLabel">Awaiting target…</span>
+            </div>
+            <div class="progress-percent" id="progressPct">0%</div>
           </div>
-          <div class="status-meta">
-            <div class="label">CURRENT ACTION</div>
-            <div class="value" id="currentAction">Standby</div>
-            <div class="label">ELAPSED</div>
-            <div class="value" id="elapsedTime">00:00</div>
+          <div class="progress-bar">
+            <div class="progress-liquid" id="progressFill">
+              <span class="glow-tip"></span>
+            </div>
+          </div>
+          <div class="progress-meta">
+            <div class="meta-block">
+              <span>Current</span>
+              <strong id="currentAction">Standby</strong>
+            </div>
+            <div class="meta-block">
+              <span>Elapsed</span>
+              <strong id="elapsedTime">00:00</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="scan-grid">
+          <div class="log-panel">
+            <div class="panel-head">
+              <span>LIVE LOG</span>
+              <span class="small">WebSocket + fallback polling</span>
+            </div>
+            <ul id="logList" aria-live="polite"></ul>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-card breathing" id="statPorts">
+              <span class="label">PORTS</span>
+              <span class="value" data-val="0">0</span>
+            </div>
+            <div class="stat-card breathing" id="statCve">
+              <span class="label">CVE</span>
+              <span class="value" data-val="0">0</span>
+            </div>
+            <div class="stat-card breathing" id="statSubs">
+              <span class="label">SUBDOMAINS</span>
+              <span class="value" data-val="0">0</span>
+            </div>
+            <div class="stat-card breathing" id="statScore">
+              <span class="label">SCORE</span>
+              <span class="value" data-val="0">0</span>
+            </div>
           </div>
         </div>
       </div>
+    </section>
 
-      <div class="progress-wrap" id="progressSection">
-        <div class="progress-head">
-          <div class="progress-title">
-            <span class="live-dot"></span>
-            <span id="progressLabel">Ожидание цели…</span>
-          </div>
-          <div class="progress-percent" id="progressPct">0%</div>
-        </div>
-        <div class="progress-bar">
-          <div class="progress-liquid" id="progressFill">
-            <span class="glow-tip"></span>
-          </div>
-        </div>
-      </div>
-
-      <div class="scan-grid">
-        <div class="log-panel">
-          <div class="panel-head">
-            <span>LIVE LOG</span>
-            <span class="small">Streaming via WebSocket</span>
-          </div>
-          <ul id="logList" aria-live="polite"></ul>
-        </div>
-        <div class="stats-grid">
-          <div class="stat-card breathing" id="statPorts">
-            <span class="label">PORTS</span>
-            <span class="value" data-val="0">0</span>
-          </div>
-          <div class="stat-card breathing" id="statCve">
-            <span class="label">CVE</span>
-            <span class="value" data-val="0">0</span>
-          </div>
-          <div class="stat-card breathing" id="statSubs">
-            <span class="label">SUBDOMAINS</span>
-            <span class="value" data-val="0">0</span>
-          </div>
-          <div class="stat-card breathing" id="statScore">
-            <span class="label">SCORE</span>
-            <span class="value" data-val="0">0</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- RESULTS -->
-  <section class="tab-panel" id="tab-results">
-    <div class="panel neon results">
-      <div class="panel-head">
-        <span>SCAN RESULTS</span>
-        <span class="small" id="resultTarget">—</span>
-      </div>
-      <div class="result-grid">
-        <div class="card soft">
-          <div class="map-wrap">
-            <div class="map-glow"></div>
-            <div class="map-target" id="mapTarget"></div>
-            <div class="map-lines"></div>
-          </div>
-          <div class="meta" id="mapInfo">
-            <div>Target: <span>—</span></div>
-            <div>Country: <span>—</span></div>
-            <div>ISP: <span>—</span></div>
-          </div>
-        </div>
-        <div class="card soft">
-          <div class="mini-stats">
-            <div class="mini" id="osInfo">OS: —</div>
-            <div class="mini" id="countryInfo">Country: —</div>
-            <div class="mini" id="ispInfo">ISP: —</div>
-            <div class="mini" id="fwInfo">Firewall: —</div>
-          </div>
-          <div class="cve-chip" id="cveSummary">CVE: —</div>
-        </div>
-      </div>
-      <div class="table-wrap">
+    <!-- RESULTS -->
+    <section class="tab-panel" id="tab-results">
+      <div class="panel neon results">
         <div class="panel-head">
-          <span>PORTS &amp; SERVICES</span>
-          <span class="small">Animated reveal</span>
+          <span>SCAN RESULTS</span>
+          <span class="small" id="resultTarget">—</span>
         </div>
-        <table>
-          <thead>
-            <tr><th>#</th><th>Port</th><th>Service</th><th>Version</th><th>Status</th></tr>
-          </thead>
-          <tbody id="portsBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- SCORECARD -->
-  <section class="tab-panel" id="tab-scorecard">
-    <div class="panel neon scorecard">
-      <div class="score-hero">
-        <div class="ring-wrap">
-          <svg viewBox="0 0 240 240">
-            <circle cx="120" cy="120" r="95" class="ring-bg"></circle>
-            <circle cx="120" cy="120" r="95" class="ring-fg" id="ringFg"></circle>
-          </svg>
-          <div class="ring-center">
-            <div id="ringGrade">—</div>
-            <div id="ringScore">0/100</div>
+        <div class="result-grid">
+          <div class="card soft">
+            <div class="map-wrap">
+              <div class="map-glow"></div>
+              <div class="map-target" id="mapTarget"></div>
+              <div class="map-lines"></div>
+            </div>
+            <div class="meta" id="mapInfo">
+              <div>Target: <span>—</span></div>
+              <div>Country: <span>—</span></div>
+              <div>ISP: <span>—</span></div>
+            </div>
+          </div>
+          <div class="card soft">
+            <div class="mini-stats">
+              <div class="mini" id="osInfo">OS: —</div>
+              <div class="mini" id="countryInfo">Country: —</div>
+              <div class="mini" id="ispInfo">ISP: —</div>
+              <div class="mini" id="fwInfo">Firewall: —</div>
+            </div>
+            <div class="cve-chip" id="cveSummary">CVE: —</div>
           </div>
         </div>
-        <div class="score-meta">
-          <div class="meta-line"><span>Verdict</span><span id="ringVerdict">—</span></div>
-          <div class="meta-line"><span>Target</span><span id="scoreTarget">—</span></div>
-        </div>
-      </div>
-      <div class="check-grid">
-        <div class="check-card">
-          <div class="panel-head"><span>DNS</span></div>
-          <ul id="dnsList" class="checklist"></ul>
-        </div>
-        <div class="check-card">
-          <div class="panel-head"><span>TLS</span></div>
-          <ul id="tlsList" class="checklist"></ul>
-        </div>
-        <div class="check-card">
-          <div class="panel-head"><span>HTTP HEADERS</span></div>
-          <ul id="httpList" class="checklist"></ul>
-        </div>
-        <div class="check-card">
-          <div class="panel-head"><span>WHOIS</span></div>
-          <ul id="whoisList" class="checklist"></ul>
-        </div>
-        <div class="check-card recs">
-          <div class="panel-head"><span>RECOMMENDATIONS</span></div>
-          <div id="recList" class="rec-list"></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- HISTORY -->
-  <section class="tab-panel" id="tab-history">
-    <div class="panel neon">
-      <div class="panel-head">
-        <span>LAST 20 SCANS</span>
-        <span class="small">Tap card to load</span>
-      </div>
-      <div class="history-grid" id="historyGrid"></div>
-    </div>
-  </section>
-
-  <!-- COMPARE -->
-  <section class="tab-panel" id="tab-compare">
-    <div class="panel neon">
-      <div class="compare-inputs">
-        <div class="input-stack">
-          <label for="cmpA">Target A</label>
-          <input id="cmpA" placeholder="site-a.com">
-        </div>
-        <div class="input-stack">
-          <label for="cmpB">Target B</label>
-          <input id="cmpB" placeholder="site-b.com">
-        </div>
-        <button class="btn-primary" id="compareBtn">Compare</button>
-      </div>
-      <div class="compare-results">
-        <div class="score-sides">
-          <div class="side">
-            <div class="label">A</div>
-            <div class="score" id="cmpAScore">—</div>
+        <div class="table-wrap">
+          <div class="panel-head">
+            <span>PORTS &amp; SERVICES</span>
+            <span class="small">Animated reveal</span>
           </div>
-          <div class="side">
-            <div class="label">B</div>
-            <div class="score" id="cmpBScore">—</div>
+          <table>
+            <thead>
+              <tr><th>#</th><th>Port</th><th>Service</th><th>Version</th><th>Status</th></tr>
+            </thead>
+            <tbody id="portsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCORECARD -->
+    <section class="tab-panel" id="tab-scorecard">
+      <div class="panel neon scorecard">
+        <div class="score-hero">
+          <div class="ring-wrap">
+            <svg viewBox="0 0 240 240">
+              <circle cx="120" cy="120" r="95" class="ring-bg"></circle>
+              <circle cx="120" cy="120" r="95" class="ring-fg" id="ringFg"></circle>
+            </svg>
+            <div class="ring-center">
+              <div id="ringGrade">—</div>
+              <div id="ringScore">0/100</div>
+            </div>
+          </div>
+          <div class="score-meta">
+            <div class="meta-line"><span>Verdict</span><span id="ringVerdict">—</span></div>
+            <div class="meta-line"><span>Target</span><span id="scoreTarget">—</span></div>
           </div>
         </div>
-        <div class="compare-legend" id="cmpLegend"></div>
+        <div class="check-grid">
+          <div class="check-card">
+            <div class="panel-head"><span>DNS</span></div>
+            <ul id="dnsList" class="checklist"></ul>
+          </div>
+          <div class="check-card">
+            <div class="panel-head"><span>TLS</span></div>
+            <ul id="tlsList" class="checklist"></ul>
+          </div>
+          <div class="check-card">
+            <div class="panel-head"><span>HTTP HEADERS</span></div>
+            <ul id="httpList" class="checklist"></ul>
+          </div>
+          <div class="check-card">
+            <div class="panel-head"><span>WHOIS</span></div>
+            <ul id="whoisList" class="checklist"></ul>
+          </div>
+          <div class="check-card recs">
+            <div class="panel-head"><span>RECOMMENDATIONS</span></div>
+            <div id="recList" class="rec-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HISTORY -->
+    <section class="tab-panel" id="tab-history">
+      <div class="panel neon">
+        <div class="panel-head">
+          <span>LAST 20 SCANS</span>
+          <span class="small">Tap card to load</span>
+        </div>
+        <div class="history-grid" id="historyGrid"></div>
+      </div>
+    </section>
+
+    <!-- COMPARE -->
+    <section class="tab-panel" id="tab-compare">
+      <div class="panel neon">
+        <div class="compare-inputs">
+          <div class="input-stack">
+            <label for="cmpA">Target A</label>
+            <input id="cmpA" placeholder="site-a.com">
+          </div>
+          <div class="input-stack">
+            <label for="cmpB">Target B</label>
+            <input id="cmpB" placeholder="site-b.com">
+          </div>
+          <button class="btn-primary" id="compareBtn">Compare</button>
+        </div>
+        <div class="compare-results">
+          <div class="score-sides">
+            <div class="side">
+              <div class="label">A</div>
+              <div class="score" id="cmpAScore">—</div>
+            </div>
+            <div class="side">
+              <div class="label">B</div>
+              <div class="score" id="cmpBScore">—</div>
+            </div>
+          </div>
+          <div class="compare-legend" id="cmpLegend"></div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <span>PHANTOMSCAN // Shadow Monarch Edition</span>
+      <span class="foot-note">Living Neon Terminal UI</span>
+    </footer>
+  </div>
+
+  <div id="moduleModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-head">
+        <div>
+          <div class="modal-label">Module Input</div>
+          <div id="modalTitle"></div>
+        </div>
+        <button id="modalClose" aria-label="Close" class="icon-btn">✕</button>
+      </div>
+      <div id="modalBody"></div>
+      <div class="modal-actions">
+        <button id="modalRun" class="btn-primary">Run</button>
       </div>
     </div>
-  </section>
+  </div>
 
-  <footer>
-    <span>PHANTOMSCAN PRO // HxOpSec</span>
-    <span class="foot-note">Living Neon Terminal UI</span>
-  </footer>
-</div>
-
-<div id="toast" role="alert"></div>
+  <div id="toast" role="alert"></div>
 </body>
 </html>
