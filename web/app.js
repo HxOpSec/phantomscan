@@ -72,24 +72,29 @@ class IntroAnimation {
     this.el = document.getElementById('intro');
     this.sound = sound;
     this.returning = localStorage.getItem('phantom_intro_seen') === '1';
-    this.figure = this.el?.querySelector('.intro-figure');
-    this.glow = this.el?.querySelector('.intro-glow');
-    this.title = this.el?.querySelector('.intro-title h1');
-    this.subtitle = this.el?.querySelector('.intro-title .subtitle');
-    this.tagline = this.el?.querySelector('.intro-title p');
+    this.lineTop = document.getElementById('introLineTop');
+    this.lineBot = document.getElementById('introLineBot');
+    this.textWrap = document.getElementById('introTextWrap');
+    this.phantomEl = document.getElementById('introPhantom');
+    this.scanEl = document.getElementById('introScan');
+    this.subtitle = document.getElementById('introSubtitle');
+    this.initLines = document.getElementById('introInitLines');
+    this.glitch = document.getElementById('introGlitch');
+    this.scanLine = document.getElementById('introScanLine');
     this.skipBtn = document.getElementById('skipIntro');
-    this.hand = this.el?.querySelector('.intro-hand');
-    this.glitch = this.el?.querySelector('.intro-glitch');
     this.particleField = this.el?.querySelector('.particle-field');
+    this._done = false;
     if (this.el) {
       this.prepareParticles();
       setTimeout(() => this.run(), 100);
     }
   }
+
   prepareParticles() {
     if (!this.particleField) return;
     this.particleField.innerHTML = '';
-    for (let i = 0; i < 100; i++) {
+    const count = window.innerWidth <= 768 ? 30 : 60;
+    for (let i = 0; i < count; i++) {
       const dot = document.createElement('span');
       dot.className = 'particle';
       dot.style.setProperty('--rx', `${(Math.random() * 2 - 1).toFixed(2)}`);
@@ -98,52 +103,213 @@ class IntroAnimation {
       this.particleField.appendChild(dot);
     }
   }
+
+  _beep(freq, duration, vol = 0.05) {
+    if (!this.sound.enabled || !this.sound.ctx) return;
+    this.sound._play({ type: 'sine', freq, duration: duration / 1000, vol });
+  }
+
+  _tick() {
+    this.sound._play({ type: 'square', freq: 1200, duration: 0.02, vol: 0.03 });
+  }
+
+  _noiseBurst(duration) {
+    if (!this.sound.enabled || !this.sound.ctx) return;
+    const ctx = this.sound.ctx;
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration / 1000), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.06, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration / 1000);
+    src.connect(gain).connect(ctx.destination);
+    src.start();
+  }
+
+  _bootChime() {
+    if (!this.sound.enabled || !this.sound.ctx) return;
+    const notes = [261.63, 329.63, 392.00];
+    notes.forEach((f, i) => {
+      this.sound._play({ type: 'triangle', freq: f, duration: 0.12, vol: 0.05, delay: i * 0.11 });
+    });
+  }
+
+  _spawnLetters(text, el, baseDelay, letterDelay) {
+    el.innerHTML = '';
+    [...text].forEach((ch, i) => {
+      const span = document.createElement('span');
+      span.className = 'intro-letter';
+      span.textContent = ch;
+      span.style.animationDelay = `${baseDelay + i * letterDelay}ms`;
+      el.appendChild(span);
+      setTimeout(() => {
+        span.style.animation = `letterDrop 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards`;
+        this._tick();
+      }, baseDelay + i * letterDelay);
+    });
+  }
+
+  _triggerGlitch(intense = false) {
+    if (!this.glitch) return;
+    if (intense) {
+      this.textWrap.style.animation = 'glitchShift 0.2s steps(3) 1';
+      setTimeout(() => { if (this.textWrap) this.textWrap.style.animation = ''; }, 220);
+    }
+    this.glitch.classList.add('active');
+    setTimeout(() => this.glitch?.classList.remove('active'), 400);
+  }
+
+  _typewriterEl(el, text, perChar = 30) {
+    return new Promise(resolve => {
+      let i = 0;
+      el.textContent = '';
+      const step = () => {
+        el.textContent += text[i++];
+        if (i < text.length) setTimeout(step, perChar);
+        else resolve();
+      };
+      setTimeout(step, perChar);
+    });
+  }
+
+  async _showInitLines() {
+    if (!this.initLines) return;
+    this.initLines.style.opacity = '1';
+    const lines = [
+      '[ INITIALIZING SYSTEMS... ]',
+      '[ NEURAL LINK ESTABLISHED ]',
+      '[ SHADOW NETWORK ONLINE ]',
+    ];
+    for (const text of lines) {
+      const span = document.createElement('span');
+      span.className = 'init-line';
+      this.initLines.appendChild(span);
+      await this._typewriterEl(span, text, 30);
+      await new Promise(r => setTimeout(r, 80));
+    }
+  }
+
   run() {
-    if (!this.el) return;
+    if (!this.el || this._done) return;
     if (this.returning) {
       this.quickFlash();
       return;
     }
-    this.sound.intro();
     this.el.classList.add('play');
-    setTimeout(() => this.sound.introWhoosh(), 1200);
-    setTimeout(() => this.glow?.classList.add('active'), 300);
-    setTimeout(() => this.figure?.classList.add('show'), 800);
-    setTimeout(() => this.el?.classList.add('eyes-on'), 1500);
-    setTimeout(() => { if (this.subtitle) this.subtitle.classList.add('show'); }, 2000);
-    setTimeout(() => { if (this.title) typewriter(this.title, this.title.dataset.full || this.title.textContent, 80); }, 2300);
-    setTimeout(() => { if (this.tagline) this.tagline.classList.add('show'); }, 2800);
-    setTimeout(() => this.hand?.classList.add('raise'), 3200);
-    setTimeout(() => this.triggerGlitch(), 3500);
-    setTimeout(() => this.dissolve(), 3800);
-    setTimeout(() => this.revealDashboard(), 4500);
+    this.sound.enable();
+
+    // 0.3s — center line grows
+    setTimeout(() => {
+      this._beep(2000, 50, 0.04);
+      if (this.lineTop) { this.lineTop.style.width = '60%'; }
+      if (this.lineBot) { this.lineBot.style.width = '60%'; }
+    }, 300);
+
+    // 0.8s — lines split apart
+    setTimeout(() => {
+      if (this.lineTop) this.lineTop.style.transform = 'translateX(-50%) translateY(-40px)';
+      if (this.lineBot) this.lineBot.style.transform = 'translateX(-50%) translateY(40px)';
+    }, 800);
+
+    // 1.0s — show text wrap, type PHANTOM
+    setTimeout(() => {
+      if (this.textWrap) this.textWrap.style.opacity = '1';
+      this._spawnLetters('PHANTOM', this.phantomEl, 0, 80);
+    }, 1000);
+
+    // 1.5s — type SCAN
+    setTimeout(() => {
+      this._spawnLetters('SCAN', this.scanEl, 0, 80);
+    }, 1500);
+
+    // 1.8s — glitch #1
+    setTimeout(() => {
+      this._noiseBurst(100);
+      this._triggerGlitch(false);
+    }, 1800);
+
+    // 2.1s — subtitle typewriter
+    setTimeout(() => {
+      if (this.subtitle) {
+        this.subtitle.style.transition = 'opacity 0.3s ease';
+        this.subtitle.style.opacity = '1';
+        this.subtitle.classList.add('visible');
+      }
+    }, 2100);
+
+    // 2.5s — glitch #2 (intense)
+    setTimeout(() => {
+      this._noiseBurst(200);
+      this._triggerGlitch(true);
+      if (this.particleField) this.particleField.classList.add('burst');
+    }, 2500);
+
+    // 2.8s — scan line sweeps
+    setTimeout(() => {
+      this.sound._play({ type: 'sine', freq: 400, sweep: 800, duration: 0.4, vol: 0.04 });
+      if (this.scanLine) {
+        this.scanLine.style.opacity = '1';
+        this.scanLine.classList.add('sweep');
+      }
+    }, 2800);
+
+    // 3.2s — init lines
+    setTimeout(() => {
+      this._showInitLines();
+    }, 3200);
+
+    // 3.8s — dissolve non-logo text, move logo to corner
+    setTimeout(() => {
+      this.sound._play({ type: 'sawtooth', freq: 800, sweep: 200, duration: 0.3, vol: 0.04 });
+      if (this.subtitle) { this.subtitle.style.transition = 'opacity 0.4s ease'; this.subtitle.style.opacity = '0'; }
+      if (this.initLines) { this.initLines.style.transition = 'opacity 0.4s ease'; this.initLines.style.opacity = '0'; }
+      if (this.lineTop) { this.lineTop.style.transition = 'opacity 0.4s ease, width 0.4s ease'; this.lineTop.style.opacity = '0'; }
+      if (this.lineBot) { this.lineBot.style.transition = 'opacity 0.4s ease, width 0.4s ease'; this.lineBot.style.opacity = '0'; }
+      if (this.textWrap) {
+        this.textWrap.style.transition = 'transform 0.6s cubic-bezier(0.4,0,0.2,1), opacity 0.6s ease';
+        this.textWrap.querySelectorAll('.intro-letter').forEach(l => {
+          l.style.transition = 'font-size 0.6s cubic-bezier(0.4,0,0.2,1)';
+          l.style.fontSize = 'clamp(14px, 2vw, 24px)';
+          l.style.textShadow = '0 0 14px #7b2fff';
+        });
+      }
+    }, 3800);
+
+    // 4.5s — reveal dashboard
+    setTimeout(() => {
+      this._bootChime();
+      this.revealDashboard();
+    }, 4500);
+
+    // 5.0s — finish
     setTimeout(() => this.finish(), 5000);
   }
-  triggerGlitch() {
-    if (!this.glitch) return;
-    this.glitch.classList.add('active');
-    setTimeout(() => this.glitch?.classList.remove('active'), 400);
-  }
-  dissolve() {
-    if (this.figure) this.figure.classList.add('dissolve');
-    if (this.particleField) this.particleField.classList.add('burst');
-  }
+
   quickFlash() {
-    if (!this.el) return;
-    this.el.classList.add('play', 'fast');
-    this.triggerGlitch();
-    setTimeout(() => this.revealDashboard(), 400);
-    setTimeout(() => this.finish(), 1000);
+    if (!this.el || this._done) return;
+    this.el.classList.add('play');
+    this._triggerGlitch(false);
+    setTimeout(() => this.revealDashboard(), 300);
+    setTimeout(() => this.finish(), 900);
   }
+
   revealDashboard() {
     document.body.classList.remove('intro-active');
   }
+
   finish() {
+    if (this._done) return;
+    this._done = true;
     localStorage.setItem('phantom_intro_seen', '1');
     document.body.classList.remove('intro-active');
-    this.el.classList.add('hidden');
-    setTimeout(() => { this.el?.remove(); }, 900);
+    if (this.el) {
+      this.el.classList.add('hidden');
+      setTimeout(() => { this.el?.remove(); }, 900);
+    }
   }
+
   skip() {
     this.quickFlash();
   }
@@ -224,6 +390,7 @@ const els = {
   modalClose: document.getElementById('modalClose'),
   ambientToggle: document.getElementById('ambientToggle'),
   skipIntro: document.getElementById('skipIntro'),
+  rootModeBtn: document.getElementById('rootModeBtn'),
 };
 
 let socket = null;
@@ -241,6 +408,7 @@ let lastSocketEvent = Date.now();
 let ambientOn = false;
 let isCancelling = false;
 let lastLiveStats = { ports: 0, cve: 0, subdomains: 0, score: 0 };
+let rootMode = false;
 
 const sound = new SoundEngine();
 document.body.classList.add('intro-active');
@@ -287,7 +455,9 @@ const intro = new IntroAnimation(sound);
       if (this.y < 0 || this.y > H) this.vy *= -1;
     }
   }
-  for (let i = 0; i < 100; i++) nodes.push(new Node());
+  const particleCount = window.innerWidth <= 768 ? 30 : 60;
+  for (let i = 0; i < particleCount; i++) nodes.push(new Node());
+  let animId = null;
   function draw() {
     ctx.clearRect(0, 0, W, H);
     nodes.forEach(n => {
@@ -305,9 +475,16 @@ const intro = new IntroAnimation(sound);
         }
       }
     }
-    requestAnimationFrame(draw);
+    animId = requestAnimationFrame(draw);
   }
   draw();
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (animId) { cancelAnimationFrame(animId); animId = null; }
+    } else {
+      if (!animId) animId = requestAnimationFrame(draw);
+    }
+  });
 })();
 
 (() => {
@@ -1014,7 +1191,7 @@ async function startScan(extra = {}) {
   switchTab('scan');
   sound.scanStart();
 
-  const body = { target, module: selectedModuleId, extra };
+  const body = { target, module: selectedModuleId, extra, root: rootMode };
   try {
     const res = await fetch(`${API}/api/scan`, {
       method: 'POST',
@@ -1043,8 +1220,35 @@ async function healthCheck() {
     const res = await fetch(`${API}/api/health`);
     const data = await res.json();
     setStatus(data.binary_exists, data.binary_exists ? 'API ONLINE' : 'BINARY MISSING');
+    if (data.sudo_available) {
+      showSudoIndicator('ok');
+    } else {
+      showSudoIndicator('no');
+    }
   } catch (e) {
     setStatus(false, 'API OFFLINE');
+  }
+}
+
+function showSudoIndicator(state) {
+  if (!els.rootModeBtn) return;
+  const existing = els.rootModeBtn.parentElement?.querySelector('.sudo-indicator');
+  if (existing) existing.remove();
+  const indicator = document.createElement('span');
+  indicator.className = `sudo-indicator sudo-${state}`;
+  indicator.textContent = state === 'ok' ? 'SUDO OK' : 'NO SUDO';
+  els.rootModeBtn.insertAdjacentElement('afterend', indicator);
+}
+
+function setRootMode(enabled) {
+  rootMode = enabled;
+  if (!els.rootModeBtn) return;
+  if (enabled) {
+    els.rootModeBtn.textContent = '🔴 ROOT MODE';
+    els.rootModeBtn.classList.add('root-active');
+  } else {
+    els.rootModeBtn.textContent = '🔓 USER MODE';
+    els.rootModeBtn.classList.remove('root-active');
   }
 }
 
@@ -1084,6 +1288,14 @@ els.stopBtn?.addEventListener('click', async () => {
 els.skipIntro?.addEventListener('click', () => {
   if (intro) intro.skip();
 });
+
+if (els.rootModeBtn) {
+  els.rootModeBtn.addEventListener('click', () => {
+    setRootMode(!rootMode);
+    sound.enable();
+    sound.buttonHover();
+  });
+}
 
 if (els.ambientToggle) {
   els.ambientToggle.addEventListener('click', () => {

@@ -35,6 +35,19 @@ SCORECARD_TIMEOUT_SECONDS = 300
 LOG_LIMIT = 500
 HOSTNAME_REGEX = r"(?=.{1,253}$)([A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*"
 
+def check_sudo_available() -> bool:
+    try:
+        result = subprocess.run(
+            ["sudo", "-n", "true"],
+            capture_output=True, timeout=3,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+SUDO_AVAILABLE = check_sudo_available()
+
 app = Flask(__name__, static_folder=".")
 CORS(app)
 socketio = SocketIO(
@@ -317,17 +330,25 @@ def build_input_sequence(target: str, module: str, extra: dict) -> list[str]:
     return seq
 
 
-def launch_process(binary: str, input_seq: list[str]) -> Tuple[Optional[subprocess.Popen], Optional[list]]:
+def launch_process(binary: str, input_seq: list[str], root_mode: bool = False) -> Tuple[Optional[subprocess.Popen], Optional[list]]:
     binary = os.path.abspath(binary)
     if binary != os.path.abspath(PHANTOMSCAN):
         logging.error("Unexpected binary path: %s", binary)
         return None, None
-    commands = [
-        ["stdbuf", "-oL", "-eL", "sudo", "-n", binary],
-        ["stdbuf", "-oL", "-eL", binary],
-        ["sudo", "-n", binary],
-        [binary],
-    ]
+    if root_mode:
+        commands = [
+            ["stdbuf", "-oL", "-eL", "sudo", "-n", binary],
+            ["sudo", "-n", binary],
+            ["stdbuf", "-oL", "-eL", binary],
+            [binary],
+        ]
+    else:
+        commands = [
+            ["stdbuf", "-oL", "-eL", binary],
+            [binary],
+            ["stdbuf", "-oL", "-eL", "sudo", "-n", binary],
+            ["sudo", "-n", binary],
+        ]
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
 
@@ -355,7 +376,7 @@ def launch_process(binary: str, input_seq: list[str]) -> Tuple[Optional[subproce
     return None, None
 
 
-def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict) -> None:
+def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root_mode: bool = False) -> None:
     scan = active_scans[scan_id]
     scan["status"] = "running"
     scan["progress"] = 0
@@ -376,7 +397,7 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict) -> N
         return
 
     input_seq = build_input_sequence(target, module, extra_inputs)
-    proc, cmd_used = launch_process(binary, input_seq)
+    proc, cmd_used = launch_process(binary, input_seq, root_mode=root_mode)
     if not proc:
         scan["status"] = "error"
         ws_emit("scan_error", {"scan_id": scan_id, "error": "Не удалось запустить phantomscan"}, room=scan_id)
@@ -627,6 +648,7 @@ def health():
                 "binary_exists": os.path.exists(binary),
                 "reports_dir": os.path.abspath(REPORTS_DIR),
                 "version": "2.0.0",
+                "sudo_available": SUDO_AVAILABLE,
             }
         )
     except OSError as exc:
@@ -641,6 +663,7 @@ def start_scan():
         target = sanitize_input(data.get("target") or "")
         module = str(data.get("module") or data.get("mode") or "1")
         extra_inputs = data.get("extra") or {}
+        root_mode = bool(data.get("root", SUDO_AVAILABLE))
         legacy_map = {
             "full": "1",
             "quick": "2",
@@ -669,7 +692,7 @@ def start_scan():
             "stats": {"ports": 0, "cve": 0, "subdomains": 0, "score": 0},
             "proc": None,
         }
-        threading.Thread(target=stream_scan, args=(scan_id, target, module, extra_inputs), daemon=True).start()
+        threading.Thread(target=stream_scan, args=(scan_id, target, module, extra_inputs, root_mode), daemon=True).start()
         return jsonify({"scan_id": scan_id, "status": "queued"})
     except (ValueError, OSError, RuntimeError) as exc:
         logging.error("start_scan error: %s", exc)
