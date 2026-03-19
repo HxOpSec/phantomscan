@@ -168,6 +168,7 @@ function classifyLog(text) {
 
 function typewriter(el, text) {
   let idx = 0;
+  // Spec requires ~15ms per character for live typewriter feel
   const write = () => {
     el.textContent = text.slice(0, idx);
     idx++;
@@ -305,7 +306,7 @@ function startPolling() {
       const data = await res.json();
       if (data.error) return;
       const logs = Array.isArray(data.log) ? data.log : [];
-      const unseen = logs.slice(Math.max(0, logSeen));
+      const unseen = logs.slice(logSeen);
       unseen.forEach(line => handleLog(line));
       logSeen = Math.max(logSeen, logs.length);
       handleStatus(data.progress || 0, data.current_action || data.status);

@@ -114,7 +114,7 @@ def add_history_entry(result: dict) -> None:
 
 
 def backend_progress_from_line(line: str, current: int) -> Tuple[int, Optional[str]]:
-    """Map backend stdout to progress percentage and human readable step."""
+    """Map backend stdout to (progress percentage, human-readable step label)."""
     text = line.lower()
     milestones = [
         (15, ["сканируем порты", "scanning ports", "ports"], "Сканируем порты"),
@@ -295,6 +295,7 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
         {"scan_id": scan_id, "status": "running", "progress": 0, "current_action": scan["current_action"]},
         room=scan_id,
     )
+    # Tiny yield prevents the streaming thread from starving SocketIO; required to keep events flowing smoothly.
     time.sleep(0.01)
 
     binary = os.path.abspath(PHANTOMSCAN)
@@ -350,6 +351,7 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
                 },
                 room=scan_id,
             )
+            # Short pause throttles emit bursts to keep UI responsive while staying within 15ms typewriter cadence.
             time.sleep(0.01)
 
         proc.wait(timeout=FULL_SCAN_TIMEOUT_SECONDS)
