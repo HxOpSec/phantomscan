@@ -1,17 +1,113 @@
-// PhantomScan Dashboard — Living Neon Terminal
+// PhantomScan Shadow Monarch Dashboard
 const API = '';
 const DEBUG = false;
 
-let socket = null;
-let reconnectTimer = null;
-let pollTimer = null;
-let elapsedTimer = null;
-let currentScanId = null;
-let currentMode = 'full';
-let lastResult = null;
-let logBuffer = [];
-let startTs = null;
-let logSeen = 0;
+class SoundEngine {
+  constructor() {
+    this.ctx = null;
+    this.enabled = false;
+    this.ambienceNode = null;
+  }
+  enable() {
+    if (this.enabled) return;
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    this.enabled = true;
+  }
+  _play({ type = 'sine', freq = 440, duration = 0.2, vol = 0.08, sweep = null, delay = 0 }) {
+    if (!this.enabled || !this.ctx) return;
+    const now = this.ctx.currentTime + delay;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+    if (sweep) osc.frequency.linearRampToValueAtTime(sweep, now + duration);
+    gain.gain.setValueAtTime(vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    osc.connect(gain).connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + duration);
+  }
+  intro() {
+    this._play({ type: 'sine', freq: 40, duration: 2.5, vol: 0.05 });
+    this._play({ type: 'triangle', freq: 120, sweep: 40, duration: 2.5, vol: 0.03, delay: 0.3 });
+  }
+  introWhoosh() { this._play({ type: 'sawtooth', freq: 60, sweep: 440, duration: 0.8, vol: 0.05 }); }
+  scanStart() { this._play({ type: 'sawtooth', freq: 40, sweep: 440, duration: 0.6, vol: 0.07 }); }
+  portFound() { this._play({ type: 'square', freq: 880, duration: 0.05, vol: 0.05 }); }
+  criticalCVE() {
+    this._play({ type: 'sine', freq: 220, duration: 0.15, vol: 0.08 });
+    this._play({ type: 'sine', freq: 220, duration: 0.15, vol: 0.08, delay: 0.18 });
+    this._play({ type: 'sine', freq: 220, duration: 0.15, vol: 0.08, delay: 0.36 });
+  }
+  scanComplete() {
+    this._play({ type: 'triangle', freq: 196, duration: 0.18, vol: 0.06 });
+    this._play({ type: 'triangle', freq: 233, duration: 0.18, vol: 0.06, delay: 0.2 });
+    this._play({ type: 'triangle', freq: 262, duration: 0.25, vol: 0.06, delay: 0.4 });
+  }
+  scanError() { this._play({ type: 'sawtooth', freq: 440, sweep: 110, duration: 0.5, vol: 0.06 }); }
+  tabClick() { this._play({ type: 'square', freq: 1000, duration: 0.04, vol: 0.03 }); }
+  buttonHover() { this._play({ type: 'square', freq: 2000, duration: 0.02, vol: 0.02 }); }
+  moduleSelect() { this._play({ type: 'square', freq: 700, duration: 0.06, vol: 0.04 }); }
+  toggleAmbience(enable) {
+    if (!this.enabled || !this.ctx) return;
+    if (enable) {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(38, this.ctx.currentTime);
+      gain.gain.setValueAtTime(0.01, this.ctx.currentTime);
+      osc.connect(gain).connect(this.ctx.destination);
+      osc.start();
+      this.ambienceNode = { osc, gain };
+    } else if (this.ambienceNode) {
+      this.ambienceNode.gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.5);
+      this.ambienceNode.osc.stop(this.ctx.currentTime + 0.6);
+      this.ambienceNode = null;
+    }
+  }
+}
+
+class IntroAnimation {
+  constructor(sound) {
+    this.el = document.getElementById('intro');
+    this.sound = sound;
+    if (this.el) {
+      setTimeout(() => this.run(), 200);
+    }
+  }
+  run() {
+    if (!this.el) return;
+    this.sound.intro();
+    setTimeout(() => this.sound.introWhoosh(), 1200);
+    setTimeout(() => {
+      this.el.classList.add('hidden');
+      setTimeout(() => { this.el.remove(); }, 1200);
+    }, 5000);
+  }
+}
+
+const modules = [
+  { id: '1', name: 'Full Scan', cat: 'recon', desc: 'WHOIS + ports + CVE + subs', inputs: [] },
+  { id: '2', name: 'Quick Scan', cat: 'recon', desc: 'Top 1024 ports fast', inputs: [] },
+  { id: '3', name: 'Subdomains', cat: 'recon', desc: 'Enumerate subdomains', inputs: [] },
+  { id: '4', name: 'Packet Monitor', cat: 'net', desc: 'Monitor packets (lo)', inputs: [] },
+  { id: '5', name: 'ARP Scan', cat: 'net', desc: 'Local subnet discovery', inputs: [{ key: 'subnet', label: 'Subnet', placeholder: '192.168.1.0/24' }] },
+  { id: '6', name: 'Traceroute', cat: 'recon', desc: 'Trace network path', inputs: [] },
+  { id: '7', name: 'SYN Stealth', cat: 'net', desc: 'Port range stealth scan', inputs: [{ key: 'port_range', label: 'Port range', placeholder: '1-1024' }] },
+  { id: '8', name: 'SSL/TLS Analysis', cat: 'vuln', desc: 'TLS posture & certs', inputs: [] },
+  { id: '9', name: 'WAF Detection', cat: 'vuln', desc: 'Detect firewalls/WAF', inputs: [] },
+  { id: '10', name: 'Vuln Scanner', cat: 'vuln', desc: 'Scan vulnerable versions', inputs: [] },
+  { id: '11', name: 'Wordlist Generator', cat: 'osint', desc: 'Generate wordlist', inputs: [] },
+  { id: '12', name: 'Shodan Lookup', cat: 'osint', desc: 'API powered lookup', inputs: [{ key: 'api_key', label: 'API Key', placeholder: 'SHODAN-KEY' }] },
+  { id: '13', name: 'Exploit Suggester', cat: 'vuln', desc: 'Suggested exploits', inputs: [{ key: 'service', label: 'Service', placeholder: 'ssh/http/...' }] },
+  { id: '14', name: 'Network Topology', cat: 'recon', desc: 'Map hops', inputs: [] },
+  { id: '15', name: 'UDP Scan', cat: 'net', desc: 'UDP port range', inputs: [{ key: 'port_range', label: 'Port range', placeholder: '1-1024' }] },
+  { id: '16', name: 'Change Target', cat: 'recon', desc: 'Update target', inputs: [{ key: 'new_target', label: 'New Target', placeholder: 'host' }] },
+  { id: '17', name: 'Scorecard', cat: 'vuln', desc: 'Security grade', inputs: [] },
+  { id: '18', name: 'HTTP Dir Scan', cat: 'osint', desc: 'Dir brute force', inputs: [{ key: 'port', label: 'Port', placeholder: '80' }] },
+  { id: '19', name: 'DNS Recon', cat: 'recon', desc: 'DNS enum + AXFR', inputs: [] },
+  { id: '20', name: 'Multi Scan', cat: 'net', desc: 'File of targets', inputs: [{ key: 'file_path', label: 'File path', placeholder: 'targets.txt' }] },
+];
 
 const els = {
   statusDot: document.getElementById('statusDot'),
@@ -56,9 +152,33 @@ const els = {
   cmpBScore: document.getElementById('cmpBScore'),
   cmpLegend: document.getElementById('cmpLegend'),
   compareBtn: document.getElementById('compareBtn'),
+  selectedModule: document.getElementById('selectedModule'),
+  modal: document.getElementById('moduleModal'),
+  modalBody: document.getElementById('modalBody'),
+  modalTitle: document.getElementById('modalTitle'),
+  modalRun: document.getElementById('modalRun'),
+  modalClose: document.getElementById('modalClose'),
+  ambientToggle: document.getElementById('ambientToggle'),
 };
 
-// Background particle network
+let socket = null;
+let reconnectTimer = null;
+let pollTimer = null;
+let elapsedTimer = null;
+let silentTimer = null;
+let currentScanId = null;
+let selectedModuleId = '1';
+let lastResult = null;
+let logBuffer = [];
+let startTs = null;
+let logSeen = 0;
+let lastSocketEvent = Date.now();
+let ambientOn = false;
+
+const sound = new SoundEngine();
+const intro = new IntroAnimation(sound);
+
+// Background particle network + lightning cursor
 (() => {
   const canvas = document.getElementById('bg-canvas');
   if (!canvas) return;
@@ -78,23 +198,21 @@ const els = {
       if (this.y < 0 || this.y > H) this.vy *= -1;
     }
   }
-  for (let i = 0; i < 80; i++) nodes.push(new Node());
+  for (let i = 0; i < 100; i++) nodes.push(new Node());
   function draw() {
     ctx.clearRect(0, 0, W, H);
     nodes.forEach(n => {
       n.step();
       ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0,212,255,0.35)'; ctx.fill();
+      ctx.fillStyle = 'rgba(123,47,255,0.35)'; ctx.fill();
     });
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
         const d = Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y);
         if (d < 140) {
-          const mx = (mouse.x / W - 0.5) * 2;
-          const my = (mouse.y / H - 0.5) * 2;
-          const alpha = 0.09 * (1 - d / 140);
+          const alpha = 0.08 * (1 - d / 140);
           ctx.strokeStyle = `rgba(0,212,255,${alpha})`;
-          ctx.beginPath(); ctx.moveTo(nodes[i].x + mx, nodes[i].y + my); ctx.lineTo(nodes[j].x, nodes[j].y); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(nodes[i].x, nodes[i].y); ctx.lineTo(nodes[j].x, nodes[j].y); ctx.stroke();
         }
       }
     }
@@ -103,11 +221,39 @@ const els = {
   draw();
 })();
 
+(() => {
+  const canvas = document.getElementById('cursor-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  const trails = [];
+  const resize = () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; };
+  resize(); window.addEventListener('resize', resize);
+  window.addEventListener('mousemove', e => {
+    trails.push({ x: e.clientX, y: e.clientY, life: 1 });
+  });
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    trails.forEach(t => {
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(123,47,255,${t.life})`;
+      ctx.shadowColor = 'rgba(123,47,255,0.8)';
+      ctx.shadowBlur = 12;
+      ctx.fill();
+      t.life -= 0.02;
+    });
+    for (let i = trails.length - 1; i >= 0; i--) if (trails[i].life <= 0) trails.splice(i, 1);
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
 // Helpers
 function setStatus(ok, text) {
   if (els.statusDot) {
-    els.statusDot.style.background = ok ? 'var(--accent)' : 'var(--secondary)';
-    els.statusDot.style.boxShadow = ok ? '0 0 12px var(--accent)' : '0 0 12px var(--secondary)';
+    els.statusDot.style.background = ok ? 'var(--accent-2)' : 'var(--danger)';
+    els.statusDot.style.boxShadow = ok ? '0 0 12px var(--accent-2)' : '0 0 12px var(--danger)';
   }
   if (els.statusText) els.statusText.textContent = text;
 }
@@ -133,7 +279,6 @@ function formatTime(ms) {
   return `${m}:${s}`;
 }
 
-// Progress handling
 function progressFromLog(line) {
   const l = (line || '').toLowerCase();
   if (l.includes('готово') || l.includes('done')) return { pct: 100, action: 'Готово' };
@@ -141,9 +286,9 @@ function progressFromLog(line) {
   if (l.includes('анализ')) return { pct: 85, action: 'Анализируем' };
   if (l.includes('tls')) return { pct: 75, action: 'Проверяем TLS' };
   if (l.includes('поддомен')) return { pct: 65, action: 'Ищем поддомены' };
-  if (l.includes('cve')) return { pct: 45, action: 'Проверяем CVE' };
-  if (l.includes('завершено за') || l.includes('ports done')) return { pct: 30, action: 'Порты завершены' };
-  if (l.includes('сканируем порты') || l.includes('ports')) return { pct: 15, action: 'Сканируем порты' };
+  if (l.includes('cve')) return { pct: 50, action: 'Проверяем CVE' };
+  if (l.includes('завершено за') || l.includes('ports done')) return { pct: 35, action: 'Порты завершены' };
+  if (l.includes('сканируем порты') || l.includes('ports')) return { pct: 20, action: 'Сканируем порты' };
   return { pct: 8, action: 'Инициализация' };
 }
 
@@ -158,7 +303,6 @@ function updateProgress(pct, label) {
   if (els.progressLabel) els.progressLabel.textContent = label || 'В работе...';
 }
 
-// Logs
 function classifyLog(text) {
   if (/^\[\+\]|✓/.test(text)) return 'log-ok';
   if (/^\[-\]|✗/.test(text)) return 'log-err';
@@ -168,7 +312,6 @@ function classifyLog(text) {
 
 function typewriter(el, text) {
   let idx = 0;
-  // Spec requires ~15ms per character for live typewriter feel; rAF keeps timers minimal.
   let last = 0;
   const step = ts => {
     if (!last || ts - last >= 15) {
@@ -195,17 +338,15 @@ function renderLog(text, cls = '') {
     rm.classList.add('fade');
     setTimeout(() => rm.remove(), 200);
   }
+  lastSocketEvent = Date.now();
 }
 
-// UI pieces
-const TOAST_DURATION = 4000;
-let toastTimer = null;
 function toast(msg) {
   if (!els.toast) return;
   els.toast.textContent = msg;
   els.toast.style.display = 'block';
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { if (els.toast) els.toast.style.display = 'none'; }, TOAST_DURATION);
+  clearTimeout(els.toast._timer);
+  els.toast._timer = setTimeout(() => { els.toast.style.display = 'none'; }, 4000);
 }
 
 function switchTab(tabName) {
@@ -224,44 +365,44 @@ function connectSocket() {
     return;
   }
   if (socket) socket.disconnect();
-  socket = io({
-    transports: ['websocket', 'polling'],
-    reconnection: true,
-    reconnectionAttempts: 10,
-    reconnectionDelay: 1500,
-  });
+  socket = io({ transports: ['polling', 'websocket'], reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 1500 });
 
   socket.on('connect', () => {
+    console.log('[socket] connect');
     setStatus(true, 'API ONLINE');
     if (currentScanId) socket.emit('join_scan', { scan_id: currentScanId });
   });
-
   socket.on('disconnect', () => {
+    console.log('[socket] disconnect');
     setStatus(false, 'API OFFLINE');
     if (reconnectTimer) clearTimeout(reconnectTimer);
     reconnectTimer = setTimeout(connectSocket, 2000);
   });
-
   socket.on('log_line', payload => {
+    console.log('[socket] log_line', payload);
     if (!payload || payload.scan_id !== currentScanId) return;
+    lastSocketEvent = Date.now();
     handleLog(payload.line, payload.progress, payload.current_action);
   });
-
   socket.on('scan_status', payload => {
+    console.log('[socket] scan_status', payload);
     if (!payload || payload.scan_id !== currentScanId) return;
+    lastSocketEvent = Date.now();
     handleStatus(payload.progress, payload.current_action);
   });
-
   socket.on('scan_error', payload => {
+    console.log('[socket] scan_error', payload);
     if (!payload || payload.scan_id !== currentScanId) return;
     renderLog(`[-] ${payload.error || 'Ошибка'}`, 'log-err');
+    sound.scanError();
     stopTimers();
     setStatus(false, 'SCAN ERROR');
     if (els.scanBtn) els.scanBtn.disabled = false;
   });
-
   socket.on('scan_complete', payload => {
+    console.log('[socket] scan_complete', payload);
     if (!payload || payload.scan_id !== currentScanId) return;
+    lastSocketEvent = Date.now();
     finalizeScan(payload.result);
   });
 }
@@ -273,6 +414,7 @@ function handleLog(line, pct, action) {
   const label = action || derived.action || 'Сканирование';
   updateProgress(progress, label);
   if (els.currentAction) els.currentAction.textContent = label;
+  if (/cve/i.test(line) && /critical/i.test(line)) sound.criticalCVE();
 }
 
 function handleStatus(pct, action) {
@@ -284,12 +426,14 @@ function handleStatus(pct, action) {
 function stopTimers() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+  if (silentTimer) { clearInterval(silentTimer); silentTimer = null; }
 }
 
 function finalizeScan(result) {
   updateProgress(100, 'Готово');
   if (els.currentAction) els.currentAction.textContent = 'Готово';
   stopTimers();
+  sound.scanComplete();
   if (els.scanBtn) els.scanBtn.disabled = false;
   if (result) {
     lastResult = result;
@@ -299,37 +443,39 @@ function finalizeScan(result) {
   }
 }
 
-// Polling fallback
-function startPolling() {
-  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
-  const pollStarted = Date.now();
-  const loop = async () => {
+function startSilentPoll() {
+  if (silentTimer) clearInterval(silentTimer);
+  silentTimer = setInterval(() => {
     if (!currentScanId) return;
-    const safeId = encodeURIComponent(currentScanId);
-    try {
-      const res = await fetch(`${API}/api/scan/${safeId}`);
-      const data = await res.json();
-      if (data.error) return;
-      const logs = Array.isArray(data.log) ? data.log : [];
-      const unseen = logs.slice(logSeen);
-      unseen.forEach(line => handleLog(line));
-      logSeen = Math.max(logSeen, logs.length);
-      handleStatus(data.progress || 0, data.current_action || data.status);
-      if (data.status === 'done') {
-        finalizeScan(data.result);
-      } else if (data.status === 'error') {
-        renderLog(`[-] ${data.error || 'Ошибка сканирования'}`, 'log-err');
-        stopTimers();
-        if (els.scanBtn) els.scanBtn.disabled = false;
-      }
-    } catch (e) {
-      if (DEBUG) console.warn('poll error', e);
+    if (Date.now() - lastSocketEvent > 5000) {
+      pollOnce();
     }
-    const elapsed = Date.now() - pollStarted;
-    const delay = elapsed > 60000 ? 4000 : 2000;
-    pollTimer = setTimeout(loop, delay);
-  };
-  loop();
+  }, 5000);
+}
+
+// Polling fallback
+async function pollOnce() {
+  if (!currentScanId) return;
+  const safeId = encodeURIComponent(currentScanId);
+  try {
+    const res = await fetch(`${API}/api/scan/${safeId}`);
+    const data = await res.json();
+    if (data.error) return;
+    const logs = Array.isArray(data.log) ? data.log : [];
+    const unseen = logs.slice(logSeen);
+    unseen.forEach(line => handleLog(line));
+    logSeen = Math.max(logSeen, logs.length);
+    handleStatus(data.progress || 0, data.current_action || data.status);
+    if (data.status === 'done') {
+      finalizeScan(data.result);
+    } else if (data.status === 'error') {
+      renderLog(`[-] ${data.error || 'Ошибка сканирования'}`, 'log-err');
+      stopTimers();
+      if (els.scanBtn) els.scanBtn.disabled = false;
+    }
+  } catch (e) {
+    if (DEBUG) console.warn('poll error', e);
+  }
 }
 
 // Rendering
@@ -372,6 +518,8 @@ function renderPorts(ports) {
     });
     setTimeout(() => tr.classList.add('visible'), idx * 80);
     body.appendChild(tr);
+    if (p.cves?.some(cv => cv.severity === 'CRITICAL')) sound.criticalCVE();
+    else if (p.cves?.length) sound.portFound();
   });
 }
 
@@ -420,6 +568,9 @@ function renderScorecard(data) {
     });
   };
 
+  const okBad = val => val ? '✓' : '✗';
+  const offOn = val => val ? '✓ Off' : '✗ On';
+
   setList(els.dnsList, [
     { label: 'SPF', badge: okBad(data.dns?.spf), state: data.dns?.spf ? 'ok' : 'bad' },
     { label: 'DMARC', badge: okBad(data.dns?.dmarc), state: data.dns?.dmarc ? 'ok' : 'bad' },
@@ -454,7 +605,7 @@ function renderScorecard(data) {
   if (els.recList) {
     els.recList.innerHTML = '';
     (data.recommendations || [])
-      .sort((a, b) => severityRank(a.level) - severityRank(b.level))
+      .sort((a, b) => ({ CRITICAL: 1, HIGH: 2, MEDIUM: 3, LOW: 4 }[a.level] - ({ CRITICAL: 1, HIGH: 2, MEDIUM: 3, LOW: 4 }[b.level])))
       .forEach(r => {
         const div = document.createElement('div');
         div.className = `rec ${r.level.toLowerCase()}`;
@@ -463,10 +614,6 @@ function renderScorecard(data) {
       });
   }
 }
-
-function okBad(val) { return val ? '✓' : '✗'; }
-function offOn(val) { return val ? '✓ Off' : '✗ On'; }
-function severityRank(lvl) { return { CRITICAL: 1, HIGH: 2, MEDIUM: 3, LOW: 4 }[lvl] || 5; }
 
 function renderAll(data) {
   if (!data) return;
@@ -563,8 +710,62 @@ async function compareTargets() {
   }
 }
 
+// Module cards + modal
+function buildModuleCards() {
+  const buckets = {
+    recon: document.getElementById('cat-recon'),
+    vuln: document.getElementById('cat-vuln'),
+    net: document.getElementById('cat-net'),
+    osint: document.getElementById('cat-osint'),
+  };
+  modules.forEach(mod => {
+    const parent = buckets[mod.cat];
+    if (!parent) return;
+    const card = document.createElement('div');
+    card.className = 'module-card';
+    card.innerHTML = `
+      <div class="title">${mod.id}. ${mod.name}</div>
+      <div class="desc">${mod.desc}</div>
+      <div class="badge">${mod.inputs.length ? 'INPUT' : 'AUTO'}</div>
+    `;
+    card.addEventListener('click', () => onModuleSelected(mod));
+    parent.appendChild(card);
+  });
+}
+
+function onModuleSelected(mod) {
+  selectedModuleId = mod.id;
+  if (els.selectedModule) els.selectedModule.textContent = mod.name;
+  sound.moduleSelect();
+  if (mod.inputs.length) {
+    openModal(mod);
+  }
+}
+
+function openModal(mod) {
+  if (!els.modal) return;
+  els.modal.classList.add('show');
+  els.modalTitle.textContent = `${mod.id}. ${mod.name}`;
+  els.modalBody.innerHTML = '';
+  mod.inputs.forEach(inp => {
+    const wrap = document.createElement('div');
+    wrap.className = 'input-stack';
+    wrap.innerHTML = `
+      <label>${inp.label}</label>
+      <input data-key="${inp.key}" placeholder="${inp.placeholder || ''}">
+    `;
+    els.modalBody.appendChild(wrap);
+  });
+  els.modalRun.onclick = () => {
+    const extra = {};
+    els.modalBody.querySelectorAll('input').forEach(i => extra[i.dataset.key] = i.value);
+    els.modal.classList.remove('show');
+    startScan(extra);
+  };
+}
+
 // Scan actions
-async function startScan() {
+async function startScan(extra = {}) {
   const target = (els.targetInput?.value || '').trim();
   if (!target) { toast('Введите цель'); return; }
   if (els.scanBtn) els.scanBtn.disabled = true;
@@ -582,8 +783,9 @@ async function startScan() {
   updateProgress(5, 'Запуск');
   if (els.currentAction) els.currentAction.textContent = 'Инициализация';
   switchTab('scan');
+  sound.scanStart();
 
-  const body = { target, mode: currentMode };
+  const body = { target, module: selectedModuleId, extra };
   try {
     const res = await fetch(`${API}/api/scan`, {
       method: 'POST',
@@ -593,11 +795,14 @@ async function startScan() {
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     currentScanId = data.scan_id;
+    lastSocketEvent = Date.now();
     if (socket) socket.emit('join_scan', { scan_id: currentScanId });
-    startPolling();
+    pollOnce();
+    startSilentPoll();
     toast('Сканирование запущено');
   } catch (err) {
     toast(err.message || 'Ошибка запуска');
+    sound.scanError();
     if (els.scanBtn) els.scanBtn.disabled = false;
   }
 }
@@ -619,26 +824,49 @@ setInterval(() => {
   if (c) c.textContent = new Date().toLocaleTimeString();
 }, 1000);
 
-// Tabs
-document.querySelectorAll('.tab').forEach(btn => {
-  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-});
-
-// Mode chips
-document.querySelectorAll('#modeChips .chip').forEach(chip => {
-  chip.addEventListener('click', () => {
-    document.querySelectorAll('#modeChips .chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    currentMode = chip.dataset.mode;
-  });
-});
-
 // Events
-els.scanBtn?.addEventListener('click', startScan);
-els.targetInput?.addEventListener('keydown', e => { if (e.key === 'Enter') startScan(); });
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => { switchTab(btn.dataset.tab); sound.tabClick(); });
+});
+
+els.scanBtn?.addEventListener('click', () => startScan({}));
+els.targetInput?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    sound.moduleSelect();
+    startScan({});
+  }
+});
 els.compareBtn?.addEventListener('click', compareTargets);
+els.modalClose?.addEventListener('click', () => els.modal.classList.remove('show'));
+els.modal?.addEventListener('click', e => { if (e.target === els.modal) els.modal.classList.remove('show'); });
+document.body.addEventListener('click', () => sound.enable(), { once: true });
+
+if (els.ambientToggle) {
+  els.ambientToggle.addEventListener('click', () => {
+    ambientOn = !ambientOn;
+    sound.enable();
+    sound.toggleAmbience(ambientOn);
+    els.ambientToggle.textContent = ambientOn ? '🔊' : '🔇';
+  });
+}
 
 // Init
+buildModuleCards();
 healthCheck();
 connectSocket();
 fetchHistory();
+
+// Lightning flashes
+setInterval(() => {
+  const flash = document.createElement('div');
+  flash.style.position = 'fixed';
+  flash.style.inset = '0';
+  flash.style.background = 'radial-gradient(circle at 50% 50%, rgba(123,47,255,0.4), transparent 60%)';
+  flash.style.pointerEvents = 'none';
+  flash.style.opacity = '0';
+  flash.style.transition = 'opacity 0.6s ease';
+  flash.style.zIndex = '2';
+  document.body.appendChild(flash);
+  requestAnimationFrame(() => { flash.style.opacity = '1'; });
+  setTimeout(() => { flash.style.opacity = '0'; setTimeout(() => flash.remove(), 600); }, 200);
+}, 30000 + Math.random() * 30000);

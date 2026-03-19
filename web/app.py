@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import re
+import select
 import subprocess
 import threading
 import time
@@ -25,14 +26,13 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 # ─────────────────────────────────────────────────────────────────────────────
 #  App setup
 # ─────────────────────────────────────────────────────────────────────────────
+os.environ.setdefault("PYTHONUNBUFFERED", "1")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PHANTOMSCAN = os.path.join(BASE_DIR, "..", "builds", "phantomscan")
 REPORTS_DIR = os.path.join(BASE_DIR, "..", "reports")
-# Timeouts are in seconds
-FULL_SCAN_TIMEOUT_SECONDS = 300
+FULL_SCAN_TIMEOUT_SECONDS = 420
 SCORECARD_TIMEOUT_SECONDS = 300
 LOG_LIMIT = 500
-# RFC 1123 hostname with optional subdomains
 HOSTNAME_REGEX = r"(?=.{1,253}$)([A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*"
 
 app = Flask(__name__, static_folder=".")
@@ -50,7 +50,6 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 
-# In‑memory scan registry
 active_scans: Dict[str, Dict] = {}
 scan_history: deque = deque(maxlen=50)
 
@@ -59,8 +58,13 @@ scan_history: deque = deque(maxlen=50)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def ws_emit(event: str, payload: dict, room: Optional[str] = None) -> None:
+    """Emit with required namespace and pacing."""
+    socketio.emit(event, payload, room=room, namespace="/")
+    time.sleep(0.05)
+
+
 def strip_ansi(text: str) -> str:
-    """Remove ANSI escape codes."""
     return re.sub(r"\033\[[0-9;]*m", "", text or "")
 
 
@@ -68,8 +72,11 @@ def safe_target(target: str) -> str:
     return re.sub(r"[^a-zA-Z0-9._-]", "_", target)
 
 
+def sanitize_input(val: str) -> str:
+    return re.sub(r"[\r\n\t]", " ", (val or "").strip())
+
+
 def is_valid_target(target: str) -> bool:
-    """Only allow hostname or IPv4/IPv6; block shell metacharacters."""
     if not target or re.search(r"[\n\r\x00;&|`$(){}\\]", target):
         return False
     stripped = target.strip("[]")
@@ -82,15 +89,22 @@ def is_valid_target(target: str) -> bool:
     return bool(hostname)
 
 
-def find_latest_report(target: str) -> Optional[str]:
-    """Return newest JSON report for a target."""
+def find_latest_report(target: str, started_at: float) -> Optional[str]:
     os.makedirs(REPORTS_DIR, exist_ok=True)
-    candidates = glob.glob(os.path.join(REPORTS_DIR, f"{safe_target(target)}_*.json"))
-    if not candidates:
-        candidates = glob.glob(os.path.join(REPORTS_DIR, "*.json"))
+    candidates: list[str] = []
+    t = safe_target(target)
+    patterns = [
+        os.path.join(REPORTS_DIR, f"{t}_*.json"),
+        os.path.join(REPORTS_DIR, f"safe_{t}_*.json"),
+        os.path.join(REPORTS_DIR, "*.json"),
+    ]
+    for pat in patterns:
+        candidates.extend(glob.glob(pat))
     if not candidates:
         return None
-    return max(candidates, key=os.path.getmtime)
+    filtered = [p for p in candidates if os.path.getmtime(p) >= started_at]
+    pool = filtered or candidates
+    return max(pool, key=os.path.getmtime)
 
 
 def load_report_file(path: str) -> Optional[dict]:
@@ -114,12 +128,12 @@ def add_history_entry(result: dict) -> None:
 
 
 def backend_progress_from_line(line: str, current: int) -> Tuple[int, Optional[str]]:
-    """Map backend stdout to (progress percentage, human-readable step label)."""
     text = line.lower()
     milestones = [
-        (15, ["сканируем порты", "scanning ports", "ports"], "Сканируем порты"),
-        (30, ["завершено за", "ports done", "port scan"], "Порты завершены"),
-        (45, ["проверяем cve", "cve", "vuln"], "Проверяем CVE"),
+        (12, ["запуск", "start"], "Запуск"),
+        (20, ["сканируем порты", "scanning ports", "ports"], "Сканируем порты"),
+        (35, ["завершено за", "ports done", "port scan"], "Порты завершены"),
+        (50, ["cve", "уязвим"], "Проверяем CVE"),
         (65, ["поддомен", "subdomain"], "Ищем поддомены"),
         (75, ["tls", "ssl"], "Проверяем TLS"),
         (85, ["анализ", "analyz", "firewall"], "Анализируем"),
@@ -147,49 +161,56 @@ def parse_scorecard_output(stdout: str, target: str) -> dict:
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
+    score_re = re.compile(r"SCORE:\s*(\d+)\s*/\s*100", re.IGNORECASE)
+    grade_re = re.compile(r"Grade:\s*([A-F][+]?)", re.IGNORECASE)
+
     for line in clean.splitlines():
-        if "SCORE:" in line and "/" in line:
-            try:
-                result["score"] = int(re.findall(r"SCORE:\s*([0-9]+)", line)[0])
-            except (IndexError, ValueError):
-                result["score"] = 0
-            grade_match = re.search(r"Grade:\s*([A-F][+]?)", line)
-            if grade_match:
-                result["grade"] = grade_match.group(1).strip()
-        if "Grade:" in line and not result.get("verdict"):
-            parts = line.split("Grade:")
+        if "scorecard" in line.lower() and not result["verdict"]:
+            parts = line.split("—")
             if len(parts) > 1:
                 result["verdict"] = parts[-1].strip()
+        if "SCORE:" in line.upper():
+            sm = score_re.search(line)
+            gm = grade_re.search(line)
+            if sm:
+                try:
+                    result["score"] = int(sm.group(1))
+                except ValueError:
+                    result["score"] = 0
+            if gm:
+                result["grade"] = gm.group(1).strip().upper()
         rec_match = re.search(r"\[(CRITICAL|HIGH|MEDIUM|LOW)\]\s*(.+)", line)
         if rec_match:
             result["recommendations"].append(
                 {"level": rec_match.group(1), "message": rec_match.group(2).strip()}
             )
 
+        section_line = line.replace("║", " ").replace("|", " ")
+
         # DNS
-        if line.startswith("SPF"):
+        if re.search(r"\bSPF\b", section_line):
             result["dns"]["spf"] = "✓" in line or "OK" in line
-        if line.startswith("DMARC"):
+        if re.search(r"\bDMARC\b", section_line):
             result["dns"]["dmarc"] = "✓" in line or "OK" in line
-        if "DNSSEC" in line:
+        if re.search(r"\bDNSSEC\b", section_line):
             result["dns"]["dnssec"] = "✓" in line or "OK" in line
-        if "CAA" in line:
+        if re.search(r"\bCAA\b", section_line):
             result["dns"]["caa"] = "✓" in line or "OK" in line
-        if "DKIM" in line:
+        if re.search(r"\bDKIM\b", section_line):
             result["dns"]["dkim"] = "✓" in line or "OK" in line
-        if re.match(r"\s*MX", line):
+        if re.search(r"\bMX\b", section_line):
             result["dns"]["mx"] = "✓" in line or "OK" in line
 
         # TLS
         if "TLS 1.0" in line:
-            result["tls"]["tls10"] = "✓" in line and "Отключён" in line
+            result["tls"]["tls10"] = "✓" in line and ("Отключ" in line or "Off" in line)
         if "TLS 1.1" in line:
-            result["tls"]["tls11"] = "✓" in line and "Отключён" in line
+            result["tls"]["tls11"] = "✓" in line and ("Отключ" in line or "Off" in line)
         if "TLS 1.2" in line:
-            result["tls"]["tls12"] = "✓" in line or "Поддерживается" in line
+            result["tls"]["tls12"] = "✓" in line or "Поддерж" in line
         if "TLS 1.3" in line:
-            result["tls"]["tls13"] = "✓" in line or "Поддерживается" in line
-        if "Сертификат истекает" in line:
+            result["tls"]["tls13"] = "✓" in line or "Поддерж" in line
+        if re.search(r"Сертификат истекает через:\s*([0-9]+)", line):
             match = re.search(r"через:\s*([0-9]+)", line)
             if match:
                 result["tls"]["days_left"] = int(match.group(1))
@@ -197,13 +218,13 @@ def parse_scorecard_output(stdout: str, target: str) -> dict:
             result["tls"]["self_signed"] = True
         if "Слабые шифры" in line:
             result["tls"]["weak_ciphers"] = True
-        if "HSTS" in line:
-            result["tls"]["hsts"] = "✓" in line or "Включён" in line
+        if re.search(r"\bHSTS\b", section_line):
+            result["tls"]["hsts"] = "✓" in line or "Включ" in line
 
         # HTTP
         if "X-Frame-Options" in line:
             result["http"]["x_frame_options"] = "✓" in line or "Настроен" in line
-        if "X-Content-Type-Options" in line:
+        if "X-Content-Type" in line:
             result["http"]["x_content_type_options"] = "✓" in line or "Настроен" in line
         if "Content-Security-Policy" in line:
             result["http"]["csp"] = "✓" in line or "Настроен" in line
@@ -212,7 +233,7 @@ def parse_scorecard_output(stdout: str, target: str) -> dict:
 
         # WHOIS
         if "Возраст домена" in line:
-            age_match = re.search(r"([0-9]+)\s*дн", line)
+            age_match = re.search(r"([0-9]+)\s*д", line)
             if age_match:
                 result["whois"]["domain_age_days"] = int(age_match.group(1))
         if "Истекает через" in line:
@@ -228,7 +249,6 @@ def parse_scorecard_output(stdout: str, target: str) -> dict:
 
 
 def parse_stdout_fallback(stdout: str, target: str) -> dict:
-    """Minimal parser when JSON report is missing."""
     clean = strip_ansi(stdout)
     data = {
         "target": target,
@@ -255,13 +275,41 @@ def parse_stdout_fallback(stdout: str, target: str) -> dict:
     return data
 
 
-def launch_process(binary: str, input_data: str) -> Tuple[Optional[subprocess.Popen], Optional[list]]:
-    """Try sudo -n first, then plain execution."""
+def build_input_sequence(target: str, module: str, extra: dict) -> list[str]:
+    module = str(module or "1")
+    seq = [target, module]
+    extra = extra or {}
+    defaults = {
+        "5": ("subnet", "192.168.1.0/24"),
+        "7": ("port_range", "1-1024"),
+        "12": ("api_key", ""),
+        "13": ("service", "http"),
+        "15": ("port_range", "1-1024"),
+        "16": ("new_target", target),
+        "18": ("port", "80"),
+        "20": ("file_path", "targets.txt"),
+    }
+    if module in defaults:
+        key, default_val = defaults[module]
+        seq.append(sanitize_input(extra.get(key, default_val)))
+    seq.append("0")
+    return seq
+
+
+def launch_process(binary: str, input_seq: list[str]) -> Tuple[Optional[subprocess.Popen], Optional[list]]:
     binary = os.path.abspath(binary)
     if binary != os.path.abspath(PHANTOMSCAN):
         logging.error("Unexpected binary path: %s", binary)
         return None, None
-    commands = [["sudo", "-n", binary], [binary]]
+    commands = [
+        ["stdbuf", "-oL", "-eL", "sudo", "-n", binary],
+        ["stdbuf", "-oL", "-eL", binary],
+        ["sudo", "-n", binary],
+        [binary],
+    ]
+    env = os.environ.copy()
+    env["PYTHONUNBUFFERED"] = "1"
+
     for cmd in commands:
         try:
             proc = subprocess.Popen(
@@ -271,10 +319,12 @@ def launch_process(binary: str, input_data: str) -> Tuple[Optional[subprocess.Po
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
+                env=env,
             )
-            proc.stdin.write(input_data)
-            proc.stdin.flush()
-            proc.stdin.close()
+            for idx, line in enumerate(input_seq):
+                proc.stdin.write(f"{line}\n")
+                proc.stdin.flush()
+                time.sleep(0.5)
             return proc, cmd
         except FileNotFoundError:
             continue
@@ -284,90 +334,102 @@ def launch_process(binary: str, input_data: str) -> Tuple[Optional[subprocess.Po
     return None, None
 
 
-def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
-    """Background scanner with live websocket streaming."""
+def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict) -> None:
     scan = active_scans[scan_id]
     scan["status"] = "running"
     scan["progress"] = 0
     scan["current_action"] = "Запуск"
-    socketio.emit(
+    ws_emit(
         "scan_status",
         {"scan_id": scan_id, "status": "running", "progress": 0, "current_action": scan["current_action"]},
         room=scan_id,
     )
-    # Tiny pause prevents the streaming thread from starving SocketIO; required to keep events flowing smoothly.
-    time.sleep(0.01)
 
     binary = os.path.abspath(PHANTOMSCAN)
     if not os.path.exists(binary):
         msg = f"Binary not found: {binary}"
         scan["status"] = "error"
-        socketio.emit("scan_error", {"scan_id": scan_id, "error": msg}, room=scan_id)
+        ws_emit("scan_error", {"scan_id": scan_id, "error": msg}, room=scan_id)
         return
 
-    input_seq = f"{target}\n{menu_choice}\n0\n"
+    input_seq = build_input_sequence(target, module, extra_inputs)
     proc, cmd_used = launch_process(binary, input_seq)
     if not proc:
         scan["status"] = "error"
-        socketio.emit("scan_error", {"scan_id": scan_id, "error": "Не удалось запустить phantomscan"}, room=scan_id)
-        time.sleep(0.01)
+        ws_emit("scan_error", {"scan_id": scan_id, "error": "Не удалось запустить phantomscan"}, room=scan_id)
         return
 
     logging.info("Started scan %s with cmd %s", scan_id, cmd_used)
     captured_output: list[str] = []
-    start_time = time.time()
+    started_at = time.time()
+    scan["started_ts"] = started_at
 
     try:
-        for raw_line in iter(proc.stdout.readline, ""):
-            if time.time() - start_time > FULL_SCAN_TIMEOUT_SECONDS:
+        while True:
+            if time.time() - started_at > FULL_SCAN_TIMEOUT_SECONDS:
                 proc.kill()
                 scan["status"] = "error"
-                socketio.emit(
-                    "scan_error",
-                    {"scan_id": scan_id, "error": "Таймаут сканирования"},
+                ws_emit("scan_error", {"scan_id": scan_id, "error": "Таймаут сканирования"}, room=scan_id)
+                return
+
+            ready, _, _ = select.select([proc.stdout], [], [], 0.25)
+            if ready:
+                raw_line = proc.stdout.readline()
+                if raw_line == "":
+                    if proc.poll() is not None:
+                        extra_ready, _, _ = select.select([proc.stdout], [], [], 0)
+                        if not extra_ready:
+                            break
+                        continue
+                    continue
+                clean = strip_ansi(raw_line.rstrip())
+                if not clean:
+                    continue
+                captured_output.append(clean)
+                scan["log"].append(clean)
+                if len(scan["log"]) > LOG_LIMIT:
+                    scan["log"] = scan["log"][-LOG_LIMIT:]
+                scan["progress"], action = backend_progress_from_line(clean, scan.get("progress", 0))
+                if action:
+                    scan["current_action"] = action
+                ws_emit(
+                    "log_line",
+                    {
+                        "scan_id": scan_id,
+                        "line": clean,
+                        "progress": scan["progress"],
+                        "current_action": scan.get("current_action"),
+                    },
                     room=scan_id,
                 )
-                time.sleep(0.01)
-                return
-            if raw_line == "" and proc.poll() is not None:
-                break
-            clean = strip_ansi(raw_line.rstrip())
-            if not clean:
-                continue
-            captured_output.append(clean)
-            scan["log"].append(clean)
-            if len(scan["log"]) > LOG_LIMIT:
-                scan["log"] = scan["log"][-LOG_LIMIT:]
-            scan["progress"], action = backend_progress_from_line(clean, scan.get("progress", 0))
-            if action:
-                scan["current_action"] = action
-            socketio.emit(
-                "log_line",
-                {
-                    "scan_id": scan_id,
-                    "line": clean,
-                    "progress": scan["progress"],
-                    "current_action": scan.get("current_action"),
-                },
-                room=scan_id,
-            )
-            # Short 10ms pause throttles emit bursts to keep UI responsive while aligning with frontend typewriter pacing.
-            time.sleep(0.01)
-
-        proc.wait(timeout=FULL_SCAN_TIMEOUT_SECONDS)
+            else:
+                if proc.poll() is not None:
+                    remainder = proc.stdout.read()
+                    for extra_line in (remainder.splitlines() if remainder else []):
+                        clean = strip_ansi(extra_line.rstrip())
+                        if not clean:
+                            continue
+                        captured_output.append(clean)
+                        scan["log"].append(clean)
+                    break
+        proc.wait(timeout=5)
     except subprocess.TimeoutExpired:
         proc.kill()
         scan["status"] = "error"
-        socketio.emit("scan_error", {"scan_id": scan_id, "error": "Таймаут сканирования"}, room=scan_id)
-        time.sleep(0.01)
+        ws_emit("scan_error", {"scan_id": scan_id, "error": "Таймаут сканирования"}, room=scan_id)
         return
     except (OSError, ValueError) as exc:
         scan["status"] = "error"
-        socketio.emit("scan_error", {"scan_id": scan_id, "error": str(exc)}, room=scan_id)
-        time.sleep(0.01)
+        ws_emit("scan_error", {"scan_id": scan_id, "error": str(exc)}, room=scan_id)
         return
+    finally:
+        try:
+            if proc.stdin and not proc.stdin.closed:
+                proc.stdin.close()
+        except Exception:
+            pass
 
-    report_file = find_latest_report(target)
+    report_file = find_latest_report(target, started_at=started_at)
     result = None
     if report_file:
         result = load_report_file(report_file)
@@ -380,7 +442,7 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
     scan["progress"] = 100
     scan["current_action"] = "Готово"
     add_history_entry(result)
-    socketio.emit(
+    ws_emit(
         "scan_complete",
         {
             "scan_id": scan_id,
@@ -390,22 +452,45 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
         },
         room=scan_id,
     )
-    time.sleep(0.01)
 
 
 def run_scorecard(target: str) -> dict:
     binary = os.path.abspath(PHANTOMSCAN)
     if not os.path.exists(binary):
         raise FileNotFoundError("phantomscan binary not found")
-    input_seq = f"{target}\n17\n0\n"
-    proc, _ = launch_process(binary, input_seq)
+    seq = build_input_sequence(target, "17", {})
+    proc, _ = launch_process(binary, seq)
     if not proc:
         raise RuntimeError("scorecard start failed")
     try:
-        stdout, _ = proc.communicate(timeout=SCORECARD_TIMEOUT_SECONDS)
-    except subprocess.TimeoutExpired:
-        proc.kill()
-        raise
+        stdout_parts: list[str] = []
+        started = time.time()
+        while True:
+            if time.time() - started > SCORECARD_TIMEOUT_SECONDS:
+                proc.kill()
+                raise subprocess.TimeoutExpired(cmd="phantomscan", timeout=SCORECARD_TIMEOUT_SECONDS)
+            ready, _, _ = select.select([proc.stdout], [], [], 0.25)
+            if ready:
+                line = proc.stdout.readline()
+                if not line:
+                    if proc.poll() is not None:
+                        break
+                    continue
+                stdout_parts.append(line)
+            else:
+                if proc.poll() is not None:
+                    remainder = proc.stdout.read()
+                    if remainder:
+                        stdout_parts.append(remainder)
+                    break
+        proc.wait(timeout=5)
+        stdout = "".join(stdout_parts)
+    finally:
+        try:
+            if proc.stdin and not proc.stdin.closed:
+                proc.stdin.close()
+        except Exception:
+            pass
     return parse_scorecard_output(stdout, target)
 
 
@@ -454,30 +539,36 @@ def health():
 def start_scan():
     try:
         data = request.get_json(force=True, silent=True) or {}
-        target = (data.get("target") or "").strip()
-        mode = data.get("mode", "full")
-        if not target or not is_valid_target(target):
-            return jsonify({"error": "Invalid target"}), 400
-
-        mode_map = {
+        target = sanitize_input(data.get("target") or "")
+        module = str(data.get("module") or data.get("mode") or "1")
+        extra_inputs = data.get("extra") or {}
+        legacy_map = {
             "full": "1",
             "quick": "2",
             "subs": "3",
             "scorecard": "17",
             "ssl": "8",
         }
-        menu_choice = mode_map.get(mode, "1")
+        module = legacy_map.get(module, module)
+
+        if not target or not is_valid_target(target):
+            return jsonify({"error": "Invalid target"}), 400
+        if not module.isdigit() or not (1 <= int(module) <= 20):
+            return jsonify({"error": "Invalid module"}), 400
+
         scan_id = f"scan_{safe_target(target)}_{datetime.now(timezone.utc).strftime('%H%M%S%f')}"
         active_scans[scan_id] = {
             "id": scan_id,
             "target": target,
+            "module": module,
             "status": "queued",
             "log": [],
             "result": None,
             "progress": 0,
             "started": datetime.now(timezone.utc).isoformat(),
+            "current_action": "Очередь",
         }
-        threading.Thread(target=stream_scan, args=(scan_id, target, menu_choice), daemon=True).start()
+        threading.Thread(target=stream_scan, args=(scan_id, target, module, extra_inputs), daemon=True).start()
         return jsonify({"scan_id": scan_id, "status": "queued"})
     except (ValueError, OSError, RuntimeError) as exc:
         logging.error("start_scan error: %s", exc)
@@ -528,8 +619,8 @@ def history():
 def compare():
     try:
         data = request.get_json(force=True, silent=True) or {}
-        t1 = (data.get("target_a") or "").strip()
-        t2 = (data.get("target_b") or "").strip()
+        t1 = sanitize_input(data.get("target_a") or "")
+        t2 = sanitize_input(data.get("target_b") or "")
         if not (is_valid_target(t1) and is_valid_target(t2)):
             return jsonify({"error": "Invalid targets"}), 400
         r1 = run_scorecard(t1)
@@ -586,25 +677,27 @@ def get_report(filename: str):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-@socketio.on("join_scan")
+@socketio.on("join_scan", namespace="/")
 def handle_join(data):
     try:
         scan_id = data.get("scan_id") if isinstance(data, dict) else None
         if not scan_id:
-            emit("error", {"error": "scan_id required"})
+            emit("error", {"error": "scan_id required"}, namespace="/")
             return
         join_room(scan_id)
-        emit("joined", {"scan_id": scan_id})
+        emit("joined", {"scan_id": scan_id}, namespace="/")
+        time.sleep(0.05)
     except (KeyError, TypeError) as exc:  # pragma: no cover - defensive
         logging.error("join_scan error: %s", exc)
 
 
-@socketio.on("leave_scan")
+@socketio.on("leave_scan", namespace="/")
 def handle_leave(data):
     try:
         scan_id = data.get("scan_id") if isinstance(data, dict) else None
         if scan_id:
             leave_room(scan_id)
+            time.sleep(0.05)
     except (KeyError, TypeError) as exc:  # pragma: no cover - defensive
         logging.error("leave_scan error: %s", exc)
 
@@ -616,4 +709,4 @@ if __name__ == "__main__":
     logging.info("PhantomScan Web API starting…")
     logging.info("Binary: %s (exists=%s)", PHANTOMSCAN, os.path.exists(PHANTOMSCAN))
     os.makedirs(REPORTS_DIR, exist_ok=True)
-    socketio.run(app, host="0.0.0.0", port=5000, debug=False)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=False, allow_unsafe_werkzeug=True)
