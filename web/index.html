@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PhantomScan — Shadow Monarch Dashboard</title>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.socket.io/4.7.4/socket.io.min.js" defer crossorigin="anonymous"></script>
@@ -12,29 +13,18 @@
 <body>
   <div id="intro" class="intro active" aria-hidden="true">
     <div class="intro-bg"></div>
-    <div class="intro-glow"></div>
-    <div class="intro-figure">
-      <div class="hood"></div>
-      <div class="face">
-        <span class="eye eye-left"></span>
-        <span class="eye eye-right"></span>
-      </div>
-      <div class="torso"></div>
-      <div class="katana"></div>
-      <div class="cloak"></div>
-      <div class="intro-hand"></div>
-      <div class="ink ink-1"></div>
-      <div class="ink ink-2"></div>
-      <div class="ink ink-3"></div>
+    <div class="intro-line-top" id="introLineTop"></div>
+    <div class="intro-line-bot" id="introLineBot"></div>
+    <div id="introTextWrap" class="intro-text-wrap">
+      <div id="introPhantom" class="intro-word phantom-word"></div>
+      <div id="introScan" class="intro-word scan-word"></div>
     </div>
-    <div class="intro-glitch"></div>
-    <div class="intro-title">
-      <span class="subtitle">Shadow Realm</span>
-      <h1 data-full="PHANTOMSCAN">PHANTOMSCAN</h1>
-      <p>Zero-Log Recon &amp; Offensive Intelligence Node</p>
-    </div>
+    <div id="introSubtitle" class="intro-subtitle">Shadow Monarch Edition</div>
+    <div id="introInitLines" class="intro-init-lines"></div>
+    <div class="intro-glitch" id="introGlitch"></div>
+    <div class="intro-scan-line" id="introScanLine"></div>
     <div class="particle-field"></div>
-    <button id="skipIntro" class="skip-btn" type="button" aria-label="Skip intro">[ SKIP ]</button>
+    <button id="skipIntro" class="skip-btn" type="button" aria-label="Skip intro">[ SKIP → ]</button>
   </div>
 
   <canvas id="bg-canvas" aria-hidden="true"></canvas>
@@ -54,6 +44,7 @@
         </div>
       </div>
       <div class="header-meta">
+        <button id="rootModeBtn" class="root-mode-btn" type="button" title="Toggle Root Mode">🔓 USER MODE</button>
         <button id="ambientToggle" class="icon-btn" aria-label="Toggle ambience">🔇</button>
         <div class="status-pill">
           <span class="pulse-dot" id="statusDot"></span>
