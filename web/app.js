@@ -28,8 +28,8 @@ class SoundEngine {
     osc.stop(now + duration);
   }
   intro() {
-    this._play({ type: 'sine', freq: 40, duration: 2.5, vol: 0.05 });
-    this._play({ type: 'triangle', freq: 120, sweep: 40, duration: 2.5, vol: 0.03, delay: 0.3 });
+    this._play({ type: 'sine', freq: 40, duration: 2.5, vol: 0.08 });
+    this._play({ type: 'triangle', freq: 120, sweep: 40, duration: 2.5, vol: 0.06, delay: 0.3 });
   }
   introWhoosh() { this._play({ type: 'sawtooth', freq: 60, sweep: 440, duration: 0.8, vol: 0.05 }); }
   scanStart() { this._play({ type: 'sawtooth', freq: 40, sweep: 440, duration: 0.6, vol: 0.07 }); }
@@ -79,34 +79,40 @@ class IntroAnimation {
     if (!this.el) return;
     this.sound.intro();
     setTimeout(() => this.sound.introWhoosh(), 1200);
+    this.el.classList.add('reveal');
+    const burst = this.el.querySelector('.particle-burst');
+    setTimeout(() => { if (burst) burst.classList.add('burst'); }, 3600);
     setTimeout(() => {
-      this.el.classList.add('hidden');
-      setTimeout(() => { this.el.remove(); }, 1200);
+      this.el.classList.add('dissolve');
+      setTimeout(() => {
+        this.el.classList.add('hidden');
+        setTimeout(() => { this.el.remove(); }, 1200);
+      }, 600);
     }, 5000);
   }
 }
 
 const modules = [
-  { id: '1', name: 'Full Scan', cat: 'recon', desc: 'WHOIS + ports + CVE + subs', inputs: [] },
-  { id: '2', name: 'Quick Scan', cat: 'recon', desc: 'Top 1024 ports fast', inputs: [] },
-  { id: '3', name: 'Subdomains', cat: 'recon', desc: 'Enumerate subdomains', inputs: [] },
-  { id: '4', name: 'Packet Monitor', cat: 'net', desc: 'Monitor packets (lo)', inputs: [] },
-  { id: '5', name: 'ARP Scan', cat: 'net', desc: 'Local subnet discovery', inputs: [{ key: 'subnet', label: 'Subnet', placeholder: '192.168.1.0/24' }] },
-  { id: '6', name: 'Traceroute', cat: 'recon', desc: 'Trace network path', inputs: [] },
-  { id: '7', name: 'SYN Stealth', cat: 'net', desc: 'Port range stealth scan', inputs: [{ key: 'port_range', label: 'Port range', placeholder: '1-1024' }] },
-  { id: '8', name: 'SSL/TLS Analysis', cat: 'vuln', desc: 'TLS posture & certs', inputs: [] },
-  { id: '9', name: 'WAF Detection', cat: 'vuln', desc: 'Detect firewalls/WAF', inputs: [] },
-  { id: '10', name: 'Vuln Scanner', cat: 'vuln', desc: 'Scan vulnerable versions', inputs: [] },
-  { id: '11', name: 'Wordlist Generator', cat: 'osint', desc: 'Generate wordlist', inputs: [] },
-  { id: '12', name: 'Shodan Lookup', cat: 'osint', desc: 'API powered lookup', inputs: [{ key: 'api_key', label: 'API Key', placeholder: 'SHODAN-KEY' }] },
-  { id: '13', name: 'Exploit Suggester', cat: 'vuln', desc: 'Suggested exploits', inputs: [{ key: 'service', label: 'Service', placeholder: 'ssh/http/...' }] },
-  { id: '14', name: 'Network Topology', cat: 'recon', desc: 'Map hops', inputs: [] },
-  { id: '15', name: 'UDP Scan', cat: 'net', desc: 'UDP port range', inputs: [{ key: 'port_range', label: 'Port range', placeholder: '1-1024' }] },
-  { id: '16', name: 'Change Target', cat: 'recon', desc: 'Update target', inputs: [{ key: 'new_target', label: 'New Target', placeholder: 'host' }] },
-  { id: '17', name: 'Scorecard', cat: 'vuln', desc: 'Security grade', inputs: [] },
-  { id: '18', name: 'HTTP Dir Scan', cat: 'osint', desc: 'Dir brute force', inputs: [{ key: 'port', label: 'Port', placeholder: '80' }] },
-  { id: '19', name: 'DNS Recon', cat: 'recon', desc: 'DNS enum + AXFR', inputs: [] },
-  { id: '20', name: 'Multi Scan', cat: 'net', desc: 'File of targets', inputs: [{ key: 'file_path', label: 'File path', placeholder: 'targets.txt' }] },
+  { id: '1', icon: '⚡', name: 'Full Scan', cat: 'recon', desc: 'WHOIS + ports + CVE + subs', inputs: [] },
+  { id: '2', icon: '🚀', name: 'Quick Scan', cat: 'recon', desc: 'Top 1024 ports fast', inputs: [] },
+  { id: '3', icon: '🌐', name: 'Subdomains', cat: 'recon', desc: 'Enumerate subdomains', inputs: [] },
+  { id: '4', icon: '📡', name: 'Packet Monitor', cat: 'net', desc: 'Monitor packets (lo)', inputs: [{ key: 'interface', label: 'Interface', placeholder: 'lo' }] },
+  { id: '5', icon: '🛰️', name: 'ARP Scan', cat: 'net', desc: 'Local subnet discovery', inputs: [{ key: 'subnet', label: 'Subnet', placeholder: '192.168.1.0/24' }] },
+  { id: '6', icon: '🧭', name: 'Traceroute', cat: 'recon', desc: 'Trace network path', inputs: [] },
+  { id: '7', icon: '🗡️', name: 'SYN Stealth', cat: 'net', desc: 'Port range stealth scan', inputs: [{ key: 'port_range', label: 'Port range', placeholder: '1-1024' }] },
+  { id: '8', icon: '🔐', name: 'SSL/TLS Analysis', cat: 'vuln', desc: 'TLS posture & certs', inputs: [] },
+  { id: '9', icon: '🛡️', name: 'WAF Detection', cat: 'vuln', desc: 'Detect firewalls/WAF', inputs: [] },
+  { id: '10', icon: '🧨', name: 'Vuln Scanner', cat: 'vuln', desc: 'Scan vulnerable versions', inputs: [] },
+  { id: '11', icon: '📜', name: 'Wordlist Generator', cat: 'osint', desc: 'Generate wordlist', inputs: [] },
+  { id: '12', icon: '🔭', name: 'Shodan Lookup', cat: 'osint', desc: 'API powered lookup', inputs: [{ key: 'api_key', label: 'API Key', placeholder: 'SHODAN-KEY' }] },
+  { id: '13', icon: '🧠', name: 'Exploit Suggester', cat: 'vuln', desc: 'Suggested exploits', inputs: [{ key: 'service', label: 'Service', placeholder: 'ssh/http/...' }] },
+  { id: '14', icon: '🕸️', name: 'Network Topology', cat: 'recon', desc: 'Map hops', inputs: [] },
+  { id: '15', icon: '💥', name: 'UDP Scan', cat: 'net', desc: 'UDP port range', inputs: [{ key: 'port_range', label: 'Port range', placeholder: '1-1024' }] },
+  { id: '16', icon: '🎯', name: 'Change Target', cat: 'recon', desc: 'Update target', inputs: [{ key: 'new_target', label: 'New Target', placeholder: 'host' }] },
+  { id: '17', icon: '🏅', name: 'Scorecard', cat: 'vuln', desc: 'Security grade', inputs: [] },
+  { id: '18', icon: '🕵️‍♂️', name: 'HTTP Dir Scan', cat: 'osint', desc: 'Dir brute force', inputs: [{ key: 'port', label: 'Port', placeholder: '80' }] },
+  { id: '19', icon: '📡', name: 'DNS Recon', cat: 'recon', desc: 'DNS enum + AXFR', inputs: [] },
+  { id: '20', icon: '🗂️', name: 'Multi Scan', cat: 'net', desc: 'File of targets', inputs: [{ key: 'file_path', label: 'File path', placeholder: 'targets.txt' }] },
 ];
 
 const els = {
@@ -178,6 +184,20 @@ let ambientOn = false;
 const sound = new SoundEngine();
 const intro = new IntroAnimation(sound);
 
+// Custom cursor dot
+(() => {
+  const dot = document.createElement('div');
+  dot.id = 'cursorDot';
+  document.body.appendChild(dot);
+  let target = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  window.addEventListener('mousemove', e => { target = { x: e.clientX, y: e.clientY }; });
+  function animate() {
+    dot.style.transform = `translate(${target.x - 6}px, ${target.y - 6}px)`;
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
 // Background particle network + lightning cursor
 (() => {
   const canvas = document.getElementById('bg-canvas');
@@ -193,7 +213,14 @@ const intro = new IntroAnimation(sound);
     constructor() { this.reset(); }
     reset() { this.x = Math.random() * W; this.y = Math.random() * H; this.vx = (Math.random() - 0.5) * 0.35; this.vy = (Math.random() - 0.5) * 0.35; this.r = Math.random() * 1.8 + 0.6; }
     step() {
+      const dx = mouse.x - this.x;
+      const dy = mouse.y - this.y;
+      const d = Math.hypot(dx, dy) || 1;
+      const accel = Math.max(0, 120 - d) / 120 * 0.08;
+      this.vx += (dx / d) * accel * 0.02;
+      this.vy += (dy / d) * accel * 0.02;
       this.x += this.vx; this.y += this.vy;
+      this.vx *= 0.99; this.vy *= 0.99;
       if (this.x < 0 || this.x > W) this.vx *= -1;
       if (this.y < 0 || this.y > H) this.vy *= -1;
     }
@@ -234,15 +261,25 @@ const intro = new IntroAnimation(sound);
   });
   function draw() {
     ctx.clearRect(0, 0, W, H);
-    trails.forEach(t => {
+    for (let i = 0; i < trails.length; i++) {
+      const t = trails[i];
       ctx.beginPath();
       ctx.arc(t.x, t.y, 6, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(123,47,255,${t.life})`;
       ctx.shadowColor = 'rgba(123,47,255,0.8)';
       ctx.shadowBlur = 12;
       ctx.fill();
+      if (i > 0) {
+        const prev = trails[i - 1];
+        ctx.beginPath();
+        ctx.moveTo(prev.x + (Math.random() - 0.5) * 6, prev.y + (Math.random() - 0.5) * 6);
+        ctx.lineTo(t.x + (Math.random() - 0.5) * 6, t.y + (Math.random() - 0.5) * 6);
+        ctx.strokeStyle = `rgba(0,212,255,${t.life})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
       t.life -= 0.02;
-    });
+    }
     for (let i = trails.length - 1; i >= 0; i--) if (trails[i].life <= 0) trails.splice(i, 1);
     requestAnimationFrame(draw);
   }
@@ -358,6 +395,10 @@ function switchTab(tabName) {
   });
 }
 
+function safeName(val) {
+  return (val || '').replace(/[^a-zA-Z0-9._-]/g, '_');
+}
+
 // Socket handling
 function connectSocket() {
   if (typeof io === 'undefined') {
@@ -367,11 +408,19 @@ function connectSocket() {
   if (socket) socket.disconnect();
   socket = io({ transports: ['polling', 'websocket'], reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 1500 });
 
+  socket.onAny((event, ...args) => {
+    console.log('[socket][event]', event, args);
+  });
   socket.on('connect', () => {
     console.log('[socket] connect');
     setStatus(true, 'API ONLINE');
     if (currentScanId) socket.emit('join_scan', { scan_id: currentScanId });
   });
+  socket.on('connect_error', err => {
+    console.log('[socket] connect_error', err?.message || err);
+    setStatus(false, 'API OFFLINE');
+  });
+  socket.on('reconnect_attempt', attempt => console.log('[socket] reconnect_attempt', attempt));
   socket.on('disconnect', () => {
     console.log('[socket] disconnect');
     setStatus(false, 'API OFFLINE');
@@ -461,6 +510,7 @@ async function pollOnce() {
     const res = await fetch(`${API}/api/scan/${safeId}`);
     const data = await res.json();
     if (data.error) return;
+    lastSocketEvent = Date.now();
     const logs = Array.isArray(data.log) ? data.log : [];
     const unseen = logs.slice(logSeen);
     unseen.forEach(line => handleLog(line));
@@ -472,6 +522,7 @@ async function pollOnce() {
       renderLog(`[-] ${data.error || 'Ошибка сканирования'}`, 'log-err');
       stopTimers();
       if (els.scanBtn) els.scanBtn.disabled = false;
+      setStatus(false, 'SCAN ERROR');
     }
   } catch (e) {
     if (DEBUG) console.warn('poll error', e);
@@ -509,6 +560,7 @@ function renderPorts(ports) {
   ports.forEach((p, idx) => {
     const tr = document.createElement('tr');
     tr.className = 'port-row';
+    if (p.cves?.some(cv => cv.severity === 'CRITICAL')) tr.classList.add('critical');
     const cells = [idx + 1, p.port, p.service || '—', p.version || '—', 'OPEN'];
     cells.forEach((c, i) => {
       const td = document.createElement('td');
@@ -553,6 +605,9 @@ function renderScorecard(data) {
   els.ring.style.strokeDashoffset = offset;
   els.ring.style.stroke = gradeColors[grade] || '#ff2d6b';
   els.ringGrade.textContent = grade;
+  els.ringGrade.classList.remove('pop');
+  void els.ringGrade.offsetWidth;
+  els.ringGrade.classList.add('pop');
   els.ringScore.textContent = `${score}/100`;
   if (els.ringVerdict) els.ringVerdict.textContent = data.verdict || '—';
   if (els.scoreTarget) els.scoreTarget.textContent = data.target || '—';
@@ -632,6 +687,44 @@ function renderAll(data) {
   }
 }
 
+async function loadLatestReport(target) {
+  try {
+    const res = await fetch(`${API}/api/reports`);
+    const files = await res.json();
+    const safe = safeName(target);
+    const picked = (files || []).find(f => f.filename.includes(safe));
+    if (picked) {
+      const r = await fetch(`${API}/api/reports/${picked.filename}`);
+      const data = await r.json();
+      renderAll(data);
+      toast(`Загружен отчёт: ${target}`);
+      switchTab('results');
+    } else {
+      toast('Нет отчётов для цели');
+    }
+  } catch (e) {
+    if (DEBUG) console.warn('loadLatestReport', e);
+  }
+}
+
+async function deleteLatestReport(target) {
+  try {
+    const res = await fetch(`${API}/api/reports`);
+    const files = await res.json();
+    const safe = safeName(target);
+    const picked = (files || []).find(f => f.filename.includes(safe));
+    if (picked) {
+      await fetch(`${API}/api/reports/${picked.filename}`, { method: 'DELETE' });
+      toast('Отчёт удалён');
+      fetchHistory();
+    } else {
+      toast('Файл отчёта не найден');
+    }
+  } catch (e) {
+    if (DEBUG) console.warn('deleteLatestReport', e);
+  }
+}
+
 // History
 async function fetchHistory() {
   try {
@@ -647,6 +740,7 @@ async function fetchHistory() {
         <div class="meta">Ports: ${row.ports ?? '—'}</div>
         <div class="meta">Score: ${row.score ?? '—'}</div>
         <div class="meta">${row.timestamp ? new Date(row.timestamp).toLocaleString() : ''}</div>
+        <button class="mini-del" type="button">DELETE</button>
       `;
       const badge = document.createElement('div');
       badge.className = 'score-badge';
@@ -658,7 +752,13 @@ async function fetchHistory() {
         grade === 'C' ? 'grade-c' : 'grade-d'
       );
       card.appendChild(badge);
-      card.addEventListener('click', () => toast(`Выбрано: ${row.target || '—'}`));
+      card.addEventListener('click', () => {
+        if (row.target) loadLatestReport(row.target);
+      });
+      card.querySelector('.mini-del').addEventListener('click', e => {
+        e.stopPropagation();
+        if (row.target) deleteLatestReport(row.target);
+      });
       els.historyGrid.appendChild(card);
     });
   } catch (e) {
@@ -724,21 +824,32 @@ function buildModuleCards() {
     const card = document.createElement('div');
     card.className = 'module-card';
     card.innerHTML = `
-      <div class="title">${mod.id}. ${mod.name}</div>
+      <div class="module-top">
+        <div class="icon">${mod.icon || '★'}</div>
+        <div class="title">${mod.id}. ${mod.name}</div>
+      </div>
       <div class="desc">${mod.desc}</div>
       <div class="badge">${mod.inputs.length ? 'INPUT' : 'AUTO'}</div>
+      <button class="run-btn" type="button">RUN</button>
     `;
-    card.addEventListener('click', () => onModuleSelected(mod));
+    card.addEventListener('click', () => onModuleSelected(mod, card));
+    card.querySelector('.run-btn').addEventListener('click', e => {
+      e.stopPropagation();
+      onModuleSelected(mod, card);
+    });
     parent.appendChild(card);
   });
 }
 
-function onModuleSelected(mod) {
+function onModuleSelected(mod, card) {
   selectedModuleId = mod.id;
+  document.querySelectorAll('.module-card').forEach(c => c.classList.toggle('active', c === card));
   if (els.selectedModule) els.selectedModule.textContent = mod.name;
   sound.moduleSelect();
   if (mod.inputs.length) {
     openModal(mod);
+  } else {
+    startScan({});
   }
 }
 
@@ -851,6 +962,7 @@ if (els.ambientToggle) {
 }
 
 // Init
+document.querySelectorAll('.panel').forEach((p, i) => setTimeout(() => p.classList.add('reveal'), i * 120));
 buildModuleCards();
 healthCheck();
 connectSocket();
