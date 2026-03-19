@@ -233,9 +233,9 @@ class IntroAnimation {
     // 2.1s — subtitle typewriter
     setTimeout(() => {
       if (this.subtitle) {
+        this.subtitle.style.transition = 'opacity 0.3s ease';
         this.subtitle.style.opacity = '1';
-        this.subtitle.style.transition = 'opacity 0.3s ease, max-width 1.2s ease';
-        this.subtitle.style.maxWidth = '600px';
+        this.subtitle.classList.add('visible');
       }
     }, 2100);
 
@@ -1221,7 +1221,6 @@ async function healthCheck() {
     const data = await res.json();
     setStatus(data.binary_exists, data.binary_exists ? 'API ONLINE' : 'BINARY MISSING');
     if (data.sudo_available) {
-      setRootMode(true);
       showSudoIndicator('ok');
     } else {
       showSudoIndicator('no');

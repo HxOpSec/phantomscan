@@ -747,7 +747,9 @@ footer {
   white-space: nowrap;
   opacity: 0;
   will-change: opacity, max-width;
+  transition: opacity 0.3s ease, max-width 1.2s ease;
 }
+.intro-subtitle.visible { opacity: 1; max-width: 600px; }
 
 /* ── INIT LINES ── */
 .intro-init-lines {
@@ -853,7 +855,6 @@ footer {
 @keyframes glowExpand { 0% { opacity: 0; transform: scale(0.2); } 100% { opacity: 1; transform: scale(1.8); } }
 @keyframes glitchFlash { 0%, 100% { opacity: 0; filter: none; } 20%,60% { opacity: 0.4; filter: drop-shadow(0 0 12px rgba(255,255,255,0.4)); transform: translateX(3px); } 40% { opacity: 0.4; transform: translateX(-3px); } }
 @keyframes particleBurst { 0% { opacity: 1; transform: translate(-50%, -50%) scale(0.4) translateZ(0); } 100% { opacity: 0; transform: translate(calc(-50% + 200px * var(--rx)), calc(-50% + 200px * var(--ry))) scale(1.2) translateZ(0); } }
-@keyframes dissolve { from { opacity: 1; filter: none; } to { opacity: 0; filter: blur(8px); } }
 @keyframes smoke { from { filter: blur(20px); transform: translateY(-4px); } to { filter: blur(30px); transform: translateY(6px); } }
 @keyframes pop { 0% { transform: scale(0.9); } 70% { transform: scale(1.1); } 100% { transform: scale(1); } }
 @keyframes flashRed { 0%, 100% { box-shadow: 0 0 0 rgba(255,45,107,0); } 20%,60% { box-shadow: 0 0 20px rgba(255,45,107,0.6); background: rgba(255,45,107,0.1); } }
