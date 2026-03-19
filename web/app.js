@@ -71,24 +71,81 @@ class IntroAnimation {
   constructor(sound) {
     this.el = document.getElementById('intro');
     this.sound = sound;
+    this.returning = localStorage.getItem('phantom_intro_seen') === '1';
+    this.figure = this.el?.querySelector('.intro-figure');
+    this.glow = this.el?.querySelector('.intro-glow');
+    this.title = this.el?.querySelector('.intro-title h1');
+    this.subtitle = this.el?.querySelector('.intro-title .subtitle');
+    this.tagline = this.el?.querySelector('.intro-title p');
+    this.skipBtn = document.getElementById('skipIntro');
+    this.hand = this.el?.querySelector('.intro-hand');
+    this.glitch = this.el?.querySelector('.intro-glitch');
+    this.particleField = this.el?.querySelector('.particle-field');
     if (this.el) {
-      setTimeout(() => this.run(), 200);
+      this.prepareParticles();
+      setTimeout(() => this.run(), 100);
+    }
+  }
+  prepareParticles() {
+    if (!this.particleField) return;
+    this.particleField.innerHTML = '';
+    for (let i = 0; i < 100; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'particle';
+      dot.style.setProperty('--rx', `${(Math.random() * 2 - 1).toFixed(2)}`);
+      dot.style.setProperty('--ry', `${(Math.random() * 2 - 1).toFixed(2)}`);
+      dot.style.setProperty('--delay', `${Math.random() * 0.3}s`);
+      this.particleField.appendChild(dot);
     }
   }
   run() {
     if (!this.el) return;
+    if (this.returning) {
+      this.quickFlash();
+      return;
+    }
     this.sound.intro();
+    this.el.classList.add('play');
     setTimeout(() => this.sound.introWhoosh(), 1200);
-    this.el.classList.add('reveal');
-    const burst = this.el.querySelector('.particle-burst');
-    setTimeout(() => { if (burst) burst.classList.add('burst'); }, 3600);
-    setTimeout(() => {
-      this.el.classList.add('dissolve');
-      setTimeout(() => {
-        this.el.classList.add('hidden');
-        setTimeout(() => { this.el.remove(); }, 1200);
-      }, 600);
-    }, 5000);
+    setTimeout(() => this.glow?.classList.add('active'), 300);
+    setTimeout(() => this.figure?.classList.add('show'), 800);
+    setTimeout(() => this.el?.classList.add('eyes-on'), 1500);
+    setTimeout(() => { if (this.subtitle) this.subtitle.classList.add('show'); }, 2000);
+    setTimeout(() => { if (this.title) typewriter(this.title, this.title.dataset.full || this.title.textContent, 80); }, 2300);
+    setTimeout(() => { if (this.tagline) this.tagline.classList.add('show'); }, 2800);
+    setTimeout(() => this.hand?.classList.add('raise'), 3200);
+    setTimeout(() => this.triggerGlitch(), 3500);
+    setTimeout(() => this.dissolve(), 3800);
+    setTimeout(() => this.revealDashboard(), 4500);
+    setTimeout(() => this.finish(), 5000);
+  }
+  triggerGlitch() {
+    if (!this.glitch) return;
+    this.glitch.classList.add('active');
+    setTimeout(() => this.glitch?.classList.remove('active'), 400);
+  }
+  dissolve() {
+    if (this.figure) this.figure.classList.add('dissolve');
+    if (this.particleField) this.particleField.classList.add('burst');
+  }
+  quickFlash() {
+    if (!this.el) return;
+    this.el.classList.add('play', 'fast');
+    this.triggerGlitch();
+    setTimeout(() => this.revealDashboard(), 400);
+    setTimeout(() => this.finish(), 1000);
+  }
+  revealDashboard() {
+    document.body.classList.remove('intro-active');
+  }
+  finish() {
+    localStorage.setItem('phantom_intro_seen', '1');
+    document.body.classList.remove('intro-active');
+    this.el.classList.add('hidden');
+    setTimeout(() => { this.el?.remove(); }, 900);
+  }
+  skip() {
+    this.quickFlash();
   }
 }
 
@@ -119,6 +176,7 @@ const els = {
   statusDot: document.getElementById('statusDot'),
   statusText: document.getElementById('statusText'),
   scanBtn: document.getElementById('scanBtn'),
+  stopBtn: document.getElementById('stopScan'),
   targetInput: document.getElementById('targetInput'),
   progressFill: document.getElementById('progressFill'),
   progressPct: document.getElementById('progressPct'),
@@ -165,6 +223,7 @@ const els = {
   modalRun: document.getElementById('modalRun'),
   modalClose: document.getElementById('modalClose'),
   ambientToggle: document.getElementById('ambientToggle'),
+  skipIntro: document.getElementById('skipIntro'),
 };
 
 let socket = null;
@@ -180,8 +239,11 @@ let startTs = null;
 let logSeen = 0;
 let lastSocketEvent = Date.now();
 let ambientOn = false;
+let isCancelling = false;
+let lastLiveStats = { ports: 0, cve: 0, subdomains: 0, score: 0 };
 
 const sound = new SoundEngine();
+document.body.classList.add('intro-active');
 const intro = new IntroAnimation(sound);
 
 // Custom cursor dot
@@ -340,6 +402,37 @@ function updateProgress(pct, label) {
   if (els.progressLabel) els.progressLabel.textContent = label || 'В работе...';
 }
 
+function updateLiveStats(stats) {
+  if (!stats) return;
+  lastLiveStats = {
+    ports: stats.ports ?? 0,
+    cve: stats.cve ?? 0,
+    subdomains: stats.subdomains ?? 0,
+    score: stats.score ?? 0,
+  };
+  animateNumber(els.statPorts, lastLiveStats.ports);
+  animateNumber(els.statCve, lastLiveStats.cve);
+  animateNumber(els.statSubs, lastLiveStats.subdomains);
+  animateNumber(els.statScore, lastLiveStats.score);
+}
+
+function toggleStop(show) {
+  if (!els.stopBtn) return;
+  els.stopBtn.classList.toggle('visible', !!show);
+  els.stopBtn.disabled = !show;
+}
+
+function handleCancelled() {
+  renderLog('[-] Сканирование остановлено', 'log-warn');
+  stopTimers();
+  updateProgress(0, 'Остановлено');
+  if (els.currentAction) els.currentAction.textContent = 'Остановлено';
+  if (els.scanBtn) els.scanBtn.disabled = false;
+  toggleStop(false);
+  updateLiveStats({ ports: 0, cve: 0, subdomains: 0, score: 0 });
+  currentScanId = null;
+}
+
 function classifyLog(text) {
   if (/^\[\+\]|✓/.test(text)) return 'log-ok';
   if (/^\[-\]|✗/.test(text)) return 'log-err';
@@ -347,11 +440,11 @@ function classifyLog(text) {
   return 'log-info';
 }
 
-function typewriter(el, text) {
+function typewriter(el, text, speed = 15) {
   let idx = 0;
   let last = 0;
   const step = ts => {
-    if (!last || ts - last >= 15) {
+    if (!last || ts - last >= speed) {
       last = ts;
       idx++;
       el.textContent = text.slice(0, idx);
@@ -433,6 +526,10 @@ function connectSocket() {
     lastSocketEvent = Date.now();
     handleLog(payload.line, payload.progress, payload.current_action);
   });
+  socket.on('stats_update', payload => {
+    if (!payload || payload.scan_id !== currentScanId) return;
+    updateLiveStats(payload);
+  });
   socket.on('scan_status', payload => {
     console.log('[socket] scan_status', payload);
     if (!payload || payload.scan_id !== currentScanId) return;
@@ -447,12 +544,17 @@ function connectSocket() {
     stopTimers();
     setStatus(false, 'SCAN ERROR');
     if (els.scanBtn) els.scanBtn.disabled = false;
+    toggleStop(false);
   });
   socket.on('scan_complete', payload => {
     console.log('[socket] scan_complete', payload);
     if (!payload || payload.scan_id !== currentScanId) return;
     lastSocketEvent = Date.now();
-    finalizeScan(payload.result);
+    finalizeScan(payload.result, payload.stats);
+  });
+  socket.on('scan_cancelled', payload => {
+    if (!payload || payload.scan_id !== currentScanId) return;
+    handleCancelled();
   });
 }
 
@@ -478,13 +580,19 @@ function stopTimers() {
   if (silentTimer) { clearInterval(silentTimer); silentTimer = null; }
 }
 
-function finalizeScan(result) {
+function finalizeScan(result, liveStats) {
   updateProgress(100, 'Готово');
   if (els.currentAction) els.currentAction.textContent = 'Готово';
   stopTimers();
   sound.scanComplete();
   if (els.scanBtn) els.scanBtn.disabled = false;
+  toggleStop(false);
   if (result) {
+    if (liveStats) {
+      result.live_stats = liveStats;
+    } else if (lastLiveStats) {
+      result.live_stats = lastLiveStats;
+    }
     lastResult = result;
     renderAll(result);
     fetchHistory();
@@ -515,9 +623,12 @@ async function pollOnce() {
     const unseen = logs.slice(logSeen);
     unseen.forEach(line => handleLog(line));
     logSeen = Math.max(logSeen, logs.length);
+    if (data.stats) updateLiveStats(data.stats);
     handleStatus(data.progress || 0, data.current_action || data.status);
     if (data.status === 'done') {
-      finalizeScan(data.result);
+      finalizeScan(data.result, data.stats);
+    } else if (data.status === 'cancelled') {
+      handleCancelled();
     } else if (data.status === 'error') {
       renderLog(`[-] ${data.error || 'Ошибка сканирования'}`, 'log-err');
       stopTimers();
@@ -542,11 +653,15 @@ function collectCves(ports) {
 }
 
 function renderStats(data) {
-  animateNumber(els.statPorts, (data.ports || []).length);
-  animateNumber(els.statSubs, (data.subdomains || []).length);
-  const c = collectCves(data.ports || []);
-  animateNumber(els.statCve, c.total);
-  animateNumber(els.statScore, data.score || 0);
+  const live = data.live_stats || {};
+  const portsVal = live.ports ?? (data.ports || []).length;
+  const subsVal = live.subdomains ?? (data.subdomains || []).length;
+  const cveVal = live.cve ?? collectCves(data.ports || []).total;
+  const scoreVal = live.score ?? (data.score || 0);
+  animateNumber(els.statPorts, portsVal);
+  animateNumber(els.statSubs, subsVal);
+  animateNumber(els.statCve, cveVal);
+  animateNumber(els.statScore, scoreVal);
 }
 
 function renderPorts(ports) {
@@ -880,6 +995,9 @@ async function startScan(extra = {}) {
   const target = (els.targetInput?.value || '').trim();
   if (!target) { toast('Введите цель'); return; }
   if (els.scanBtn) els.scanBtn.disabled = true;
+  isCancelling = false;
+  updateLiveStats({ ports: 0, cve: 0, subdomains: 0, score: 0 });
+  toggleStop(true);
   logBuffer = [];
   logSeen = 0;
   if (els.logList) els.logList.innerHTML = '';
@@ -915,6 +1033,7 @@ async function startScan(extra = {}) {
     toast(err.message || 'Ошибка запуска');
     sound.scanError();
     if (els.scanBtn) els.scanBtn.disabled = false;
+    toggleStop(false);
   }
 }
 
@@ -951,6 +1070,20 @@ els.compareBtn?.addEventListener('click', compareTargets);
 els.modalClose?.addEventListener('click', () => els.modal.classList.remove('show'));
 els.modal?.addEventListener('click', e => { if (e.target === els.modal) els.modal.classList.remove('show'); });
 document.body.addEventListener('click', () => sound.enable(), { once: true });
+els.stopBtn?.addEventListener('click', async () => {
+  if (!currentScanId || isCancelling) return;
+  isCancelling = true;
+  els.stopBtn.disabled = true;
+  try {
+    await fetch(`${API}/api/scan/${encodeURIComponent(currentScanId)}`, { method: 'DELETE' });
+  } catch (err) {
+    console.warn('cancel error', err);
+  }
+});
+
+els.skipIntro?.addEventListener('click', () => {
+  if (intro) intro.skip();
+});
 
 if (els.ambientToggle) {
   els.ambientToggle.addEventListener('click', () => {

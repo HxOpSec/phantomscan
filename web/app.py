@@ -116,6 +116,20 @@ def load_report_file(path: str) -> Optional[dict]:
         return None
 
 
+def is_menu_line(line: str) -> bool:
+    return (
+        line.startswith("│")
+        or line.startswith("┌")
+        or line.startswith("└")
+        or line.startswith("╔")
+        or line.startswith("╚")
+        or line.startswith("╠")
+        or re.search(r"\[\s*\d+\s*\].*скан", line, re.IGNORECASE)
+        or "Выбор:" in line
+        or ("PhantomScan" in line and "│" in line)
+    )
+
+
 def add_history_entry(result: dict) -> None:
     entry = {
         "target": result.get("target") or result.get("ip") or "unknown",
@@ -346,6 +360,8 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict) -> N
     scan["status"] = "running"
     scan["progress"] = 0
     scan["current_action"] = "Запуск"
+    scan["stats"] = {"ports": 0, "cve": 0, "subdomains": 0, "score": 0}
+    scan["proc"] = None
     ws_emit(
         "scan_status",
         {"scan_id": scan_id, "status": "running", "progress": 0, "current_action": scan["current_action"]},
@@ -365,11 +381,36 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict) -> N
         scan["status"] = "error"
         ws_emit("scan_error", {"scan_id": scan_id, "error": "Не удалось запустить phantomscan"}, room=scan_id)
         return
+    scan["proc"] = proc
 
     logging.info("Started scan %s with cmd %s", scan_id, cmd_used)
     captured_output: list[str] = []
     started_at = time.time()
     scan["started_ts"] = started_at
+
+    port_count = 0
+    cve_count = 0
+    sub_count = 0
+    score_value = 0
+    last_stats = {"ports": -1, "cve": -1, "subdomains": -1, "score": -1}
+
+    def emit_stats() -> None:
+        nonlocal last_stats
+        current = {
+            "ports": port_count,
+            "cve": cve_count,
+            "subdomains": sub_count,
+            "score": score_value,
+        }
+        if current == last_stats:
+            return
+        last_stats = current
+        ws_emit(
+            "stats_update",
+            {"scan_id": scan_id, **current},
+            room=scan_id,
+        )
+    emit_stats()
 
     try:
         while True:
@@ -377,6 +418,12 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict) -> N
                 proc.kill()
                 scan["status"] = "error"
                 ws_emit("scan_error", {"scan_id": scan_id, "error": "Таймаут сканирования"}, room=scan_id)
+                return
+            if scan.get("status") == "cancelled":
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
                 return
 
             ready, _, _ = select.select([proc.stdout], [], [], 0.25)
@@ -390,12 +437,34 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict) -> N
                         continue
                     continue
                 clean = strip_ansi(raw_line.rstrip())
-                if not clean:
+                if not clean or is_menu_line(clean):
                     continue
                 captured_output.append(clean)
                 scan["log"].append(clean)
                 if len(scan["log"]) > LOG_LIMIT:
                     scan["log"] = scan["log"][-LOG_LIMIT:]
+
+                if re.search(r"\[\s*\+\s*\]\s*Найден:", clean):
+                    sub_count += 1
+                if re.search(r"Открыт", clean, re.IGNORECASE):
+                    port_count += 1
+                cve_hits = re.findall(r"CVE-\d{4}-\d+", clean, re.IGNORECASE)
+                if cve_hits:
+                    cve_count += len(cve_hits)
+                score_match = re.search(r"SCORE:\s*(\d+)", clean, re.IGNORECASE)
+                if score_match:
+                    try:
+                        score_value = int(score_match.group(1))
+                    except ValueError:
+                        pass
+                scan["stats"] = {
+                    "ports": port_count,
+                    "cve": cve_count,
+                    "subdomains": sub_count,
+                    "score": score_value,
+                }
+                emit_stats()
+
                 scan["progress"], action = backend_progress_from_line(clean, scan.get("progress", 0))
                 if action:
                     scan["current_action"] = action
@@ -414,8 +483,28 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict) -> N
                     remainder = proc.stdout.read()
                     for extra_line in (remainder.splitlines() if remainder else []):
                         clean = strip_ansi(extra_line.rstrip())
-                        if not clean:
+                        if not clean or is_menu_line(clean):
                             continue
+                        if re.search(r"\[\s*\+\s*\]\s*Найден:", clean):
+                            sub_count += 1
+                        if re.search(r"Открыт", clean, re.IGNORECASE):
+                            port_count += 1
+                        cve_hits = re.findall(r"CVE-\d{4}-\d+", clean, re.IGNORECASE)
+                        if cve_hits:
+                            cve_count += len(cve_hits)
+                        score_match = re.search(r"SCORE:\s*(\d+)", clean, re.IGNORECASE)
+                        if score_match:
+                            try:
+                                score_value = int(score_match.group(1))
+                            except ValueError:
+                                pass
+                        scan["stats"] = {
+                            "ports": port_count,
+                            "cve": cve_count,
+                            "subdomains": sub_count,
+                            "score": score_value,
+                        }
+                        emit_stats()
                         captured_output.append(clean)
                         scan["log"].append(clean)
                     break
@@ -444,16 +533,19 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict) -> N
         stdout = "\n".join(captured_output)
         result = parse_stdout_fallback(stdout, target)
 
+    scan["stats"] = {"ports": port_count, "cve": cve_count, "subdomains": sub_count, "score": score_value}
     scan["status"] = "done"
     scan["result"] = result
     scan["progress"] = 100
     scan["current_action"] = "Готово"
+    scan["proc"] = None
     add_history_entry(result)
     ws_emit(
         "scan_complete",
         {
             "scan_id": scan_id,
             "result": result,
+            "stats": scan.get("stats"),
             "progress": 100,
             "current_action": scan.get("current_action"),
         },
@@ -574,6 +666,8 @@ def start_scan():
             "progress": 0,
             "started": datetime.now(timezone.utc).isoformat(),
             "current_action": "Очередь",
+            "stats": {"ports": 0, "cve": 0, "subdomains": 0, "score": 0},
+            "proc": None,
         }
         threading.Thread(target=stream_scan, args=(scan_id, target, module, extra_inputs), daemon=True).start()
         return jsonify({"scan_id": scan_id, "status": "queued"})
@@ -587,10 +681,36 @@ def get_scan(scan_id: str):
     try:
         if scan_id not in active_scans:
             return jsonify({"error": "Not found"}), 404
-        return jsonify(active_scans[scan_id])
+        data = dict(active_scans[scan_id])
+        data.pop("proc", None)
+        return jsonify(data)
     except (ValueError, KeyError) as exc:
         logging.error("get_scan error: %s", exc)
         return jsonify({"error": "Failed to get scan"}), 500
+
+
+@app.route("/api/scan/<scan_id>", methods=["DELETE"])
+def cancel_scan(scan_id: str):
+    try:
+        if scan_id not in active_scans:
+            return jsonify({"error": "Not found"}), 404
+        scan = active_scans[scan_id]
+        proc = scan.get("proc")
+        if scan.get("status") == "done":
+            return jsonify({"status": "done"})
+        scan["status"] = "cancelled"
+        scan["current_action"] = "Отменено"
+        if proc and proc.poll() is None:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+        scan["proc"] = None
+        ws_emit("scan_cancelled", {"scan_id": scan_id}, room=scan_id)
+        return jsonify({"status": "cancelled"})
+    except (ValueError, KeyError, OSError) as exc:
+        logging.error("cancel_scan error: %s", exc)
+        return jsonify({"error": "Failed to cancel scan"}), 500
 
 
 @app.route("/api/history", methods=["GET"])

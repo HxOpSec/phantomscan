@@ -12,6 +12,7 @@
 <body>
   <div id="intro" class="intro active" aria-hidden="true">
     <div class="intro-bg"></div>
+    <div class="intro-glow"></div>
     <div class="intro-figure">
       <div class="hood"></div>
       <div class="face">
@@ -20,16 +21,20 @@
       </div>
       <div class="torso"></div>
       <div class="katana"></div>
+      <div class="cloak"></div>
+      <div class="intro-hand"></div>
       <div class="ink ink-1"></div>
       <div class="ink ink-2"></div>
       <div class="ink ink-3"></div>
     </div>
+    <div class="intro-glitch"></div>
     <div class="intro-title">
       <span class="subtitle">Shadow Realm</span>
-      <h1>PHANTOMSCAN</h1>
-      <p>Zero-Lag Recon &amp; Offensive Intelligence Node</p>
+      <h1 data-full="PHANTOMSCAN">PHANTOMSCAN</h1>
+      <p>Zero-Log Recon &amp; Offensive Intelligence Node</p>
     </div>
-    <div class="particle-burst"></div>
+    <div class="particle-field"></div>
+    <button id="skipIntro" class="skip-btn" type="button" aria-label="Skip intro">[ SKIP ]</button>
   </div>
 
   <canvas id="bg-canvas" aria-hidden="true"></canvas>
@@ -110,7 +115,10 @@
               <span class="live-dot"></span>
               <span id="progressLabel">Awaiting target…</span>
             </div>
-            <div class="progress-percent" id="progressPct">0%</div>
+            <div class="progress-actions">
+              <div class="progress-percent" id="progressPct">0%</div>
+              <button id="stopScan" class="btn-stop" type="button">■ STOP</button>
+            </div>
           </div>
           <div class="progress-bar">
             <div class="progress-liquid" id="progressFill">
