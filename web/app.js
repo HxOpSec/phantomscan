@@ -192,7 +192,7 @@ const intro = new IntroAnimation(sound);
   let target = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
   window.addEventListener('mousemove', e => { target = { x: e.clientX, y: e.clientY }; });
   function animate() {
-    dot.style.transform = `translate(${target.x - 6}px, ${target.y - 6}px)`;
+    dot.style.transform = `translate3d(${target.x - 6}px, ${target.y - 6}px, 0)`;
     requestAnimationFrame(animate);
   }
   animate();

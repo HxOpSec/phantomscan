@@ -495,6 +495,12 @@ tbody tr.visible { opacity: 1; transform: translateY(0); }
 tbody tr:hover { background: rgba(123,47,255,0.08); }
 .port-row { opacity: 0; transform: translateY(8px); }
 .port-row.critical { animation: flashRed 1.6s ease-in-out 3; }
+.port-row.critical td:first-child::before {
+  content: "⚠";
+  margin-right: 6px;
+  display: inline-block;
+  font-weight: bold;
+}
 .badge-open { color: var(--danger); font-weight: 700; }
 
 .scorecard .score-hero { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; }
@@ -723,7 +729,7 @@ footer { margin-top: 30px; display: flex; justify-content: space-between; align-
   .input-row, .scan-grid, .results .result-grid, .scorecard .score-hero { grid-template-columns: 1fr; }
 }
 @media (max-width: 768px) {
-  body { cursor: default; }
+  body { cursor: auto; }
   header { flex-direction: column; align-items: flex-start; }
   .tabs { gap: 6px; }
   .tab { flex: 1 1 45%; text-align: center; }
