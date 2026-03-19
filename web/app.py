@@ -295,7 +295,7 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
         {"scan_id": scan_id, "status": "running", "progress": 0, "current_action": scan["current_action"]},
         room=scan_id,
     )
-    # Tiny yield prevents the streaming thread from starving SocketIO; required to keep events flowing smoothly.
+    # Tiny pause prevents the streaming thread from starving SocketIO; required to keep events flowing smoothly.
     time.sleep(0.01)
 
     binary = os.path.abspath(PHANTOMSCAN)
@@ -351,7 +351,7 @@ def stream_scan(scan_id: str, target: str, menu_choice: str) -> None:
                 },
                 room=scan_id,
             )
-            # Short pause throttles emit bursts to keep UI responsive while staying within 15ms typewriter cadence.
+            # Short 10ms pause throttles emit bursts to keep UI responsive while aligning with frontend typewriter pacing.
             time.sleep(0.01)
 
         proc.wait(timeout=FULL_SCAN_TIMEOUT_SECONDS)

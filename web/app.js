@@ -78,7 +78,7 @@ const els = {
       if (this.y < 0 || this.y > H) this.vy *= -1;
     }
   }
-  for (let i = 0; i < 90; i++) nodes.push(new Node());
+  for (let i = 0; i < 80; i++) nodes.push(new Node());
   function draw() {
     ctx.clearRect(0, 0, W, H);
     nodes.forEach(n => {
@@ -168,13 +168,17 @@ function classifyLog(text) {
 
 function typewriter(el, text) {
   let idx = 0;
-  // Spec requires ~15ms per character for live typewriter feel
-  const write = () => {
-    el.textContent = text.slice(0, idx);
-    idx++;
-    if (idx <= text.length) setTimeout(write, 15);
+  // Spec requires ~15ms per character for live typewriter feel; rAF keeps timers minimal.
+  let last = 0;
+  const step = ts => {
+    if (!last || ts - last >= 15) {
+      last = ts;
+      idx++;
+      el.textContent = text.slice(0, idx);
+    }
+    if (idx <= text.length) requestAnimationFrame(step);
   };
-  write();
+  requestAnimationFrame(step);
 }
 
 function renderLog(text, cls = '') {
@@ -297,8 +301,9 @@ function finalizeScan(result) {
 
 // Polling fallback
 function startPolling() {
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(async () => {
+  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+  const pollStarted = Date.now();
+  const loop = async () => {
     if (!currentScanId) return;
     const safeId = encodeURIComponent(currentScanId);
     try {
@@ -320,7 +325,11 @@ function startPolling() {
     } catch (e) {
       if (DEBUG) console.warn('poll error', e);
     }
-  }, 2000);
+    const elapsed = Date.now() - pollStarted;
+    const delay = elapsed > 60000 ? 4000 : 2000;
+    pollTimer = setTimeout(loop, delay);
+  };
+  loop();
 }
 
 // Rendering
