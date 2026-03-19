@@ -593,7 +593,7 @@ def handle_join(data):
             return
         join_room(scan_id)
         emit("joined", {"scan_id": scan_id})
-    except Exception as exc:  # pragma: no cover - defensive
+    except (KeyError, TypeError) as exc:  # pragma: no cover - defensive
         logging.error("join_scan error: %s", exc)
 
 
@@ -603,7 +603,7 @@ def handle_leave(data):
         scan_id = data.get("scan_id") if isinstance(data, dict) else None
         if scan_id:
             leave_room(scan_id)
-    except Exception as exc:  # pragma: no cover - defensive
+    except (KeyError, TypeError) as exc:  # pragma: no cover - defensive
         logging.error("leave_scan error: %s", exc)
 
 

@@ -219,7 +219,12 @@ function connectSocket() {
     return;
   }
   if (socket) socket.disconnect();
-  socket = io({ transports: ['websocket', 'polling'] });
+  socket = io({
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 1500,
+  });
 
   socket.on('connect', () => {
     setStatus(true, 'API ONLINE');
@@ -294,8 +299,9 @@ function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(async () => {
     if (!currentScanId) return;
+    const safeId = encodeURIComponent(currentScanId);
     try {
-      const res = await fetch(`${API}/api/scan/${currentScanId}`);
+      const res = await fetch(`${API}/api/scan/${safeId}`);
       const data = await res.json();
       if (data.error) return;
       const logs = Array.isArray(data.log) ? data.log : [];
