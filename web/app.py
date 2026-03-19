@@ -164,6 +164,12 @@ def parse_scorecard_output(stdout: str, target: str) -> dict:
     score_re = re.compile(r"SCORE:\s*(\d+)\s*/\s*100", re.IGNORECASE)
     grade_re = re.compile(r"Grade:\s*([A-F][+]?)", re.IGNORECASE)
 
+    def has_ok(line: str) -> bool:
+        return ("✓" in line) or ("OK" in line.upper())
+
+    def has_fail(line: str) -> bool:
+        return ("✗" in line) or ("FAIL" in line.upper())
+
     for line in clean.splitlines():
         if "scorecard" in line.lower() and not result["verdict"]:
             parts = line.split("—")
@@ -185,33 +191,33 @@ def parse_scorecard_output(stdout: str, target: str) -> dict:
                 {"level": rec_match.group(1), "message": rec_match.group(2).strip()}
             )
 
-        section_line = line.replace("║", " ").replace("|", " ")
+        section_line = strip_ansi(line.replace("║", " ").replace("|", " "))
 
         # DNS
         if re.search(r"\bSPF\b", section_line):
-            result["dns"]["spf"] = "✓" in line or "OK" in line
+            result["dns"]["spf"] = has_ok(line) and not has_fail(line)
         if re.search(r"\bDMARC\b", section_line):
-            result["dns"]["dmarc"] = "✓" in line or "OK" in line
+            result["dns"]["dmarc"] = has_ok(line) and not has_fail(line)
         if re.search(r"\bDNSSEC\b", section_line):
-            result["dns"]["dnssec"] = "✓" in line or "OK" in line
+            result["dns"]["dnssec"] = has_ok(line) and not has_fail(line)
         if re.search(r"\bCAA\b", section_line):
-            result["dns"]["caa"] = "✓" in line or "OK" in line
+            result["dns"]["caa"] = has_ok(line) and not has_fail(line)
         if re.search(r"\bDKIM\b", section_line):
-            result["dns"]["dkim"] = "✓" in line or "OK" in line
+            result["dns"]["dkim"] = has_ok(line) and not has_fail(line)
         if re.search(r"\bMX\b", section_line):
-            result["dns"]["mx"] = "✓" in line or "OK" in line
+            result["dns"]["mx"] = has_ok(line) and not has_fail(line)
 
         # TLS
         if "TLS 1.0" in line:
-            result["tls"]["tls10"] = "✓" in line and ("Отключ" in line or "Off" in line)
+            result["tls"]["tls10"] = has_ok(line) and not has_fail(line)
         if "TLS 1.1" in line:
-            result["tls"]["tls11"] = "✓" in line and ("Отключ" in line or "Off" in line)
+            result["tls"]["tls11"] = has_ok(line) and not has_fail(line)
         if "TLS 1.2" in line:
-            result["tls"]["tls12"] = "✓" in line or "Поддерж" in line
+            result["tls"]["tls12"] = has_ok(line) and not has_fail(line)
         if "TLS 1.3" in line:
-            result["tls"]["tls13"] = "✓" in line or "Поддерж" in line
-        if re.search(r"Сертификат истекает через:\s*([0-9]+)", line):
-            match = re.search(r"через:\s*([0-9]+)", line)
+            result["tls"]["tls13"] = has_ok(line) and not has_fail(line)
+        if re.search(r"(Сертификат истекает через|notAfter|Days left)", line, re.IGNORECASE):
+            match = re.search(r"([0-9]+)", line)
             if match:
                 result["tls"]["days_left"] = int(match.group(1))
         if "Самоподписанный" in line:
@@ -219,17 +225,17 @@ def parse_scorecard_output(stdout: str, target: str) -> dict:
         if "Слабые шифры" in line:
             result["tls"]["weak_ciphers"] = True
         if re.search(r"\bHSTS\b", section_line):
-            result["tls"]["hsts"] = "✓" in line or "Включ" in line
+            result["tls"]["hsts"] = has_ok(line) and not has_fail(line)
 
         # HTTP
         if "X-Frame-Options" in line:
-            result["http"]["x_frame_options"] = "✓" in line or "Настроен" in line
+            result["http"]["x_frame_options"] = has_ok(line) and not has_fail(line)
         if "X-Content-Type" in line:
-            result["http"]["x_content_type_options"] = "✓" in line or "Настроен" in line
+            result["http"]["x_content_type_options"] = has_ok(line) and not has_fail(line)
         if "Content-Security-Policy" in line:
-            result["http"]["csp"] = "✓" in line or "Настроен" in line
+            result["http"]["csp"] = has_ok(line) and not has_fail(line)
         if "Referrer-Policy" in line:
-            result["http"]["referrer_policy"] = "✓" in line or "Настроен" in line
+            result["http"]["referrer_policy"] = has_ok(line) and not has_fail(line)
 
         # WHOIS
         if "Возраст домена" in line:
@@ -280,6 +286,7 @@ def build_input_sequence(target: str, module: str, extra: dict) -> list[str]:
     seq = [target, module]
     extra = extra or {}
     defaults = {
+        "4": ("interface", "lo"),
         "5": ("subnet", "192.168.1.0/24"),
         "7": ("port_range", "1-1024"),
         "12": ("api_key", ""),
@@ -672,6 +679,21 @@ def get_report(filename: str):
         return jsonify({"error": "Failed to fetch report"}), 500
 
 
+@app.route("/api/reports/<filename>", methods=["DELETE"])
+def delete_report(filename: str):
+    try:
+        if ".." in filename or "/" in filename or not filename.endswith(".json"):
+            return jsonify({"error": "Invalid filename"}), 400
+        fp = os.path.join(REPORTS_DIR, filename)
+        if not os.path.exists(fp):
+            return jsonify({"error": "Not found"}), 404
+        os.remove(fp)
+        return jsonify({"status": "deleted"})
+    except OSError as exc:
+        logging.error("delete_report error: %s", exc)
+        return jsonify({"error": "Failed to delete report"}), 500
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  Socket.IO
 # ─────────────────────────────────────────────────────────────────────────────
@@ -683,6 +705,7 @@ def handle_join(data):
         scan_id = data.get("scan_id") if isinstance(data, dict) else None
         if not scan_id:
             emit("error", {"error": "scan_id required"}, namespace="/")
+            time.sleep(0.05)
             return
         join_room(scan_id)
         emit("joined", {"scan_id": scan_id}, namespace="/")
