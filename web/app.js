@@ -391,10 +391,7 @@ const els = {
   ambientToggle: document.getElementById('ambientToggle'),
   skipIntro: document.getElementById('skipIntro'),
   rootModeBtn: document.getElementById('rootModeBtn'),
-  sudoModal: document.getElementById('sudoModal'),
-  sudoPasswordInput: document.getElementById('sudoPasswordInput'),
-  sudoModalSubmit: document.getElementById('sudoModalSubmit'),
-  sudoModalClose: document.getElementById('sudoModalClose'),
+  spaceModal: document.getElementById('spaceModal'),
 };
 
 let socket = null;
@@ -413,7 +410,6 @@ let ambientOn = false;
 let isCancelling = false;
 let lastLiveStats = { ports: 0, cve: 0, subdomains: 0, score: 0 };
 let rootMode = false;
-let sudoModalShown = false;
 let pendingScanExtra = {};
 
 const sound = new SoundEngine();
@@ -829,6 +825,8 @@ function renderLog(text, cls = '') {
     rm.classList.add('fade');
     setTimeout(() => rm.remove(), 200);
   }
+  // Auto-scroll to bottom
+  els.logList.scrollTop = els.logList.scrollHeight;
   lastSocketEvent = Date.now();
 }
 
@@ -921,11 +919,6 @@ function connectSocket() {
 
 function handleLog(line, pct, action) {
   renderLog(line);
-  // Detect sudo password prompt
-  if (!sudoModalShown && /sudo.*требует|password.*required|sudo.*password|пароль.*sudo/i.test(line)) {
-    sudoModalShown = true;
-    showSudoModal();
-  }
   const derived = progressFromLog(line);
   const progress = Math.max(pct || 0, derived.pct);
   const label = action || derived.action || 'Сканирование';
@@ -1007,14 +1000,13 @@ async function pollOnce() {
 }
 
 // Rendering
-function collectCves(ports) {
-  let total = 0, critical = 0;
-  (ports || []).forEach(p => {
-    if (Array.isArray(p.cves)) {
-      total += p.cves.length;
-      critical += p.cves.filter(c => c.severity === 'CRITICAL').length;
-    }
-  });
+function collectCves(data) {
+  // CVEs live at the top-level data.cve (array from report.cpp) or fallback
+  const cves = Array.isArray(data.cve) ? data.cve
+             : Array.isArray(data.cve_findings) ? data.cve_findings
+             : [];
+  const total = cves.length;
+  const critical = cves.filter(c => (c.severity || '').toUpperCase() === 'CRITICAL').length;
   return { total, critical };
 }
 
@@ -1022,7 +1014,7 @@ function renderStats(data) {
   const live = data.live_stats || {};
   const portsVal = live.ports ?? (data.ports || []).length;
   const subsVal = live.subdomains ?? (data.subdomains || []).length;
-  const cveVal = live.cve ?? collectCves(data.ports || []).total;
+  const cveVal = live.cve ?? collectCves(data).total;
   const scoreVal = live.score ?? (data.score || 0);
   animateNumber(els.statPorts, portsVal);
   animateNumber(els.statSubs, subsVal);
@@ -1034,14 +1026,13 @@ function renderPorts(ports) {
   if (!els.portsBody) return;
   const body = els.portsBody;
   if (!ports.length) {
-    body.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">Нет данных</td></tr>';
+    body.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">Нет открытых портов</td></tr>';
     return;
   }
   body.innerHTML = '';
   ports.forEach((p, idx) => {
     const tr = document.createElement('tr');
     tr.className = 'port-row';
-    if (p.cves?.some(cv => cv.severity === 'CRITICAL')) tr.classList.add('critical');
     const cells = [idx + 1, p.port, p.service || '—', p.version || '—', 'OPEN'];
     cells.forEach((c, i) => {
       const td = document.createElement('td');
@@ -1051,8 +1042,6 @@ function renderPorts(ports) {
     });
     setTimeout(() => tr.classList.add('visible'), idx * 80);
     body.appendChild(tr);
-    if (p.cves?.some(cv => cv.severity === 'CRITICAL')) sound.criticalCVE();
-    else if (p.cves?.length) sound.portFound();
   });
 }
 
@@ -1163,7 +1152,7 @@ function renderAll(data) {
   if (els.ispInfo) els.ispInfo.textContent = `ISP: ${data.isp || '—'}`;
   if (els.fwInfo) els.fwInfo.textContent = `Firewall: ${data.firewall ? 'Detected' : '—'}`;
   if (els.cveSummary) {
-    const c = collectCves(data.ports || []);
+    const c = collectCves(data);
     els.cveSummary.textContent = `CVE total: ${c.total} | Critical: ${c.critical}`;
   }
 }
@@ -1361,7 +1350,6 @@ function openModal(mod) {
 // Scan actions
 async function startScan(extra = {}) {
   pendingScanExtra = extra;
-  sudoModalShown = false;
   const target = (els.targetInput?.value || '').trim();
   if (!target) { toast('Введите цель'); return; }
   if (els.scanBtn) els.scanBtn.disabled = true;
@@ -1413,15 +1401,18 @@ async function healthCheck() {
     const res = await fetch(`${API}/api/health`);
     const data = await res.json();
     setStatus(data.binary_exists, data.binary_exists ? 'API ONLINE' : 'BINARY MISSING');
-    if (data.sudo_available) {
-      showSudoIndicator('ok');
+    if (data.setup_required) {
+      showSetupBanner(data);
+    } else {
+      hideSetupBanner();
+    }
+    if (data.sudo_ok || data.caps_ok) {
       if (els.rootModeBtn && !els.rootModeBtn.classList.contains('root-active')) {
-        els.rootModeBtn.textContent = '🔐 SUDO READY';
+        els.rootModeBtn.textContent = 'ROOT READY';
       }
     } else {
-      showSudoIndicator('no');
       if (els.rootModeBtn && !els.rootModeBtn.classList.contains('root-active')) {
-        els.rootModeBtn.textContent = '🔓 NO SUDO';
+        els.rootModeBtn.textContent = 'USER MODE';
       }
     }
   } catch (e) {
@@ -1429,63 +1420,249 @@ async function healthCheck() {
   }
 }
 
-function showSudoIndicator(state) {
-  if (!els.rootModeBtn) return;
-  const existing = els.rootModeBtn.parentElement?.querySelector('.sudo-indicator');
-  if (existing) existing.remove();
-  const indicator = document.createElement('span');
-  indicator.className = `sudo-indicator sudo-${state}`;
-  indicator.textContent = state === 'ok' ? 'SUDO OK' : 'NO SUDO';
-  els.rootModeBtn.insertAdjacentElement('afterend', indicator);
+function showSetupBanner(data) {
+  const dismissed = localStorage.getItem('phantom_setup_dismissed') === '1';
+  if (dismissed) return;
+  const banner = document.getElementById('setupBanner');
+  if (!banner) return;
+  banner.style.display = 'flex';
+  // Validate that setup_commands is a non-empty array before using it
+  const cmds = Array.isArray(data?.setup_commands) ? data.setup_commands : [];
+  const rawCmd = typeof cmds[0] === 'string' ? cmds[0] : '';
+  // Sanitize: allow only alphanumeric, spaces, slashes, dots, underscores, hyphens, equals, commas, and +
+  const safeCmd = rawCmd.replace(/[^a-zA-Z0-9 /._\-=,+]/g, '');
+  const cmdEl = document.getElementById('setupBannerCmd');
+  if (cmdEl) cmdEl.textContent = safeCmd || 'sudo setcap cap_net_raw,cap_net_admin+eip ./phantomscan';
 }
 
-function showSudoModal() {
-  if (!els.sudoModal) return;
-  els.sudoModal.classList.add('show');
-  if (els.sudoPasswordInput) {
-    els.sudoPasswordInput.value = '';
-    setTimeout(() => els.sudoPasswordInput.focus(), 100);
-  }
-}
-
-async function submitSudoPassword() {
-  const password = els.sudoPasswordInput?.value || '';
-  if (!password) { toast('Enter sudo password'); return; }
-  if (els.sudoModalSubmit) els.sudoModalSubmit.disabled = true;
-  try {
-    const res = await fetch(`${API}/api/sudo-auth`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    });
-    const data = await res.json();
-    if (data.error) {
-      toast(`Auth failed: ${data.error}`);
-      return;
-    }
-    if (els.sudoModal) els.sudoModal.classList.remove('show');
-    if (els.sudoPasswordInput) els.sudoPasswordInput.value = '';
-    toast('Authenticated. Retrying scan...');
-    sudoModalShown = false;
-    await startScan(pendingScanExtra);
-  } catch (e) {
-    toast('Authentication failed');
-  } finally {
-    if (els.sudoModalSubmit) els.sudoModalSubmit.disabled = false;
-  }
+function hideSetupBanner() {
+  const banner = document.getElementById('setupBanner');
+  if (banner) banner.style.display = 'none';
 }
 
 function setRootMode(enabled) {
   rootMode = enabled;
   if (!els.rootModeBtn) return;
   if (enabled) {
-    els.rootModeBtn.textContent = '🔴 ROOT MODE';
+    els.rootModeBtn.textContent = 'ROOT MODE';
     els.rootModeBtn.classList.add('root-active');
   } else {
-    els.rootModeBtn.textContent = '🔓 USER MODE';
+    els.rootModeBtn.textContent = 'USER MODE';
     els.rootModeBtn.classList.remove('root-active');
   }
 }
+
+// ─── Deep Space Modal ────────────────────────────────────────────────────────
+class SpaceScene {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.animId = null;
+    this.stars = [];
+    this.comets = [];
+    this.diskAngle = 0;
+    this.hwParticles = [];
+    this.nextComet = Date.now() + 2000;
+    this.resize();
+    this.initStars();
+  }
+
+  resize() {
+    this.W = this.canvas.width = this.canvas.offsetWidth || window.innerWidth;
+    this.H = this.canvas.height = this.canvas.offsetHeight || window.innerHeight;
+    this.bhX = this.W * 0.5;
+    this.bhY = this.H * 0.45;
+  }
+
+  initStars() {
+    this.stars = [];
+    const n = Math.min(300, Math.floor(this.W * this.H / 8000));
+    for (let i = 0; i < n; i++) {
+      this.stars.push({
+        x: Math.random() * this.W,
+        y: Math.random() * this.H,
+        r: Math.random() * 1.5 + 0.3,
+        twinkleSpeed: Math.random() * 0.025 + 0.005,
+        twinklePhase: Math.random() * Math.PI * 2,
+        baseBrightness: Math.random() * 0.6 + 0.4,
+      });
+    }
+  }
+
+  spawnComet() {
+    const sy = Math.random() * this.H * 0.4;
+    this.comets.push({
+      x: -20, y: sy,
+      vx: 9 + Math.random() * 7,
+      vy: 2 + Math.random() * 3,
+      life: 1,
+      len: 80 + Math.random() * 60,
+    });
+    this.nextComet = Date.now() + 3000 + Math.random() * 7000;
+  }
+
+  spawnHawking() {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.6 + Math.random() * 1.8;
+    this.hwParticles.push({
+      x: this.bhX + Math.cos(angle) * 46,
+      y: this.bhY + Math.sin(angle) * 46,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      r: Math.random() * 1.5 + 0.5,
+    });
+  }
+
+  draw() {
+    const { ctx, W, H, bhX, bhY } = this;
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, W, H);
+
+    // Nebula
+    const g1 = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.6);
+    g1.addColorStop(0, 'rgba(60,0,120,0.12)');
+    g1.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g1; ctx.fillRect(0, 0, W, H);
+    const g2 = ctx.createRadialGradient(W, H, 0, W, H, W * 0.5);
+    g2.addColorStop(0, 'rgba(0,30,80,0.1)');
+    g2.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+
+    // Stars
+    this.stars.forEach(s => {
+      s.twinklePhase += s.twinkleSpeed;
+      const brightness = s.baseBrightness * (0.6 + 0.4 * Math.sin(s.twinklePhase));
+      const dx = bhX - s.x, dy = bhY - s.y;
+      if (Math.hypot(dx, dy) < 50) return;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.7 * brightness})`;
+      ctx.fill();
+    });
+
+    // Comets
+    if (Date.now() > this.nextComet) this.spawnComet();
+    for (let i = this.comets.length - 1; i >= 0; i--) {
+      const c = this.comets[i];
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y);
+      const speed = Math.hypot(c.vx, c.vy) || 1;
+      ctx.lineTo(
+        c.x - (c.vx / speed) * c.len * c.life,
+        c.y - (c.vy / speed) * c.len * c.life
+      );
+      const grad = ctx.createLinearGradient(
+        c.x - (c.vx / speed) * c.len, c.y - (c.vy / speed) * c.len, c.x, c.y);
+      grad.addColorStop(0, 'rgba(255,255,255,0)');
+      grad.addColorStop(1, `rgba(200,180,255,${c.life * 0.9})`);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      c.x += c.vx; c.y += c.vy; c.life -= 0.012;
+      if (c.life <= 0 || c.x > W + 100) this.comets.splice(i, 1);
+    }
+
+    // Black hole shadow
+    const shadow = ctx.createRadialGradient(bhX, bhY, 44, bhX, bhY, 180);
+    shadow.addColorStop(0, 'rgba(0,0,0,0.95)');
+    shadow.addColorStop(0.4, 'rgba(0,0,10,0.55)');
+    shadow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = shadow;
+    ctx.beginPath(); ctx.arc(bhX, bhY, 180, 0, Math.PI * 2); ctx.fill();
+
+    // Accretion disk
+    ctx.save();
+    ctx.translate(bhX, bhY);
+    ctx.rotate(this.diskAngle);
+    for (let layer = 0; layer < 3; layer++) {
+      const rx = 100 - layer * 12;
+      const ry = 20 - layer * 4;
+      const alpha = 0.22 - layer * 0.05;
+      const innerColor = layer === 0 ? `rgba(255,220,150,${alpha})` : `rgba(255,100,50,${alpha * 0.6})`;
+      const diskGrad = ctx.createRadialGradient(0, 0, rx * 0.3, 0, 0, rx);
+      diskGrad.addColorStop(0, innerColor);
+      diskGrad.addColorStop(1, 'rgba(180,40,0,0)');
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fillStyle = diskGrad;
+      ctx.fill();
+    }
+    ctx.restore();
+    this.diskAngle += (Math.PI * 2) / (8 * 60);
+
+    // Event horizon ring
+    ctx.beginPath();
+    ctx.arc(bhX, bhY, 47, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(180,100,255,0.65)';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = 'rgba(150,50,255,0.9)';
+    ctx.shadowBlur = 20;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Black hole core
+    ctx.beginPath();
+    ctx.arc(bhX, bhY, 44, 0, Math.PI * 2);
+    ctx.fillStyle = '#000000';
+    ctx.fill();
+
+    // Hawking radiation
+    if (Math.random() < 0.1) this.spawnHawking();
+    for (let i = this.hwParticles.length - 1; i >= 0; i--) {
+      const p = this.hwParticles[i];
+      p.x += p.vx; p.y += p.vy; p.life -= 0.018;
+      if (p.life <= 0) { this.hwParticles.splice(i, 1); continue; }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(200,150,255,${p.life * 0.7})`;
+      ctx.fill();
+    }
+
+    this.animId = requestAnimationFrame(() => this.draw());
+  }
+
+  start() {
+    if (!this.animId) this.draw();
+  }
+
+  stop() {
+    if (this.animId) { cancelAnimationFrame(this.animId); this.animId = null; }
+  }
+}
+
+let spaceScene = null;
+
+function openSpaceModal() {
+  const modal = document.getElementById('spaceModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  requestAnimationFrame(() => modal.classList.add('visible'));
+  const canvas = document.getElementById('spaceCanvas');
+  if (canvas) {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    if (spaceScene) spaceScene.stop();
+    spaceScene = new SpaceScene(canvas);
+    spaceScene.start();
+  }
+}
+
+function closeSpaceModal() {
+  const modal = document.getElementById('spaceModal');
+  if (!modal) return;
+  modal.classList.remove('visible');
+  setTimeout(() => { modal.style.display = 'none'; }, 300);
+  if (spaceScene) { spaceScene.stop(); spaceScene = null; }
+}
+
+// ESC closes modals
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeSpaceModal();
+    if (els.modal) els.modal.classList.remove('show');
+  }
+});
 
 // Clock
 setInterval(() => {
@@ -1508,10 +1685,6 @@ els.targetInput?.addEventListener('keydown', e => {
 els.compareBtn?.addEventListener('click', compareTargets);
 els.modalClose?.addEventListener('click', () => els.modal.classList.remove('show'));
 els.modal?.addEventListener('click', e => { if (e.target === els.modal) els.modal.classList.remove('show'); });
-els.sudoModalClose?.addEventListener('click', () => els.sudoModal?.classList.remove('show'));
-els.sudoModal?.addEventListener('click', e => { if (e.target === els.sudoModal) els.sudoModal.classList.remove('show'); });
-els.sudoModalSubmit?.addEventListener('click', submitSudoPassword);
-els.sudoPasswordInput?.addEventListener('keydown', e => { if (e.key === 'Enter') submitSudoPassword(); });
 document.body.addEventListener('click', () => sound.enable(), { once: true });
 els.stopBtn?.addEventListener('click', async () => {
   if (!currentScanId || isCancelling) return;
@@ -1544,6 +1717,21 @@ if (els.ambientToggle) {
     els.ambientToggle.textContent = ambientOn ? '🔊' : '🔇';
   });
 }
+
+// Space modal events
+document.getElementById('spaceBtn')?.addEventListener('click', openSpaceModal);
+document.getElementById('spaceModalClose')?.addEventListener('click', closeSpaceModal);
+els.spaceModal?.addEventListener('click', e => { if (e.target === els.spaceModal) closeSpaceModal(); });
+
+// Setup banner
+document.getElementById('setupBannerClose')?.addEventListener('click', () => {
+  localStorage.setItem('phantom_setup_dismissed', '1');
+  hideSetupBanner();
+});
+document.getElementById('setupBannerCopy')?.addEventListener('click', () => {
+  const cmd = document.getElementById('setupBannerCmd')?.textContent || '';
+  navigator.clipboard?.writeText(cmd).then(() => toast('Command copied!')).catch(() => toast(cmd));
+});
 
 // Init
 document.querySelectorAll('.panel').forEach((p, i) => setTimeout(() => p.classList.add('reveal'), i * 120));
