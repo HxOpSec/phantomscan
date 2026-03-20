@@ -45,8 +45,9 @@
         </div>
       </div>
       <div class="header-meta">
-        <button id="rootModeBtn" class="root-mode-btn" type="button" title="Toggle Root Mode">🔓 USER MODE</button>
+        <button id="rootModeBtn" class="root-mode-btn" type="button" title="Toggle Root Mode" aria-label="Current mode: User. Click to toggle Root Mode">USER MODE</button>
         <button id="ambientToggle" class="icon-btn" aria-label="Toggle ambience">🔇</button>
+        <button id="spaceBtn" class="space-btn" type="button" title="Deep Space Viewer">SPACE</button>
         <div class="status-pill">
           <span class="pulse-dot" id="statusDot"></span>
           <span id="statusText">INIT</span>
@@ -55,6 +56,14 @@
         <div class="clock" id="clock">--:--:--</div>
       </div>
     </header>
+
+    <!-- Setup Banner -->
+    <div id="setupBanner" class="setup-banner" style="display:none" role="alert">
+      <span class="setup-banner-icon">&#9888;</span>
+      <span class="setup-banner-text">LIMITED MODE &mdash; Some modules need root access. Run: <code id="setupBannerCmd"></code></span>
+      <button id="setupBannerCopy" class="setup-banner-copy" type="button">Copy</button>
+      <button id="setupBannerClose" class="setup-banner-close" type="button" aria-label="Dismiss">&#10005;</button>
+    </div>
 
     <nav class="tabs" aria-label="Navigation tabs">
       <button class="tab active" data-tab="scan">[ SCAN ]</button>
@@ -295,32 +304,6 @@
     </footer>
   </div>
 
-  <div id="sudoModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-head">
-        <div>
-          <div class="modal-label">Authentication Required</div>
-          <div id="sudoModalTitle">Sudo Password Required</div>
-        </div>
-        <button id="sudoModalClose" aria-label="Close" class="icon-btn">✕</button>
-      </div>
-      <div id="sudoModalBody">
-        <div class="sudo-info">
-          <p>Elevated privileges are required for this scan module.</p>
-          <p class="sudo-hint">Or configure sudoers (no password prompt):</p>
-          <code class="sudo-code">sudo visudo<br>Add: USER ALL=(ALL) NOPASSWD: /path/to/phantomscan</code>
-        </div>
-        <div class="input-stack">
-          <label for="sudoPasswordInput">Sudo Password</label>
-          <input type="password" id="sudoPasswordInput" placeholder="Enter sudo password" autocomplete="current-password">
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button id="sudoModalSubmit" class="btn-primary">Authenticate &amp; Retry</button>
-      </div>
-    </div>
-  </div>
-
   <div id="moduleModal" class="modal">
     <div class="modal-content">
       <div class="modal-head">
@@ -328,13 +311,19 @@
           <div class="modal-label">Module Input</div>
           <div id="modalTitle"></div>
         </div>
-        <button id="modalClose" aria-label="Close" class="icon-btn">✕</button>
+        <button id="modalClose" aria-label="Close" class="icon-btn">&#x2715;</button>
       </div>
       <div id="modalBody"></div>
       <div class="modal-actions">
         <button id="modalRun" class="btn-primary">Run</button>
       </div>
     </div>
+  </div>
+
+  <!-- Deep Space Viewer Modal -->
+  <div id="spaceModal" class="space-modal" role="dialog" aria-modal="true" aria-label="Deep Space Viewer">
+    <canvas id="spaceCanvas"></canvas>
+    <button id="spaceModalClose" class="space-modal-close" type="button" aria-label="Close">&#x2715; CLOSE</button>
   </div>
 
   <div id="toast" role="alert"></div>
