@@ -20,7 +20,8 @@ from collections import deque
 from datetime import datetime, timezone
 from typing import Dict, Optional, Tuple
 
-from flask import Flask, jsonify, request, send_from_directory
+import secrets
+from flask import Flask, jsonify, request, send_from_directory, session
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
@@ -51,6 +52,7 @@ def check_sudo_available() -> bool:
 SUDO_AVAILABLE = check_sudo_available()
 
 app = Flask(__name__, static_folder=".")
+app.secret_key = os.environ.get("PHANTOM_SECRET_KEY", secrets.token_hex(32))
 CORS(app)
 socketio = SocketIO(
     app,
@@ -385,7 +387,7 @@ def launch_process(binary: str, input_seq: list[str], root_mode: bool = False) -
     return None, None
 
 
-def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root_mode: bool = False) -> None:
+def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root_mode: bool = False, sudo_password: str = "") -> None:
     scan = active_scans[scan_id]
     scan["status"] = "running"
     scan["progress"] = 0
@@ -411,7 +413,9 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root
     # terminal, disabling all internal stdout buffering in the C++ binary.
     master_fd, slave_fd = pty.openpty()
 
-    if root_mode or SUDO_AVAILABLE:
+    if sudo_password:
+        cmd_options = [["sudo", "-S", "-n", binary], ["sudo", "-n", binary], [binary]]
+    elif root_mode or SUDO_AVAILABLE:
         cmd_options = [["sudo", "-n", binary], [binary]]
     else:
         cmd_options = [[binary], ["sudo", "-n", binary]]
@@ -431,6 +435,13 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root
                 close_fds=True,
                 env=env,
             )
+            # If using sudo -S, write password to stdin first
+            if "-S" in cmd and sudo_password:
+                try:
+                    proc.stdin.write((sudo_password + "\n").encode())
+                    proc.stdin.flush()
+                except (BrokenPipeError, OSError):
+                    pass
             cmd_used = cmd
             break
         except (FileNotFoundError, OSError, PermissionError) as exc:
@@ -728,7 +739,8 @@ def start_scan():
             "stats": {"ports": 0, "cve": 0, "subdomains": 0, "score": 0},
             "proc": None,
         }
-        threading.Thread(target=stream_scan, args=(scan_id, target, module, extra_inputs, root_mode), daemon=True).start()
+        sudo_pw = session.pop("sudo_password", "") or ""
+        threading.Thread(target=stream_scan, args=(scan_id, target, module, extra_inputs, root_mode, sudo_pw), daemon=True).start()
         return jsonify({"scan_id": scan_id, "status": "queued"})
     except (ValueError, OSError, RuntimeError) as exc:
         logging.error("start_scan error: %s", exc)
@@ -871,6 +883,35 @@ def delete_report(filename: str):
     except OSError as exc:
         logging.error("delete_report error: %s", exc)
         return jsonify({"error": "Failed to delete report"}), 500
+
+
+@app.route("/api/sudo-auth", methods=["POST"])
+def sudo_auth():
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        password = data.get("password") or ""
+        if not password or len(password) > 256:
+            return jsonify({"error": "Invalid password"}), 400
+        # Verify password by running sudo -S -v
+        result = subprocess.run(
+            ["sudo", "-S", "-v"],
+            input=password + "\n",
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            session["sudo_password"] = password
+            password = ""  # clear from local scope
+            return jsonify({"status": "ok"})
+        else:
+            password = ""
+            return jsonify({"error": "Authentication failed"}), 401
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "sudo verification timed out"}), 500
+    except (OSError, ValueError) as exc:
+        logging.error("sudo_auth error: %s", exc)
+        return jsonify({"error": "sudo auth failed"}), 500
 
 
 # ─────────────────────────────────────────────────────────────────────────────

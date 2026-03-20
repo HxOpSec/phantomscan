@@ -316,26 +316,26 @@ class IntroAnimation {
 }
 
 const modules = [
-  { id: '1', icon: '⚡', name: 'Full Scan', cat: 'recon', desc: 'WHOIS + ports + CVE + subs', inputs: [] },
-  { id: '2', icon: '🚀', name: 'Quick Scan', cat: 'recon', desc: 'Top 1024 ports fast', inputs: [] },
-  { id: '3', icon: '🌐', name: 'Subdomains', cat: 'recon', desc: 'Enumerate subdomains', inputs: [] },
-  { id: '4', icon: '📡', name: 'Packet Monitor', cat: 'net', desc: 'Monitor packets (lo)', inputs: [{ key: 'interface', label: 'Interface', placeholder: 'lo' }] },
-  { id: '5', icon: '🛰️', name: 'ARP Scan', cat: 'net', desc: 'Local subnet discovery', inputs: [{ key: 'subnet', label: 'Subnet', placeholder: '192.168.1.0/24' }] },
-  { id: '6', icon: '🧭', name: 'Traceroute', cat: 'recon', desc: 'Trace network path', inputs: [] },
-  { id: '7', icon: '🗡️', name: 'SYN Stealth', cat: 'net', desc: 'Port range stealth scan', inputs: [{ key: 'port_range', label: 'Port range', placeholder: '1-1024' }] },
-  { id: '8', icon: '🔐', name: 'SSL/TLS Analysis', cat: 'vuln', desc: 'TLS posture & certs', inputs: [] },
-  { id: '9', icon: '🛡️', name: 'WAF Detection', cat: 'vuln', desc: 'Detect firewalls/WAF', inputs: [] },
-  { id: '10', icon: '🧨', name: 'Vuln Scanner', cat: 'vuln', desc: 'Scan vulnerable versions', inputs: [] },
-  { id: '11', icon: '📜', name: 'Wordlist Generator', cat: 'osint', desc: 'Generate wordlist', inputs: [] },
-  { id: '12', icon: '🔭', name: 'Shodan Lookup', cat: 'osint', desc: 'API powered lookup', inputs: [{ key: 'api_key', label: 'API Key', placeholder: 'SHODAN-KEY' }] },
-  { id: '13', icon: '🧠', name: 'Exploit Suggester', cat: 'vuln', desc: 'Suggested exploits', inputs: [{ key: 'service', label: 'Service', placeholder: 'ssh/http/...' }] },
-  { id: '14', icon: '🕸️', name: 'Network Topology', cat: 'recon', desc: 'Map hops', inputs: [] },
-  { id: '15', icon: '💥', name: 'UDP Scan', cat: 'net', desc: 'UDP port range', inputs: [{ key: 'port_range', label: 'Port range', placeholder: '1-1024' }] },
-  { id: '16', icon: '🎯', name: 'Change Target', cat: 'recon', desc: 'Update target', inputs: [{ key: 'new_target', label: 'New Target', placeholder: 'host' }] },
-  { id: '17', icon: '🏅', name: 'Scorecard', cat: 'vuln', desc: 'Security grade', inputs: [] },
-  { id: '18', icon: '🕵️‍♂️', name: 'HTTP Dir Scan', cat: 'osint', desc: 'Dir brute force', inputs: [{ key: 'port', label: 'Port', placeholder: '80' }] },
-  { id: '19', icon: '📡', name: 'DNS Recon', cat: 'recon', desc: 'DNS enum + AXFR', inputs: [] },
-  { id: '20', icon: '🗂️', name: 'Multi Scan', cat: 'net', desc: 'File of targets', inputs: [{ key: 'file_path', label: 'File path', placeholder: 'targets.txt' }] },
+  { id: '1', name: 'Full Scan', cat: 'recon', desc: 'WHOIS + ports + CVE + subs', inputs: [] },
+  { id: '2', name: 'Quick Scan', cat: 'recon', desc: 'Top 1024 ports fast', inputs: [] },
+  { id: '3', name: 'Subdomains', cat: 'recon', desc: 'Enumerate subdomains', inputs: [] },
+  { id: '4', name: 'Packet Monitor', cat: 'net', desc: 'Monitor packets (lo)', inputs: [{ key: 'interface', label: 'Interface', placeholder: 'lo' }] },
+  { id: '5', name: 'ARP Scan', cat: 'net', desc: 'Local subnet discovery', inputs: [{ key: 'subnet', label: 'Subnet', placeholder: '192.168.1.0/24' }] },
+  { id: '6', name: 'Traceroute', cat: 'recon', desc: 'Trace network path', inputs: [] },
+  { id: '7', name: 'SYN Stealth', cat: 'net', desc: 'Port range stealth scan', inputs: [{ key: 'port_range', label: 'Port range', placeholder: '1-1024' }] },
+  { id: '8', name: 'SSL/TLS Analysis', cat: 'vuln', desc: 'TLS posture & certs', inputs: [] },
+  { id: '9', name: 'WAF Detection', cat: 'vuln', desc: 'Detect firewalls/WAF', inputs: [] },
+  { id: '10', name: 'Vuln Scanner', cat: 'vuln', desc: 'Scan vulnerable versions', inputs: [] },
+  { id: '11', name: 'Wordlist Generator', cat: 'osint', desc: 'Generate wordlist', inputs: [] },
+  { id: '12', name: 'Shodan Lookup', cat: 'osint', desc: 'API powered lookup', inputs: [{ key: 'api_key', label: 'API Key', placeholder: 'SHODAN-KEY' }] },
+  { id: '13', name: 'Exploit Suggester', cat: 'vuln', desc: 'Suggested exploits', inputs: [{ key: 'service', label: 'Service', placeholder: 'ssh/http/...' }] },
+  { id: '14', name: 'Network Topology', cat: 'recon', desc: 'Map hops', inputs: [] },
+  { id: '15', name: 'UDP Scan', cat: 'net', desc: 'UDP port range', inputs: [{ key: 'port_range', label: 'Port range', placeholder: '1-1024' }] },
+  { id: '16', name: 'Change Target', cat: 'recon', desc: 'Update target', inputs: [{ key: 'new_target', label: 'New Target', placeholder: 'host' }] },
+  { id: '17', name: 'Scorecard', cat: 'vuln', desc: 'Security grade', inputs: [] },
+  { id: '18', name: 'HTTP Dir Scan', cat: 'osint', desc: 'Dir brute force', inputs: [{ key: 'port', label: 'Port', placeholder: '80' }] },
+  { id: '19', name: 'DNS Recon', cat: 'recon', desc: 'DNS enum + AXFR', inputs: [] },
+  { id: '20', name: 'Multi Scan', cat: 'net', desc: 'File of targets', inputs: [{ key: 'file_path', label: 'File path', placeholder: 'targets.txt' }] },
 ];
 
 const els = {
@@ -391,6 +391,10 @@ const els = {
   ambientToggle: document.getElementById('ambientToggle'),
   skipIntro: document.getElementById('skipIntro'),
   rootModeBtn: document.getElementById('rootModeBtn'),
+  sudoModal: document.getElementById('sudoModal'),
+  sudoPasswordInput: document.getElementById('sudoPasswordInput'),
+  sudoModalSubmit: document.getElementById('sudoModalSubmit'),
+  sudoModalClose: document.getElementById('sudoModalClose'),
 };
 
 let socket = null;
@@ -409,6 +413,8 @@ let ambientOn = false;
 let isCancelling = false;
 let lastLiveStats = { ports: 0, cve: 0, subdomains: 0, score: 0 };
 let rootMode = false;
+let sudoModalShown = false;
+let pendingScanExtra = {};
 
 const sound = new SoundEngine();
 document.body.classList.add('intro-active');
@@ -428,56 +434,234 @@ const intro = new IntroAnimation(sound);
   animate();
 })();
 
-// Background particle network + lightning cursor
+// Cosmic deep space + black hole background
 (() => {
   const canvas = document.getElementById('bg-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  let W, H;
-  const nodes = [];
-  const resize = () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; };
-  resize(); window.addEventListener('resize', resize);
-  let mouse = { x: W / 2, y: H / 2 };
-  window.addEventListener('mousemove', e => { mouse = { x: e.clientX, y: e.clientY }; });
-  class Node {
-    constructor() { this.reset(); }
-    reset() { this.x = Math.random() * W; this.y = Math.random() * H; this.vx = (Math.random() - 0.5) * 0.35; this.vy = (Math.random() - 0.5) * 0.35; this.r = Math.random() * 1.8 + 0.6; }
-    step() {
-      const dx = mouse.x - this.x;
-      const dy = mouse.y - this.y;
-      const d = Math.hypot(dx, dy) || 1;
-      const accel = Math.max(0, 120 - d) / 120 * 0.08;
-      this.vx += (dx / d) * accel * 0.02;
-      this.vy += (dy / d) * accel * 0.02;
-      this.x += this.vx; this.y += this.vy;
-      this.vx *= 0.99; this.vy *= 0.99;
-      if (this.x < 0 || this.x > W) this.vx *= -1;
-      if (this.y < 0 || this.y > H) this.vy *= -1;
+  let W, H, bhX, bhY;
+  const isMobile = () => window.innerWidth <= 768;
+
+  const resize = () => {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    bhX = W * 0.75;
+    bhY = H * 0.40;
+  };
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Stars
+  const starCount = () => isMobile() ? 100 : 200;
+  let stars = [];
+  function initStars() {
+    stars = [];
+    const n = starCount();
+    for (let i = 0; i < n; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: Math.random() * 1.5 + 0.5,
+        vx: (Math.random() - 0.5) * 0.03,
+        vy: (Math.random() - 0.5) * 0.03,
+        twinkleSpeed: Math.random() * 0.02 + 0.005,
+        twinklePhase: Math.random() * Math.PI * 2,
+        baseBrightness: Math.random() * 0.5 + 0.5,
+      });
     }
   }
-  const particleCount = window.innerWidth <= 768 ? 30 : 60;
-  for (let i = 0; i < particleCount; i++) nodes.push(new Node());
-  let animId = null;
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    nodes.forEach(n => {
-      n.step();
-      ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(123,47,255,0.35)'; ctx.fill();
+  initStars();
+  window.addEventListener('resize', initStars);
+
+  // Shooting star state
+  let shootingStar = null;
+  let nextShoot = Date.now() + 5000 + Math.random() * 10000;
+
+  // Hawking radiation particles
+  const hwParticles = [];
+  function spawnHawking() {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.5 + Math.random() * 1.5;
+    hwParticles.push({
+      x: bhX + Math.cos(angle) * 42,
+      y: bhY + Math.sin(angle) * 42,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      r: Math.random() * 1.5 + 0.5,
     });
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const d = Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y);
-        if (d < 140) {
-          const alpha = 0.08 * (1 - d / 140);
-          ctx.strokeStyle = `rgba(0,212,255,${alpha})`;
-          ctx.beginPath(); ctx.moveTo(nodes[i].x, nodes[i].y); ctx.lineTo(nodes[j].x, nodes[j].y); ctx.stroke();
-        }
-      }
+  }
+
+  // Accretion disk rotation
+  let diskAngle = 0;
+
+  let animId = null;
+
+  function drawNebula() {
+    // Top-left nebula
+    const g1 = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.5);
+    g1.addColorStop(0, 'rgba(60,0,120,0.08)');
+    g1.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g1;
+    ctx.fillRect(0, 0, W, H);
+    // Bottom-right nebula
+    const g2 = ctx.createRadialGradient(W, H, 0, W, H, W * 0.5);
+    g2.addColorStop(0, 'rgba(0,30,80,0.07)');
+    g2.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g2;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawPulsarRings(t) {
+    const cx = W * 0.3, cy = H * 0.6;
+    for (let i = 0; i < 3; i++) {
+      const phase = (t * 0.0003 + i * 0.33) % 1;
+      const radius = phase * 120;
+      const alpha = (1 - phase) * 0.08;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(123,47,255,${alpha})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
     }
+  }
+
+  function drawStars(t) {
+    stars.forEach(s => {
+      // Gravitational lensing: stars near BH curve toward it
+      const dx = bhX - s.x, dy = bhY - s.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      if (dist < 200) {
+        const pull = (200 - dist) / 200 * 0.08;
+        s.x += (dx / dist) * pull;
+        s.y += (dy / dist) * pull;
+      }
+      s.x += s.vx;
+      s.y += s.vy;
+      if (s.x < 0) s.x = W;
+      if (s.x > W) s.x = 0;
+      if (s.y < 0) s.y = H;
+      if (s.y > H) s.y = 0;
+
+      s.twinklePhase += s.twinkleSpeed;
+      const brightness = s.baseBrightness * (0.65 + 0.35 * Math.sin(s.twinklePhase));
+      const alpha = 0.3 + 0.7 * brightness;
+      // Don't draw stars inside the BH
+      const bhdx = bhX - s.x, bhdy = bhY - s.y;
+      if (Math.hypot(bhdx, bhdy) < 44) return;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      ctx.fill();
+    });
+  }
+
+  function drawShootingStar(t) {
+    if (Date.now() > nextShoot && !shootingStar) {
+      const sx = Math.random() * W * 0.5;
+      const sy = Math.random() * H * 0.3;
+      shootingStar = { x: sx, y: sy, life: 1, speed: 8 + Math.random() * 6, angle: Math.PI / 4 + (Math.random() - 0.5) * 0.4 };
+      nextShoot = Date.now() + 5000 + Math.random() * 10000;
+    }
+    if (shootingStar) {
+      const s = shootingStar;
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      const tx = s.x - Math.cos(s.angle) * 60 * s.life;
+      const ty = s.y - Math.sin(s.angle) * 60 * s.life;
+      ctx.lineTo(tx, ty);
+      const grad = ctx.createLinearGradient(tx, ty, s.x, s.y);
+      grad.addColorStop(0, 'rgba(255,255,255,0)');
+      grad.addColorStop(1, `rgba(255,255,255,${s.life * 0.9})`);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      s.x += Math.cos(s.angle) * s.speed;
+      s.y += Math.sin(s.angle) * s.speed;
+      s.life -= 0.025;
+      if (s.life <= 0 || s.x > W || s.y > H) shootingStar = null;
+    }
+  }
+
+  function drawBlackHole(t) {
+    // Shadow around BH
+    const shadow = ctx.createRadialGradient(bhX, bhY, 40, bhX, bhY, 160);
+    shadow.addColorStop(0, 'rgba(0,0,0,0.9)');
+    shadow.addColorStop(0.4, 'rgba(0,0,5,0.5)');
+    shadow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = shadow;
+    ctx.beginPath();
+    ctx.arc(bhX, bhY, 160, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Accretion disk (ellipse, rotates)
+    if (!isMobile()) {
+      ctx.save();
+      ctx.translate(bhX, bhY);
+      ctx.rotate(diskAngle);
+      for (let layer = 0; layer < 3; layer++) {
+        const rx = 90 - layer * 10;
+        const ry = 18 - layer * 4;
+        const alpha = 0.18 - layer * 0.04;
+        const innerColor = layer === 0 ? `rgba(255,220,150,${alpha})` : `rgba(255,100,50,${alpha * 0.6})`;
+        const outerColor = `rgba(180,40,0,0)`;
+        const diskGrad = ctx.createRadialGradient(0, 0, rx * 0.3, 0, 0, rx);
+        diskGrad.addColorStop(0, innerColor);
+        diskGrad.addColorStop(1, outerColor);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fillStyle = diskGrad;
+        ctx.fill();
+      }
+      ctx.restore();
+      diskAngle += (Math.PI * 2) / (8 * 60); // 360deg / 8s at 60fps
+    }
+
+    // Event horizon ring
+    ctx.beginPath();
+    ctx.arc(bhX, bhY, 43, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(180,100,255,0.6)';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = 'rgba(150,50,255,0.9)';
+    ctx.shadowBlur = 18;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Black circle (the hole)
+    ctx.beginPath();
+    ctx.arc(bhX, bhY, 40, 0, Math.PI * 2);
+    ctx.fillStyle = '#000005';
+    ctx.fill();
+
+    // Hawking radiation
+    if (Math.random() < 0.08) spawnHawking();
+    for (let i = hwParticles.length - 1; i >= 0; i--) {
+      const p = hwParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 0.018;
+      if (p.life <= 0) { hwParticles.splice(i, 1); continue; }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(200,150,255,${p.life * 0.7})`;
+      ctx.fill();
+    }
+  }
+
+  function draw(t) {
+    // Deep space background
+    ctx.fillStyle = '#000005';
+    ctx.fillRect(0, 0, W, H);
+    drawNebula();
+    drawPulsarRings(t);
+    drawStars(t);
+    drawShootingStar(t);
+    drawBlackHole(t);
     animId = requestAnimationFrame(draw);
   }
-  draw();
+
+  animId = requestAnimationFrame(draw);
+
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       if (animId) { cancelAnimationFrame(animId); animId = null; }
@@ -737,6 +921,11 @@ function connectSocket() {
 
 function handleLog(line, pct, action) {
   renderLog(line);
+  // Detect sudo password prompt
+  if (!sudoModalShown && /sudo.*требует|password.*required|sudo.*password|пароль.*sudo/i.test(line)) {
+    sudoModalShown = true;
+    showSudoModal();
+  }
   const derived = progressFromLog(line);
   const progress = Math.max(pct || 0, derived.pct);
   const label = action || derived.action || 'Сканирование';
@@ -1120,22 +1309,17 @@ function buildModuleCards() {
   modules.forEach(mod => {
     const parent = buckets[mod.cat];
     if (!parent) return;
+    const num = String(mod.id).padStart(2, '0');
+    const needsInput = mod.inputs.length > 0;
     const card = document.createElement('div');
     card.className = 'module-card';
     card.innerHTML = `
-      <div class="module-top">
-        <div class="icon">${mod.icon || '★'}</div>
-        <div class="title">${mod.id}. ${mod.name}</div>
-      </div>
-      <div class="desc">${mod.desc}</div>
-      <div class="badge">${mod.inputs.length ? 'INPUT' : 'AUTO'}</div>
-      <button class="run-btn" type="button">RUN</button>
+      <div class="module-num">${num}</div>
+      <div class="module-title">${mod.name.toUpperCase()}</div>
+      <div class="module-desc">${mod.desc}</div>
+      <div class="module-badge ${needsInput ? 'badge-input' : 'badge-auto'}">${needsInput ? 'INPUT' : 'AUTO'}</div>
     `;
     card.addEventListener('click', () => onModuleSelected(mod, card));
-    card.querySelector('.run-btn').addEventListener('click', e => {
-      e.stopPropagation();
-      onModuleSelected(mod, card);
-    });
     parent.appendChild(card);
   });
 }
@@ -1176,6 +1360,8 @@ function openModal(mod) {
 
 // Scan actions
 async function startScan(extra = {}) {
+  pendingScanExtra = extra;
+  sudoModalShown = false;
   const target = (els.targetInput?.value || '').trim();
   if (!target) { toast('Введите цель'); return; }
   if (els.scanBtn) els.scanBtn.disabled = true;
@@ -1253,6 +1439,42 @@ function showSudoIndicator(state) {
   els.rootModeBtn.insertAdjacentElement('afterend', indicator);
 }
 
+function showSudoModal() {
+  if (!els.sudoModal) return;
+  els.sudoModal.classList.add('show');
+  if (els.sudoPasswordInput) {
+    els.sudoPasswordInput.value = '';
+    setTimeout(() => els.sudoPasswordInput.focus(), 100);
+  }
+}
+
+async function submitSudoPassword() {
+  const password = els.sudoPasswordInput?.value || '';
+  if (!password) { toast('Enter sudo password'); return; }
+  if (els.sudoModalSubmit) els.sudoModalSubmit.disabled = true;
+  try {
+    const res = await fetch(`${API}/api/sudo-auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+    if (data.error) {
+      toast(`Auth failed: ${data.error}`);
+      return;
+    }
+    if (els.sudoModal) els.sudoModal.classList.remove('show');
+    if (els.sudoPasswordInput) els.sudoPasswordInput.value = '';
+    toast('Authenticated. Retrying scan...');
+    sudoModalShown = false;
+    await startScan(pendingScanExtra);
+  } catch (e) {
+    toast('Authentication failed');
+  } finally {
+    if (els.sudoModalSubmit) els.sudoModalSubmit.disabled = false;
+  }
+}
+
 function setRootMode(enabled) {
   rootMode = enabled;
   if (!els.rootModeBtn) return;
@@ -1286,6 +1508,10 @@ els.targetInput?.addEventListener('keydown', e => {
 els.compareBtn?.addEventListener('click', compareTargets);
 els.modalClose?.addEventListener('click', () => els.modal.classList.remove('show'));
 els.modal?.addEventListener('click', e => { if (e.target === els.modal) els.modal.classList.remove('show'); });
+els.sudoModalClose?.addEventListener('click', () => els.sudoModal?.classList.remove('show'));
+els.sudoModal?.addEventListener('click', e => { if (e.target === els.sudoModal) els.sudoModal.classList.remove('show'); });
+els.sudoModalSubmit?.addEventListener('click', submitSudoPassword);
+els.sudoPasswordInput?.addEventListener('keydown', e => { if (e.key === 'Enter') submitSudoPassword(); });
 document.body.addEventListener('click', () => sound.enable(), { once: true });
 els.stopBtn?.addEventListener('click', async () => {
   if (!currentScanId || isCancelling) return;
