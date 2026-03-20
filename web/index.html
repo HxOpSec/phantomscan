@@ -295,6 +295,32 @@
     </footer>
   </div>
 
+  <div id="sudoModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-head">
+        <div>
+          <div class="modal-label">Authentication Required</div>
+          <div id="sudoModalTitle">Sudo Password Required</div>
+        </div>
+        <button id="sudoModalClose" aria-label="Close" class="icon-btn">✕</button>
+      </div>
+      <div id="sudoModalBody">
+        <div class="sudo-info">
+          <p>Elevated privileges are required for this scan module.</p>
+          <p class="sudo-hint">Or configure sudoers (no password prompt):</p>
+          <code class="sudo-code">sudo visudo<br>Add: USER ALL=(ALL) NOPASSWD: /path/to/phantomscan</code>
+        </div>
+        <div class="input-stack">
+          <label for="sudoPasswordInput">Sudo Password</label>
+          <input type="password" id="sudoPasswordInput" placeholder="Enter sudo password" autocomplete="current-password">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="sudoModalSubmit" class="btn-primary">Authenticate &amp; Retry</button>
+      </div>
+    </div>
+  </div>
+
   <div id="moduleModal" class="modal">
     <div class="modal-content">
       <div class="modal-head">
