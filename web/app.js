@@ -430,6 +430,62 @@ const intro = new IntroAnimation(sound);
   animate();
 })();
 
+// Hex grid canvas animation
+(() => {
+  const canvas = document.getElementById('hexCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  const HEX_SIZE = 32;
+  const HEX_W = HEX_SIZE * Math.sqrt(3);
+  const HEX_H = HEX_SIZE * 2;
+  let t = 0;
+
+  const resize = () => {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  };
+  resize();
+  window.addEventListener('resize', resize);
+
+  function hexPath(cx, cy, s) {
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i - Math.PI / 6;
+      const x = cx + s * Math.cos(angle);
+      const y = cy + s * Math.sin(angle);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  }
+
+  function drawHexGrid(ts) {
+    t = ts * 0.0004;
+    ctx.clearRect(0, 0, W, H);
+    const cols = Math.ceil(W / HEX_W) + 2;
+    const rows = Math.ceil(H / (HEX_H * 0.75)) + 2;
+    for (let row = -1; row < rows; row++) {
+      for (let col = -1; col < cols; col++) {
+        const cx = col * HEX_W + (row % 2 === 0 ? 0 : HEX_W * 0.5);
+        const cy = row * HEX_H * 0.75;
+        const phase = Math.sin(t + col * 0.4 + row * 0.3) * 0.5 + 0.5;
+        const alpha = 0.03 + phase * 0.06;
+        hexPath(cx, cy, HEX_SIZE - 1);
+        ctx.strokeStyle = `rgba(123,47,255,${alpha})`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        if (phase > 0.92) {
+          ctx.fillStyle = `rgba(0,212,255,${(phase - 0.92) * 0.5})`;
+          ctx.fill();
+        }
+      }
+    }
+    requestAnimationFrame(drawHexGrid);
+  }
+  requestAnimationFrame(drawHexGrid);
+})();
+
 // Cosmic deep space + black hole background
 (() => {
   const canvas = document.getElementById('bg-canvas');
@@ -887,6 +943,7 @@ function connectSocket() {
   });
   socket.on('stats_update', payload => {
     if (!payload || payload.scan_id !== currentScanId) return;
+    if ((payload.ports ?? 0) > lastLiveStats.ports) sound.portFound();
     updateLiveStats(payload);
   });
   socket.on('scan_status', payload => {
@@ -924,7 +981,8 @@ function handleLog(line, pct, action) {
   const label = action || derived.action || 'Сканирование';
   updateProgress(progress, label);
   if (els.currentAction) els.currentAction.textContent = label;
-  if (/cve/i.test(line) && /critical/i.test(line)) sound.criticalCVE();
+  if (/critical/i.test(line)) flashCritical();
+  else if (/cve/i.test(line)) sound.criticalCVE();
 }
 
 function handleStatus(pct, action) {
@@ -1452,6 +1510,43 @@ function setRootMode(enabled) {
   }
 }
 
+// Ripple effect
+function addRipple(btn) {
+  btn.addEventListener('click', e => {
+    const r = document.createElement('span');
+    r.className = 'ripple';
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - rect.left - size / 2}px;top:${e.clientY - rect.top - size / 2}px;position:absolute;border-radius:50%;background:rgba(123,47,255,0.35);transform:scale(0);animation:rippleAnim 0.6s linear;pointer-events:none;`;
+    btn.style.position = btn.style.position || 'relative';
+    btn.style.overflow = 'hidden';
+    btn.appendChild(r);
+    r.addEventListener('animationend', () => r.remove());
+  });
+}
+
+if (!document.getElementById('ripple-style')) {
+  const s = document.createElement('style');
+  s.id = 'ripple-style';
+  s.textContent = '@keyframes rippleAnim{to{transform:scale(2.5);opacity:0}}';
+  document.head.appendChild(s);
+}
+
+document.querySelectorAll('button').forEach(addRipple);
+
+// Glitch timer
+setInterval(() => {
+  document.body.classList.add('glitch-active');
+  setTimeout(() => document.body.classList.remove('glitch-active'), 200);
+}, 30000 + Math.random() * 30000);
+
+// flashCritical
+function flashCritical() {
+  document.body.classList.add('critical-flash');
+  setTimeout(() => document.body.classList.remove('critical-flash'), 1000);
+  sound.criticalCVE();
+}
+
 // ─── Deep Space Modal ────────────────────────────────────────────────────────
 class SpaceScene {
   constructor(canvas) {
@@ -1459,12 +1554,36 @@ class SpaceScene {
     this.ctx = canvas.getContext('2d');
     this.animId = null;
     this.stars = [];
-    this.comets = [];
     this.diskAngle = 0;
+    this.galaxyAngle = 0;
     this.hwParticles = [];
-    this.nextComet = Date.now() + 2000;
+    this.explodeParticles = [];
+    this.soundOn = false;
+    this.ambienceNode = null;
+
+    // 10-comet pool
+    this.comets = [];
+    for (let i = 0; i < 10; i++) this.comets.push(this._makeComet(true));
+
     this.resize();
     this.initStars();
+
+    this.canvas.addEventListener('click', e => this._explode(e.offsetX, e.offsetY));
+  }
+
+  _makeComet(offscreen = false) {
+    const W = this.W || window.innerWidth;
+    const H = this.H || window.innerHeight;
+    return {
+      active: !offscreen,
+      x: offscreen ? -200 : -20,
+      y: offscreen ? -200 : Math.random() * H * 0.4,
+      vx: 9 + Math.random() * 7,
+      vy: 2 + Math.random() * 3,
+      life: offscreen ? 0 : 1,
+      len: 80 + Math.random() * 60,
+      nextSpawn: Date.now() + Math.random() * 8000,
+    };
   }
 
   resize() {
@@ -1472,11 +1591,13 @@ class SpaceScene {
     this.H = this.canvas.height = this.canvas.offsetHeight || window.innerHeight;
     this.bhX = this.W * 0.5;
     this.bhY = this.H * 0.45;
+    this.galX = this.W * 0.75;
+    this.galY = this.H * 0.40;
   }
 
   initStars() {
     this.stars = [];
-    const n = Math.min(300, Math.floor(this.W * this.H / 8000));
+    const n = Math.min(350, Math.floor(this.W * this.H / 7000));
     for (let i = 0; i < n; i++) {
       this.stars.push({
         x: Math.random() * this.W,
@@ -1485,33 +1606,96 @@ class SpaceScene {
         twinkleSpeed: Math.random() * 0.025 + 0.005,
         twinklePhase: Math.random() * Math.PI * 2,
         baseBrightness: Math.random() * 0.6 + 0.4,
+        vx: (Math.random() - 0.5) * 0.02,
+        vy: (Math.random() - 0.5) * 0.02,
       });
     }
-  }
-
-  spawnComet() {
-    const sy = Math.random() * this.H * 0.4;
-    this.comets.push({
-      x: -20, y: sy,
-      vx: 9 + Math.random() * 7,
-      vy: 2 + Math.random() * 3,
-      life: 1,
-      len: 80 + Math.random() * 60,
-    });
-    this.nextComet = Date.now() + 3000 + Math.random() * 7000;
   }
 
   spawnHawking() {
     const angle = Math.random() * Math.PI * 2;
     const speed = 0.6 + Math.random() * 1.8;
     this.hwParticles.push({
-      x: this.bhX + Math.cos(angle) * 46,
-      y: this.bhY + Math.sin(angle) * 46,
+      x: this.bhX + Math.cos(angle) * 75,
+      y: this.bhY + Math.sin(angle) * 75,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       life: 1,
       r: Math.random() * 1.5 + 0.5,
     });
+  }
+
+  _explode(cx, cy) {
+    for (let i = 0; i < 40; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1 + Math.random() * 5;
+      this.explodeParticles.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        r: Math.random() * 3 + 1,
+        color: `hsl(${Math.floor(Math.random() * 60 + 260)},100%,70%)`,
+      });
+    }
+  }
+
+  toggleSound(sc) {
+    this.soundOn = !this.soundOn;
+    if (this.soundOn) {
+      sc.enable();
+      if (!this.ambienceNode && sc.ctx) {
+        const osc = sc.ctx.createOscillator();
+        const gain = sc.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(55, sc.ctx.currentTime);
+        gain.gain.setValueAtTime(0.015, sc.ctx.currentTime);
+        osc.connect(gain).connect(sc.ctx.destination);
+        osc.start();
+        this.ambienceNode = { osc, gain };
+      }
+    } else if (this.ambienceNode && sc.ctx) {
+      this.ambienceNode.gain.gain.exponentialRampToValueAtTime(0.0001, sc.ctx.currentTime + 0.5);
+      this.ambienceNode.osc.stop(sc.ctx.currentTime + 0.6);
+      this.ambienceNode = null;
+    }
+  }
+
+  _drawGalaxy(ctx) {
+    const { galX, galY, galaxyAngle } = this;
+    ctx.save();
+    ctx.translate(galX, galY);
+    ctx.rotate(galaxyAngle);
+
+    // Core glow
+    const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 28);
+    coreGrad.addColorStop(0, 'rgba(255,240,200,0.35)');
+    coreGrad.addColorStop(0.5, 'rgba(180,100,255,0.12)');
+    coreGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = coreGrad;
+    ctx.beginPath(); ctx.arc(0, 0, 28, 0, Math.PI * 2); ctx.fill();
+
+    // Spiral arms
+    for (let arm = 0; arm < 2; arm++) {
+      const armOff = arm * Math.PI;
+      ctx.beginPath();
+      for (let t = 0; t <= 1; t += 0.01) {
+        const r = t * 90;
+        const theta = armOff + t * Math.PI * 3;
+        const x = r * Math.cos(theta);
+        const y = r * Math.sin(theta) * 0.45;
+        if (t === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = `rgba(180,100,255,0.12)`;
+      ctx.lineWidth = 6;
+      ctx.stroke();
+      ctx.strokeStyle = `rgba(100,180,255,0.08)`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+    this.galaxyAngle += 0.0002;
   }
 
   draw() {
@@ -1521,7 +1705,7 @@ class SpaceScene {
 
     // Nebula
     const g1 = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.6);
-    g1.addColorStop(0, 'rgba(60,0,120,0.12)');
+    g1.addColorStop(0, 'rgba(60,0,120,0.14)');
     g1.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g1; ctx.fillRect(0, 0, W, H);
     const g2 = ctx.createRadialGradient(W, H, 0, W, H, W * 0.5);
@@ -1529,29 +1713,50 @@ class SpaceScene {
     g2.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
 
-    // Stars
+    // Galaxy
+    this._drawGalaxy(ctx);
+
+    // Stars with gravitational lensing
     this.stars.forEach(s => {
       s.twinklePhase += s.twinkleSpeed;
       const brightness = s.baseBrightness * (0.6 + 0.4 * Math.sin(s.twinklePhase));
       const dx = bhX - s.x, dy = bhY - s.y;
-      if (Math.hypot(dx, dy) < 50) return;
+      const dist = Math.hypot(dx, dy) || 1;
+      // Gravitational lensing: pull stars near BH
+      if (dist < 220) {
+        const pull = (220 - dist) / 220 * 0.06;
+        s.x += (dx / dist) * pull;
+        s.y += (dy / dist) * pull;
+      }
+      s.x += s.vx; s.y += s.vy;
+      if (s.x < 0) s.x = W; if (s.x > W) s.x = 0;
+      if (s.y < 0) s.y = H; if (s.y > H) s.y = 0;
+      if (Math.hypot(bhX - s.x, bhY - s.y) < 72) return;
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.7 * brightness})`;
       ctx.fill();
     });
 
-    // Comets
-    if (Date.now() > this.nextComet) this.spawnComet();
-    for (let i = this.comets.length - 1; i >= 0; i--) {
-      const c = this.comets[i];
+    // Comets pool (10 slots)
+    const now = Date.now();
+    this.comets.forEach(c => {
+      if (!c.active) {
+        if (now >= c.nextSpawn) {
+          c.x = -20;
+          c.y = Math.random() * H * 0.4;
+          c.vx = 9 + Math.random() * 7;
+          c.vy = 2 + Math.random() * 3;
+          c.life = 1;
+          c.len = 80 + Math.random() * 60;
+          c.active = true;
+        }
+        return;
+      }
+      const speed = Math.hypot(c.vx, c.vy) || 1;
       ctx.beginPath();
       ctx.moveTo(c.x, c.y);
-      const speed = Math.hypot(c.vx, c.vy) || 1;
-      ctx.lineTo(
-        c.x - (c.vx / speed) * c.len * c.life,
-        c.y - (c.vy / speed) * c.len * c.life
-      );
+      ctx.lineTo(c.x - (c.vx / speed) * c.len * c.life, c.y - (c.vy / speed) * c.len * c.life);
       const grad = ctx.createLinearGradient(
         c.x - (c.vx / speed) * c.len, c.y - (c.vy / speed) * c.len, c.x, c.y);
       grad.addColorStop(0, 'rgba(255,255,255,0)');
@@ -1560,28 +1765,34 @@ class SpaceScene {
       ctx.lineWidth = 1.5;
       ctx.stroke();
       c.x += c.vx; c.y += c.vy; c.life -= 0.012;
-      if (c.life <= 0 || c.x > W + 100) this.comets.splice(i, 1);
-    }
+      if (c.life <= 0 || c.x > W + 100) {
+        c.active = false;
+        c.nextSpawn = Date.now() + 2000 + Math.random() * 8000;
+      }
+    });
 
     // Black hole shadow
-    const shadow = ctx.createRadialGradient(bhX, bhY, 44, bhX, bhY, 180);
-    shadow.addColorStop(0, 'rgba(0,0,0,0.95)');
-    shadow.addColorStop(0.4, 'rgba(0,0,10,0.55)');
+    const shadow = ctx.createRadialGradient(bhX, bhY, 66, bhX, bhY, 200);
+    shadow.addColorStop(0, 'rgba(0,0,0,0.97)');
+    shadow.addColorStop(0.35, 'rgba(0,0,10,0.6)');
     shadow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = shadow;
-    ctx.beginPath(); ctx.arc(bhX, bhY, 180, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bhX, bhY, 200, 0, Math.PI * 2); ctx.fill();
 
-    // Accretion disk
+    // Accretion disk (3 bright layers)
     ctx.save();
     ctx.translate(bhX, bhY);
     ctx.rotate(this.diskAngle);
     for (let layer = 0; layer < 3; layer++) {
-      const rx = 100 - layer * 12;
-      const ry = 20 - layer * 4;
-      const alpha = 0.22 - layer * 0.05;
-      const innerColor = layer === 0 ? `rgba(255,220,150,${alpha})` : `rgba(255,100,50,${alpha * 0.6})`;
-      const diskGrad = ctx.createRadialGradient(0, 0, rx * 0.3, 0, 0, rx);
+      const rx = 110 - layer * 14;
+      const ry = 22 - layer * 4;
+      const alpha = 0.55 - layer * 0.12;
+      const innerColor = layer === 0
+        ? `rgba(255,230,160,${alpha})`
+        : layer === 1 ? `rgba(255,140,60,${alpha * 0.8})` : `rgba(220,80,20,${alpha * 0.6})`;
+      const diskGrad = ctx.createRadialGradient(0, 0, rx * 0.25, 0, 0, rx);
       diskGrad.addColorStop(0, innerColor);
+      diskGrad.addColorStop(0.7, `rgba(200,60,0,${alpha * 0.3})`);
       diskGrad.addColorStop(1, 'rgba(180,40,0,0)');
       ctx.beginPath();
       ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
@@ -1593,17 +1804,17 @@ class SpaceScene {
 
     // Event horizon ring
     ctx.beginPath();
-    ctx.arc(bhX, bhY, 47, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(180,100,255,0.65)';
-    ctx.lineWidth = 2.5;
-    ctx.shadowColor = 'rgba(150,50,255,0.9)';
-    ctx.shadowBlur = 20;
+    ctx.arc(bhX, bhY, 73, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(180,100,255,0.7)';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = 'rgba(150,50,255,1)';
+    ctx.shadowBlur = 24;
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    // Black hole core
+    // Black hole core (radius 70px)
     ctx.beginPath();
-    ctx.arc(bhX, bhY, 44, 0, Math.PI * 2);
+    ctx.arc(bhX, bhY, 70, 0, Math.PI * 2);
     ctx.fillStyle = '#000000';
     ctx.fill();
 
@@ -1619,6 +1830,19 @@ class SpaceScene {
       ctx.fill();
     }
 
+    // Click explosion particles
+    for (let i = this.explodeParticles.length - 1; i >= 0; i--) {
+      const p = this.explodeParticles[i];
+      p.x += p.vx; p.y += p.vy;
+      p.vx *= 0.96; p.vy *= 0.96;
+      p.life -= 0.022;
+      if (p.life <= 0) { this.explodeParticles.splice(i, 1); continue; }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+      ctx.fillStyle = p.color.replace(')', `,${p.life})`).replace('hsl', 'hsla');
+      ctx.fill();
+    }
+
     this.animId = requestAnimationFrame(() => this.draw());
   }
 
@@ -1628,6 +1852,12 @@ class SpaceScene {
 
   stop() {
     if (this.animId) { cancelAnimationFrame(this.animId); this.animId = null; }
+    if (this.ambienceNode) {
+      try {
+        this.ambienceNode.osc.stop();
+      } catch (_) {}
+      this.ambienceNode = null;
+    }
   }
 }
 
@@ -1721,6 +1951,13 @@ if (els.ambientToggle) {
 // Space modal events
 document.getElementById('spaceBtn')?.addEventListener('click', openSpaceModal);
 document.getElementById('spaceModalClose')?.addEventListener('click', closeSpaceModal);
+document.getElementById('spaceSoundBtn')?.addEventListener('click', () => {
+  if (spaceScene) {
+    spaceScene.toggleSound(sound);
+    const btn = document.getElementById('spaceSoundBtn');
+    if (btn) btn.textContent = spaceScene.soundOn ? '🔊 SOUND' : '🔇 SOUND';
+  }
+});
 els.spaceModal?.addEventListener('click', e => { if (e.target === els.spaceModal) closeSpaceModal(); });
 
 // Setup banner
