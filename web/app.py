@@ -30,6 +30,7 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 # ─────────────────────────────────────────────────────────────────────────────
 os.environ.setdefault("PYTHONUNBUFFERED", "1")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
 PHANTOMSCAN = os.path.join(BASE_DIR, "..", "builds", "phantomscan")
 REPORTS_DIR = os.path.join(BASE_DIR, "..", "reports")
 FULL_SCAN_TIMEOUT_SECONDS = 420
@@ -49,18 +50,49 @@ def check_capabilities(binary: str) -> bool:
 
 
 def check_sudo_available(binary: Optional[str] = None) -> bool:
-    bin_path = os.path.abspath(binary or PHANTOMSCAN)
+    """Return True only if sudo works without a password prompt."""
     try:
         result = subprocess.run(
-            ["sudo", "-n", bin_path, "--help"],
+            ["sudo", "-n", "true"],
             capture_output=True, timeout=3,
         )
-        return result.returncode in (0, 1)  # any response = sudo works
+        return result.returncode == 0
     except Exception:
         return False
 
 
+def ensure_capabilities(binary: str) -> bool:
+    """Ensure the binary has cap_net_raw+cap_net_admin.
+
+    If already set, return True immediately.
+    If running as root, try setcap directly.
+    Otherwise try via sudo -n (works when sudoers has NOPASSWD for setcap).
+    """
+    if check_capabilities(binary):
+        return True
+    setcap_args = ["setcap", "cap_net_raw,cap_net_admin+eip", binary]
+    if os.geteuid() == 0:
+        try:
+            subprocess.run(setcap_args, check=True, capture_output=True, timeout=5)
+            return check_capabilities(binary)
+        except Exception:
+            pass
+    try:
+        subprocess.run(
+            ["sudo", "-n"] + setcap_args,
+            check=True, capture_output=True, timeout=5,
+        )
+        return check_capabilities(binary)
+    except Exception:
+        pass
+    return False
+
+
 _binary_abs = os.path.abspath(PHANTOMSCAN)
+# Auto-apply capabilities at startup (works if running as root or if sudoers allows
+# passwordless setcap).  If neither condition holds this is a no-op..
+if os.path.exists(_binary_abs) and not check_capabilities(_binary_abs):
+    ensure_capabilities(_binary_abs)
 CAPS_OK = check_capabilities(_binary_abs)
 SUDO_AVAILABLE = check_sudo_available(_binary_abs)
 
@@ -359,7 +391,12 @@ def launch_process(binary: str, input_seq: list[str], root_mode: bool = False) -
     if binary != os.path.abspath(PHANTOMSCAN):
         logging.error("Unexpected binary path: %s", binary)
         return None, None
-    if root_mode:
+    if CAPS_OK:
+        commands = [
+            ["stdbuf", "-oL", "-eL", binary],
+            [binary],
+        ]
+    elif root_mode:
         commands = [
             ["stdbuf", "-oL", "-eL", "sudo", "-n", binary],
             ["sudo", "-n", binary],
@@ -386,17 +423,22 @@ def launch_process(binary: str, input_seq: list[str], root_mode: bool = False) -
                 text=True,
                 bufsize=1,
                 env=env,
+                cwd=PROJECT_ROOT,  # ensure reports/ is written to the correct directory
             )
-            for idx, line in enumerate(input_seq):
-                proc.stdin.write(f"{line}\n")
-                proc.stdin.flush()
-                time.sleep(0.5)
-            return proc, cmd
         except FileNotFoundError:
             continue
         except (OSError, PermissionError) as exc:
             logging.error("Failed to start process %s: %s", cmd, exc)
             continue
+        # Write inputs separately so a broken pipe doesn't cause us to skip to the next cmd.
+        for line in input_seq:
+            try:
+                proc.stdin.write(f"{line}\n")
+                proc.stdin.flush()
+                time.sleep(0.5)
+            except OSError:
+                break
+        return proc, cmd
     return None, None
 
 
@@ -426,10 +468,13 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root
     # terminal, disabling all internal stdout buffering in the C++ binary.
     master_fd, slave_fd = pty.openpty()
 
-    if root_mode or SUDO_AVAILABLE:
+    if CAPS_OK:
+        # Binary has the needed capabilities — no sudo required.
+        cmd_options = [[binary]]
+    elif root_mode or SUDO_AVAILABLE:
         cmd_options = [["sudo", "-n", binary], [binary]]
     else:
-        cmd_options = [[binary], ["sudo", "-n", binary]]
+        cmd_options = [[binary]]
 
     env = os.environ.copy()
     env.update({"PYTHONUNBUFFERED": "1", "TERM": "xterm", "COLUMNS": "120", "LINES": "40"})
@@ -445,6 +490,7 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root
                 stderr=slave_fd,
                 close_fds=True,
                 env=env,
+                cwd=PROJECT_ROOT,  # ensure reports/ lands in the right directory
             )
             cmd_used = cmd
             break
@@ -724,6 +770,26 @@ def setup_check():
     except OSError as exc:
         logging.error("setup_check error: %s", exc)
         return jsonify({"error": "setup check failed"}), 500
+
+
+@app.route("/api/install-caps", methods=["POST"])
+def install_caps():
+    """Return the setcap command users need to run once, or auto-apply it."""
+    try:
+        binary = os.path.abspath(PHANTOMSCAN)
+        if not os.path.exists(binary):
+            return jsonify({"error": "Binary not found"}), 404
+        caps_applied = ensure_capabilities(binary)
+        cmd = f"sudo setcap cap_net_raw,cap_net_admin+eip {binary}"
+        return jsonify({
+            "caps_applied": caps_applied,
+            "caps_ok": check_capabilities(binary),
+            "command": cmd,
+            "instructions": "Run the command once in a terminal if caps_applied is false.",
+        })
+    except OSError as exc:
+        logging.error("install_caps error: %s", exc)
+        return jsonify({"error": "install_caps failed"}), 500
 
 
 @app.route("/api/scan", methods=["POST"])
