@@ -1024,6 +1024,13 @@ async function fetchHistory() {
     const rows = await res.json();
     if (!Array.isArray(rows) || !els.historyGrid) return;
     els.historyGrid.innerHTML = '';
+    if (rows.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'history-empty';
+      empty.textContent = 'No scans yet';
+      els.historyGrid.appendChild(empty);
+      return;
+    }
     rows.slice(0, 20).forEach(row => {
       const card = document.createElement('div');
       card.className = 'history-card';
@@ -1222,8 +1229,14 @@ async function healthCheck() {
     setStatus(data.binary_exists, data.binary_exists ? 'API ONLINE' : 'BINARY MISSING');
     if (data.sudo_available) {
       showSudoIndicator('ok');
+      if (els.rootModeBtn && !els.rootModeBtn.classList.contains('root-active')) {
+        els.rootModeBtn.textContent = '🔐 SUDO READY';
+      }
     } else {
       showSudoIndicator('no');
+      if (els.rootModeBtn && !els.rootModeBtn.classList.contains('root-active')) {
+        els.rootModeBtn.textContent = '🔓 NO SUDO';
+      }
     }
   } catch (e) {
     setStatus(false, 'API OFFLINE');

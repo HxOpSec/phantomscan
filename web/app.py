@@ -9,6 +9,7 @@ import glob
 import json
 import logging
 import os
+import pty
 import re
 import select
 import subprocess
@@ -36,12 +37,13 @@ LOG_LIMIT = 500
 HOSTNAME_REGEX = r"(?=.{1,253}$)([A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*"
 
 def check_sudo_available() -> bool:
+    binary = os.path.abspath(PHANTOMSCAN)
     try:
         result = subprocess.run(
-            ["sudo", "-n", "true"],
+            ["sudo", "-n", binary, "--help"],
             capture_output=True, timeout=3,
         )
-        return result.returncode == 0
+        return result.returncode in (0, 1)  # any response = sudo works
     except Exception:
         return False
 
@@ -130,17 +132,24 @@ def load_report_file(path: str) -> Optional[dict]:
 
 
 def is_menu_line(line: str) -> bool:
-    return (
-        line.startswith("│")
-        or line.startswith("┌")
-        or line.startswith("└")
-        or line.startswith("╔")
-        or line.startswith("╚")
-        or line.startswith("╠")
-        or re.search(r"\[\s*\d+\s*\].*скан", line, re.IGNORECASE)
-        or "Выбор:" in line
-        or ("PhantomScan" in line and "│" in line)
-    )
+    """Filter out PhantomScan menu/banner/decoration lines."""
+    if not line:
+        return True
+    # Box drawing characters
+    if any(c in line for c in ['║', '╔', '╚', '╠', '╗', '╝', '─', '│', '┌', '└', '┐', '┘', '├', '┤']):
+        return True
+    # Menu items pattern
+    if re.search(r'\[\s*\d+\s*\]', line):
+        return True
+    # Common menu/banner strings
+    menu_patterns = [
+        'Выбор:', 'PhantomScan', 'Network Scanner',
+        'by UMEDJON', 'HxOpSec', '██', 'Введите IP',
+        'Цель:', 'Новая цель', 'До свидания', 'Неверный выбор',
+    ]
+    if any(p in line for p in menu_patterns):
+        return True
+    return False
 
 
 def add_history_entry(result: dict) -> None:
@@ -397,14 +406,48 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root
         return
 
     input_seq = build_input_sequence(target, module, extra_inputs)
-    proc, cmd_used = launch_process(binary, input_seq, root_mode=root_mode)
+
+    # Create pseudo-terminal — tricks PhantomScan into thinking it has a real
+    # terminal, disabling all internal stdout buffering in the C++ binary.
+    master_fd, slave_fd = pty.openpty()
+
+    if root_mode or SUDO_AVAILABLE:
+        cmd_options = [["sudo", "-n", binary], [binary]]
+    else:
+        cmd_options = [[binary], ["sudo", "-n", binary]]
+
+    env = os.environ.copy()
+    env.update({"PYTHONUNBUFFERED": "1", "TERM": "xterm", "COLUMNS": "120", "LINES": "40"})
+
+    proc = None
+    cmd_used = None
+    for cmd in cmd_options:
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=slave_fd,
+                stderr=slave_fd,
+                close_fds=True,
+                env=env,
+            )
+            cmd_used = cmd
+            break
+        except (FileNotFoundError, OSError, PermissionError) as exc:
+            logging.warning("Failed to start %s: %s", cmd, exc)
+
+    # slave_fd is now owned by the child; close our copy in the parent
+    os.close(slave_fd)
+
     if not proc:
+        os.close(master_fd)
         scan["status"] = "error"
         ws_emit("scan_error", {"scan_id": scan_id, "error": "Не удалось запустить phantomscan"}, room=scan_id)
         return
-    scan["proc"] = proc
 
-    logging.info("Started scan %s with cmd %s", scan_id, cmd_used)
+    scan["proc"] = proc
+    logging.info("Started scan %s with cmd %s (pty)", scan_id, cmd_used)
+
     captured_output: list[str] = []
     started_at = time.time()
     scan["started_ts"] = started_at
@@ -413,26 +456,70 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root
     cve_count = 0
     sub_count = 0
     score_value = 0
-    last_stats = {"ports": -1, "cve": -1, "subdomains": -1, "score": -1}
+    last_stats: dict = {"ports": -1, "cve": -1, "subdomains": -1, "score": -1}
 
     def emit_stats() -> None:
         nonlocal last_stats
-        current = {
-            "ports": port_count,
-            "cve": cve_count,
-            "subdomains": sub_count,
-            "score": score_value,
-        }
+        current = {"ports": port_count, "cve": cve_count, "subdomains": sub_count, "score": score_value}
         if current == last_stats:
             return
         last_stats = current
-        ws_emit(
-            "stats_update",
-            {"scan_id": scan_id, **current},
-            room=scan_id,
-        )
+        ws_emit("stats_update", {"scan_id": scan_id, **current}, room=scan_id)
+
     emit_stats()
 
+    # Send inputs with delays in a background thread so we don't block reading.
+    # Delays give the binary time to display each prompt before we answer it:
+    # first item (target) needs 0.5 s, module choice 0.3 s, extras 0.2 s each.
+    def write_inputs() -> None:
+        delays = [0.5, 0.3] + [0.2] * max(0, len(input_seq) - 2)
+        for text, delay in zip(input_seq, delays):
+            try:
+                proc.stdin.write(f"{text}\n".encode())
+                proc.stdin.flush()
+                time.sleep(delay)
+            except (BrokenPipeError, OSError):
+                break
+
+    input_thread = threading.Thread(target=write_inputs, daemon=True)
+    input_thread.start()
+
+    def _process_line(raw_line: str) -> None:
+        nonlocal port_count, cve_count, sub_count, score_value
+        clean = strip_ansi(raw_line.strip())
+        if not clean or is_menu_line(clean):
+            return
+        captured_output.append(clean)
+        scan["log"].append(clean)
+        if len(scan["log"]) > LOG_LIMIT:
+            scan["log"] = scan["log"][-LOG_LIMIT:]
+        if re.search(r"\[\s*\+\s*\]\s*Найден:", clean):
+            sub_count += 1
+        if re.search(r"Открыт", clean, re.IGNORECASE):
+            port_count += 1
+        cve_hits = re.findall(r"CVE-\d{4}-\d+", clean, re.IGNORECASE)
+        if cve_hits:
+            cve_count += len(cve_hits)
+        score_match = re.search(r"SCORE:\s*(\d+)", clean, re.IGNORECASE)
+        if score_match:
+            try:
+                score_value = int(score_match.group(1))
+            except ValueError:
+                pass
+        scan["stats"] = {"ports": port_count, "cve": cve_count, "subdomains": sub_count, "score": score_value}
+        emit_stats()
+        scan["progress"], action = backend_progress_from_line(clean, scan.get("progress", 0))
+        if action:
+            scan["current_action"] = action
+        ws_emit(
+            "log_line",
+            {"scan_id": scan_id, "line": clean, "progress": scan["progress"], "current_action": scan.get("current_action")},
+            room=scan_id,
+        )
+
+    # Read from pty master using select; no readline() to avoid blocking
+    no_output_count = 0
+    line_buf = ""
     try:
         while True:
             if time.time() - started_at > FULL_SCAN_TIMEOUT_SECONDS:
@@ -447,112 +534,61 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root
                     pass
                 return
 
-            ready, _, _ = select.select([proc.stdout], [], [], 0.25)
+            proc_done = proc.poll() is not None
+
+            try:
+                # 1.0 s timeout: short enough for responsive cancellation / timeout
+                # checks, long enough not to busy-spin between output bursts.
+                ready, _, _ = select.select([master_fd], [], [], 1.0)
+            except (ValueError, OSError):
+                break
+
             if ready:
-                raw_line = proc.stdout.readline()
-                if raw_line == "":
-                    if proc.poll() is not None:
-                        extra_ready, _, _ = select.select([proc.stdout], [], [], 0)
-                        if not extra_ready:
-                            break
-                        continue
-                    continue
-                clean = strip_ansi(raw_line.rstrip())
-                if not clean or is_menu_line(clean):
-                    continue
-                captured_output.append(clean)
-                scan["log"].append(clean)
-                if len(scan["log"]) > LOG_LIMIT:
-                    scan["log"] = scan["log"][-LOG_LIMIT:]
-
-                if re.search(r"\[\s*\+\s*\]\s*Найден:", clean):
-                    sub_count += 1
-                if re.search(r"Открыт", clean, re.IGNORECASE):
-                    port_count += 1
-                cve_hits = re.findall(r"CVE-\d{4}-\d+", clean, re.IGNORECASE)
-                if cve_hits:
-                    cve_count += len(cve_hits)
-                score_match = re.search(r"SCORE:\s*(\d+)", clean, re.IGNORECASE)
-                if score_match:
-                    try:
-                        score_value = int(score_match.group(1))
-                    except ValueError:
-                        pass
-                scan["stats"] = {
-                    "ports": port_count,
-                    "cve": cve_count,
-                    "subdomains": sub_count,
-                    "score": score_value,
-                }
-                emit_stats()
-
-                scan["progress"], action = backend_progress_from_line(clean, scan.get("progress", 0))
-                if action:
-                    scan["current_action"] = action
-                ws_emit(
-                    "log_line",
-                    {
-                        "scan_id": scan_id,
-                        "line": clean,
-                        "progress": scan["progress"],
-                        "current_action": scan.get("current_action"),
-                    },
-                    room=scan_id,
-                )
-            else:
-                if proc.poll() is not None:
-                    remainder = proc.stdout.read()
-                    for extra_line in (remainder.splitlines() if remainder else []):
-                        clean = strip_ansi(extra_line.rstrip())
-                        if not clean or is_menu_line(clean):
-                            continue
-                        if re.search(r"\[\s*\+\s*\]\s*Найден:", clean):
-                            sub_count += 1
-                        if re.search(r"Открыт", clean, re.IGNORECASE):
-                            port_count += 1
-                        cve_hits = re.findall(r"CVE-\d{4}-\d+", clean, re.IGNORECASE)
-                        if cve_hits:
-                            cve_count += len(cve_hits)
-                        score_match = re.search(r"SCORE:\s*(\d+)", clean, re.IGNORECASE)
-                        if score_match:
-                            try:
-                                score_value = int(score_match.group(1))
-                            except ValueError:
-                                pass
-                        scan["stats"] = {
-                            "ports": port_count,
-                            "cve": cve_count,
-                            "subdomains": sub_count,
-                            "score": score_value,
-                        }
-                        emit_stats()
-                        captured_output.append(clean)
-                        scan["log"].append(clean)
+                try:
+                    raw = os.read(master_fd, 4096)
+                    if not raw:
+                        break
+                    no_output_count = 0
+                    text = line_buf + raw.decode("utf-8", errors="replace")
+                    line_buf = ""
+                    # Normalize line endings
+                    text = text.replace("\r\n", "\n").replace("\r", "\n")
+                    lines = text.split("\n")
+                    # Keep partial last line in buffer
+                    if not text.endswith("\n"):
+                        line_buf = lines[-1]
+                        lines = lines[:-1]
+                    for line in lines:
+                        _process_line(line)
+                except OSError:
                     break
-        proc.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        proc.kill()
-        scan["status"] = "error"
-        ws_emit("scan_error", {"scan_id": scan_id, "error": "Таймаут сканирования"}, room=scan_id)
-        return
-    except (OSError, ValueError) as exc:
-        scan["status"] = "error"
-        ws_emit("scan_error", {"scan_id": scan_id, "error": str(exc)}, room=scan_id)
-        return
+            else:
+                if proc_done:
+                    no_output_count += 1
+                    if no_output_count >= 3:
+                        break
     finally:
+        try:
+            os.close(master_fd)
+        except OSError:
+            pass
         try:
             if proc.stdin and not proc.stdin.closed:
                 proc.stdin.close()
         except Exception:
             pass
 
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+
     report_file = find_latest_report(target, started_at=started_at)
     result = None
     if report_file:
         result = load_report_file(report_file)
     if not result:
-        stdout = "\n".join(captured_output)
-        result = parse_stdout_fallback(stdout, target)
+        result = parse_stdout_fallback("\n".join(captured_output), target)
 
     scan["stats"] = {"ports": port_count, "cve": cve_count, "subdomains": sub_count, "score": score_value}
     scan["status"] = "done"
@@ -853,6 +889,49 @@ def handle_join(data):
         join_room(scan_id)
         emit("joined", {"scan_id": scan_id}, namespace="/")
         time.sleep(0.05)
+
+        # Replay buffered log lines so late-joining clients catch up
+        if scan_id in active_scans:
+            scan = active_scans[scan_id]
+            for line in scan.get("log", []):
+                emit(
+                    "log_line",
+                    {
+                        "scan_id": scan_id,
+                        "line": line,
+                        "progress": scan.get("progress", 0),
+                        "current_action": scan.get("current_action"),
+                    },
+                    namespace="/",
+                )
+                time.sleep(0.01)  # brief yield so the client can process each line
+            if scan.get("stats"):
+                emit("stats_update", {"scan_id": scan_id, **scan["stats"]}, namespace="/")
+                time.sleep(0.05)
+            emit(
+                "scan_status",
+                {
+                    "scan_id": scan_id,
+                    "status": scan["status"],
+                    "progress": scan.get("progress", 0),
+                    "current_action": scan.get("current_action"),
+                },
+                namespace="/",
+            )
+            time.sleep(0.05)
+            if scan["status"] == "done" and scan.get("result"):
+                emit(
+                    "scan_complete",
+                    {
+                        "scan_id": scan_id,
+                        "result": scan["result"],
+                        "stats": scan.get("stats"),
+                        "progress": 100,
+                        "current_action": scan.get("current_action"),
+                    },
+                    namespace="/",
+                )
+                time.sleep(0.05)
     except (KeyError, TypeError) as exc:  # pragma: no cover - defensive
         logging.error("join_scan error: %s", exc)
 
