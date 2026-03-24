@@ -13,6 +13,46 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+static constexpr size_t MAX_IP_TARGET_LENGTH = 64;
+
+static int hex_char_value(char ch) {
+    if (ch >= '0' && ch <= '9') return ch - '0';
+    if (ch >= 'a' && ch <= 'f') return 10 + (ch - 'a');
+    if (ch >= 'A' && ch <= 'F') return 10 + (ch - 'A');
+    return -1;
+}
+
+static bool parse_u16_hex(const std::string& s, size_t pos, uint16_t& out) {
+    if (pos + 3 >= s.size()) return false;
+    int h1 = hex_char_value(s[pos]);
+    int h2 = hex_char_value(s[pos + 1]);
+    int h3 = hex_char_value(s[pos + 2]);
+    int h4 = hex_char_value(s[pos + 3]);
+    if (h1 < 0 || h2 < 0 || h3 < 0 || h4 < 0) return false;
+    out = static_cast<uint16_t>((h1 << 12) | (h2 << 8) | (h3 << 4) | h4);
+    return true;
+}
+
+static void append_utf8_from_codepoint(std::string& out, uint32_t cp) {
+    if (cp <= 0x7F) {
+        out.push_back(static_cast<char>(cp));
+    } else if (cp <= 0x7FF) {
+        out.push_back(static_cast<char>(0xC0 | ((cp >> 6) & 0x1F)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+    } else if (cp <= 0xFFFF) {
+        out.push_back(static_cast<char>(0xE0 | ((cp >> 12) & 0x0F)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+    } else if (cp <= 0x10FFFF) {
+        out.push_back(static_cast<char>(0xF0 | ((cp >> 18) & 0x07)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+    } else {
+        out.push_back('?');
+    }
+}
+
 static bool is_private_or_loopback_ipv4(const std::string& ip) {
     uint32_t a = 0, b = 0, c = 0, d = 0;
     if (sscanf(ip.c_str(), "%u.%u.%u.%u", &a, &b, &c, &d) != 4) return false;
@@ -76,7 +116,27 @@ static std::string parse_json_field(const std::string& json,
                 case 'n':  value.push_back('\n'); break;
                 case 'r':  value.push_back('\r'); break;
                 case 't':  value.push_back('\t'); break;
-                case 'u':  value += "\\u"; break;
+                case 'u': {
+                    uint16_t cp16 = 0;
+                    if (parse_u16_hex(json, pos + 1, cp16)) {
+                        pos += 4;
+                        uint32_t cp = cp16;
+                        if (cp16 >= 0xD800 && cp16 <= 0xDBFF) {
+                            if (pos + 6 < json.size() && json[pos + 1] == '\\' && json[pos + 2] == 'u') {
+                                uint16_t low = 0;
+                                if (parse_u16_hex(json, pos + 3, low) && low >= 0xDC00 && low <= 0xDFFF) {
+                                    cp = 0x10000u + (((static_cast<uint32_t>(cp16) - 0xD800u) << 10)
+                                                     | (static_cast<uint32_t>(low) - 0xDC00u));
+                                    pos += 6;
+                                }
+                            }
+                        }
+                        append_utf8_from_codepoint(value, cp);
+                        break;
+                    }
+                    value.push_back('?');
+                    break;
+                }
                 default:   value.push_back(ch); break;
             }
             escaped = false;
@@ -204,7 +264,7 @@ static std::string fetch_ip_api_json(const std::string& ip) {
 }
 
 static bool is_safe_ip_target(const std::string& ip) {
-    if (ip.empty() || ip.size() > 64) return false;
+    if (ip.empty() || ip.size() > MAX_IP_TARGET_LENGTH) return false;
     for (char ch : ip) {
         const bool is_digit = (ch >= '0' && ch <= '9');
         const bool is_lower_hex = (ch >= 'a' && ch <= 'f');
@@ -273,11 +333,11 @@ WhoisResult Whois::lookup(const std::string& target) {
     }
 
     std::string json = fetch_ip_api_json(target);
-    if (!fill_from_ip_api_json(json, result)) {
+    if (json.empty()) {
         json = fetch_ip_api_json(target);
-        if (!fill_from_ip_api_json(json, result)) {
-            set_public_fallback(result);
-        }
+    }
+    if (!fill_from_ip_api_json(json, result)) {
+        set_public_fallback(result);
     }
 
     return result;
