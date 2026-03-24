@@ -356,20 +356,20 @@ const els = {
   statSubs: document.querySelector('#statSubs .value'),
   statScore: document.querySelector('#statScore .value'),
   mapInfo: document.getElementById('mapInfo'),
-  mapTarget: document.getElementById('mapTarget'),
-  resultTarget: document.getElementById('resultTarget'),
+  mapContainer: document.getElementById('map-container'),
+  resultTarget: document.getElementById('resultTarget') || document.getElementById('result-target'),
   osInfo: document.getElementById('osInfo'),
   countryInfo: document.getElementById('countryInfo'),
   ispInfo: document.getElementById('ispInfo'),
   fwInfo: document.getElementById('fwInfo'),
   cveSummary: document.getElementById('cveSummary'),
-  portsBody: document.getElementById('portsBody'),
-  subdomainsList: document.getElementById('subdomainsList'),
-  whoisInfo: document.getElementById('whoisInfo'),
-  cveList: document.getElementById('cveList'),
-  resultIp: document.getElementById('resultIp'),
-  resultStarted: document.getElementById('resultStarted'),
-  resultDuration: document.getElementById('resultDuration'),
+  portsBody: document.getElementById('portsBody') || document.getElementById('ports-table-body'),
+  subdomainsList: document.getElementById('subdomainsList') || document.getElementById('subdomains-list'),
+  whoisInfo: document.getElementById('whoisInfo') || document.getElementById('whois-info'),
+  cveList: document.getElementById('cveList') || document.getElementById('cve-list'),
+  resultIp: document.getElementById('resultIp') || document.getElementById('result-ip'),
+  resultStarted: document.getElementById('resultStarted') || document.getElementById('result-started'),
+  resultDuration: document.getElementById('resultDuration') || document.getElementById('result-duration'),
   ring: document.getElementById('ringFg'),
   ringGrade: document.getElementById('ringGrade'),
   ringScore: document.getElementById('ringScore'),
@@ -380,7 +380,7 @@ const els = {
   httpList: document.getElementById('httpList'),
   whoisList: document.getElementById('whoisList'),
   recList: document.getElementById('recList'),
-  historyGrid: document.getElementById('historyGrid'),
+  historyGrid: document.getElementById('historyGrid') || document.getElementById('history-list'),
   toast: document.getElementById('toast'),
   cmpA: document.getElementById('cmpA'),
   cmpB: document.getElementById('cmpB'),
@@ -418,6 +418,7 @@ let isCancelling = false;
 let lastLiveStats = { ports: 0, cve: 0, subdomains: 0, score: 0 };
 let rootMode = false;
 let pendingScanExtra = {};
+let map = null;
 
 const sound = new SoundEngine();
 document.body.classList.add('intro-active');
@@ -979,11 +980,7 @@ function connectSocket() {
     if (!payload || payload.scan_id !== currentScanId) return;
     lastSocketEvent = Date.now();
     const target = payload?.result?.target || payload?.result?.ip || '';
-    if (target) {
-      loadLatestReport(target).finally(() => finalizeScan(payload.result, payload.stats));
-    } else {
-      finalizeScan(payload.result, payload.stats);
-    }
+    loadLatestResults(target).finally(() => finalizeScan(payload.result, payload.stats));
   });
   socket.on('scan_cancelled', payload => {
     if (!payload || payload.scan_id !== currentScanId) return;
@@ -1029,7 +1026,7 @@ function finalizeScan(result, liveStats) {
     }
     lastResult = result;
     renderAll(result);
-    fetchHistory();
+    loadHistory();
     switchTab('results');
   }
 }
@@ -1100,18 +1097,22 @@ function renderStats(data) {
 function renderPorts(ports) {
   if (!els.portsBody) return;
   const body = els.portsBody;
-  if (!Array.isArray(ports) || !ports.length) {
+  const normalized = Array.isArray(ports) ? ports : [];
+  if (!normalized.length) {
     body.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">Нет открытых портов</td></tr>';
     return;
   }
   body.innerHTML = '';
-  ports.forEach((p, idx) => {
+  normalized.forEach((p, idx) => {
     const tr = document.createElement('tr');
     tr.className = 'port-row';
-    const cells = [idx + 1, p?.port ?? 'N/A', p?.service ?? 'N/A', p?.version ?? 'N/A', 'OPEN'];
+    const port = (p && typeof p === 'object') ? (p.port ?? p.number ?? p.id ?? 'N/A') : p;
+    const service = (p && typeof p === 'object') ? (p.service ?? p.name ?? 'unknown') : 'unknown';
+    const version = (p && typeof p === 'object') ? (p.version ?? p.banner ?? p.product ?? '') : '';
+    const cells = [idx + 1, port ?? 'N/A', service ?? 'unknown', version ?? '', 'OPEN'];
     cells.forEach((c, i) => {
       const td = document.createElement('td');
-      td.textContent = c;
+      td.textContent = c ?? 'N/A';
       if (i === 4) td.className = 'badge-open';
       tr.appendChild(td);
     });
@@ -1120,26 +1121,69 @@ function renderPorts(ports) {
   });
 }
 
+function initMap(lat, lon, ip) {
+  const container = els.mapContainer || document.getElementById('map-container');
+  if (!container || typeof L === 'undefined') return;
+  if (map) {
+    map.remove();
+    map = null;
+  }
+  map = L.map('map-container').setView([lat, lon], 6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+  }).addTo(map);
+  L.marker([lat, lon])
+    .addTo(map)
+    .bindPopup(`<b>${ip || 'N/A'}</b>`)
+    .openPopup();
+  setTimeout(() => {
+    if (map) map.invalidateSize();
+  }, 300);
+}
+
+async function getGeoAndInitMap(ip) {
+  if (!ip || ip === 'N/A') return;
+  const container = els.mapContainer || document.getElementById('map-container');
+  if (!container) return;
+  try {
+    const r = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}`);
+    const geo = await r.json();
+    if (geo?.status === 'success' && Number.isFinite(geo.lat) && Number.isFinite(geo.lon)) {
+      initMap(geo.lat, geo.lon, ip);
+      return;
+    }
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#00d4ff;">📍 ${ip}</div>`;
+  } catch (e) {
+    console.warn('Geo lookup failed:', e);
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#00d4ff;">📍 ${ip}</div>`;
+  }
+}
+
 function renderMap(data) {
-  if (!els.mapInfo || !els.mapTarget) return;
+  if (!els.mapInfo) return;
   const ip = data?.ip || 'N/A';
+  const whois = (data?.whois && typeof data.whois === 'object') ? data.whois : {};
   const info = [
     ['Target', data?.target || 'N/A'],
     ['IP', ip],
-    ['Country', data?.country || data?.whois?.country || 'N/A'],
-    ['ISP', data?.isp || data?.whois?.isp || 'N/A'],
+    ['Country', data?.country || whois.country || 'N/A'],
+    ['ISP', data?.isp || whois.isp || 'N/A'],
   ];
   els.mapInfo.innerHTML = '';
   info.forEach(([k, v]) => {
     const row = document.createElement('div');
     row.textContent = `${k}: `;
-    const span = document.createElement('span'); span.textContent = v;
-    row.appendChild(span); els.mapInfo.appendChild(row);
+    const span = document.createElement('span');
+    span.textContent = v ?? 'N/A';
+    row.appendChild(span);
+    els.mapInfo.appendChild(row);
   });
-  const x = 20 + Math.random() * 60;
-  const y = 20 + Math.random() * 50;
-  els.mapTarget.style.left = `${x}%`;
-  els.mapTarget.style.top = `${y}%`;
+
+  if (typeof L !== 'undefined' && Number.isFinite(Number(data?.lat)) && Number.isFinite(Number(data?.lon))) {
+    initMap(Number(data.lat), Number(data.lon), ip);
+  } else {
+    getGeoAndInitMap(ip);
+  }
 }
 
 function renderScorecard(data) {
@@ -1236,6 +1280,14 @@ function renderAll(data) {
   if (els.countryInfo) els.countryInfo.textContent = `Country: ${data.country || whois.country || 'N/A'}`;
   if (els.ispInfo) els.ispInfo.textContent = `ISP: ${data.isp || whois.isp || 'N/A'}`;
   if (els.fwInfo) els.fwInfo.textContent = `Firewall: ${data.firewall ? 'Detected' : 'N/A'}`;
+  const resultOs = document.getElementById('result-os');
+  if (resultOs) resultOs.textContent = `OS: ${osDetected || 'N/A'}`;
+  const resultCountry = document.getElementById('result-country');
+  if (resultCountry) resultCountry.textContent = `Country: ${data.country || whois.country || 'N/A'}`;
+  const resultIsp = document.getElementById('result-isp');
+  if (resultIsp) resultIsp.textContent = `ISP: ${data.isp || whois.isp || 'N/A'}`;
+  const resultFirewall = document.getElementById('result-firewall');
+  if (resultFirewall) resultFirewall.textContent = `Firewall: ${data.firewall ? 'Detected' : 'N/A'}`;
   if (els.resultStarted) {
     els.resultStarted.textContent = `Started: ${data.scan_started_at ? new Date(data.scan_started_at).toLocaleString() : 'N/A'}`;
   }
@@ -1246,6 +1298,10 @@ function renderAll(data) {
   if (els.cveSummary) {
     const c = collectCves({ ...data, cve: cves });
     els.cveSummary.textContent = `CVE total: ${c.total} | Critical: ${c.critical}`;
+    const cveTotal = document.getElementById('result-cve-total');
+    if (cveTotal) cveTotal.textContent = String(c.total);
+    const cveCritical = document.getElementById('result-cve-critical');
+    if (cveCritical) cveCritical.textContent = String(c.critical);
   }
   if (els.subdomainsList) {
     els.subdomainsList.innerHTML = '';
@@ -1317,6 +1373,10 @@ async function loadLatestReport(target) {
   }
 }
 
+async function loadLatestResults(target) {
+  await loadLatestReport(target || (els.targetInput?.value || '').trim());
+}
+
 async function deleteLatestReport(target) {
   try {
     const res = await fetch(`${API}/api/reports`);
@@ -1326,7 +1386,7 @@ async function deleteLatestReport(target) {
     if (picked) {
       await fetch(`${API}/api/reports/${picked.filename}`, { method: 'DELETE' });
       toast('Отчёт удалён');
-      fetchHistory();
+      loadHistory();
     } else {
       toast('Файл отчёта не найден');
     }
@@ -1336,7 +1396,7 @@ async function deleteLatestReport(target) {
 }
 
 // History
-async function fetchHistory() {
+async function loadHistory() {
   try {
     const res = await fetch(`${API}/api/history`);
     if (!res.ok) throw new Error('history fetch failed');
@@ -2055,7 +2115,15 @@ setInterval(() => {
 
 // Events
 document.querySelectorAll('.tab').forEach(btn => {
-  btn.addEventListener('click', () => { switchTab(btn.dataset.tab); sound.tabClick(); });
+  btn.addEventListener('click', () => {
+    switchTab(btn.dataset.tab);
+    sound.tabClick();
+    if (btn.dataset.tab === 'results') {
+      setTimeout(() => {
+        if (map) map.invalidateSize();
+      }, 200);
+    }
+  });
 });
 
 els.scanBtn?.addEventListener('click', () => startScan({}));
@@ -2124,11 +2192,19 @@ document.getElementById('setupBannerCopy')?.addEventListener('click', () => {
 });
 
 // Init
-document.querySelectorAll('.panel').forEach((p, i) => setTimeout(() => p.classList.add('reveal'), i * 120));
-buildModuleCards();
-healthCheck();
-connectSocket();
-fetchHistory();
+function initApp() {
+  document.querySelectorAll('.panel').forEach((p, i) => setTimeout(() => p.classList.add('reveal'), i * 120));
+  buildModuleCards();
+  healthCheck();
+  connectSocket();
+  loadHistory();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
 
 // Lightning flashes
 setInterval(() => {

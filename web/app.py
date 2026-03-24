@@ -29,10 +29,23 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 #  App setup
 # ─────────────────────────────────────────────────────────────────────────────
 os.environ.setdefault("PYTHONUNBUFFERED", "1")
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
-PHANTOMSCAN = os.path.join(BASE_DIR, "..", "builds", "phantomscan")
-REPORTS_DIR = os.path.join(BASE_DIR, "..", "reports")
+WEB_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(WEB_DIR)
+PROJECT_ROOT = BASE_DIR
+PHANTOMSCAN = os.path.join(BASE_DIR, "builds", "phantomscan")
+REPORTS_DIR = os.path.join(BASE_DIR, "reports")
+LOGS_DIR = os.path.join(BASE_DIR, "logs")
+WEB_REPORTS_DIR = os.path.join(WEB_DIR, "reports")
+WEB_LOGS_DIR = os.path.join(WEB_DIR, "logs")
+# Ensure report/log directories exist regardless of current working directory.
+os.makedirs(REPORTS_DIR, exist_ok=True)
+os.makedirs(LOGS_DIR, exist_ok=True)
+os.makedirs(WEB_REPORTS_DIR, exist_ok=True)
+os.makedirs(WEB_LOGS_DIR, exist_ok=True)
+os.makedirs("reports", exist_ok=True)
+os.makedirs("logs", exist_ok=True)
+os.makedirs("../reports", exist_ok=True)
+os.makedirs("../logs", exist_ok=True)
 FULL_SCAN_TIMEOUT_SECONDS = 420
 SCORECARD_TIMEOUT_SECONDS = 300
 LOG_LIMIT = 500
@@ -151,22 +164,27 @@ def is_valid_target(target: str) -> bool:
     return bool(hostname)
 
 
-def find_latest_report(target: str, started_at: float) -> Optional[str]:
+def find_latest_report(target: str = "", started_at: Optional[float] = None) -> Optional[str]:
     os.makedirs(REPORTS_DIR, exist_ok=True)
-    candidates: list[str] = []
-    t = safe_target(target)
-    patterns = [
-        os.path.join(REPORTS_DIR, f"{t}_*.json"),
-        os.path.join(REPORTS_DIR, f"safe_{t}_*.json"),
-        os.path.join(REPORTS_DIR, "*.json"),
-    ]
-    for pat in patterns:
-        candidates.extend(glob.glob(pat))
-    if not candidates:
+    files = glob.glob(os.path.join(REPORTS_DIR, "*.json"))
+    if not files:
         return None
-    filtered = [p for p in candidates if os.path.getmtime(p) >= started_at]
-    pool = filtered or candidates
-    return max(pool, key=os.path.getmtime)
+    if target:
+        safe = safe_target(target)
+        target_u = str(target).replace(".", "_")
+        filtered = [
+            f for f in files
+            if safe in os.path.basename(f)
+            or str(target) in os.path.basename(f)
+            or target_u in os.path.basename(f)
+        ]
+        if filtered:
+            files = filtered
+    if started_at is not None:
+        filtered_by_time = [p for p in files if os.path.getmtime(p) >= started_at]
+        if filtered_by_time:
+            files = filtered_by_time
+    return max(files, key=os.path.getmtime)
 
 
 def parse_iso_datetime(raw: str) -> Optional[datetime]:
@@ -211,17 +229,47 @@ def normalize_report_payload(content: dict, path: Optional[str] = None) -> dict:
     if started_at_dt is None and mtime is not None:
         started_at_dt = datetime.fromtimestamp(max(0.0, mtime - max(scan_duration, 0.0)), tz=timezone.utc)
 
-    raw_ports = content.get("open_ports")
-    if not isinstance(raw_ports, list):
-        raw_ports = content.get("ports", [])
+    raw_ports = content.get("ports")
+    if raw_ports in (None, "", []):
+        raw_ports = content.get("open_ports")
+    if raw_ports in (None, "", []):
+        raw_ports = content.get("open_ports_list")
+
     open_ports = []
-    for row in raw_ports if isinstance(raw_ports, list) else []:
-        if not isinstance(row, dict):
+    raw_items: list = []
+    if isinstance(raw_ports, str):
+        raw_items = [ln.strip() for ln in raw_ports.splitlines() if ln.strip()]
+    elif isinstance(raw_ports, list):
+        raw_items = raw_ports
+
+    for row in raw_items:
+        if isinstance(row, int):
+            open_ports.append({"port": row, "service": "unknown", "version": ""})
             continue
-        port = row.get("port", "N/A")
-        service = row.get("service", "N/A")
-        version = row.get("version", row.get("banner", "N/A"))
-        open_ports.append({"port": port, "service": service, "version": version})
+        if isinstance(row, dict):
+            open_ports.append(
+                {
+                    "port": row.get("port") or row.get("number") or row.get("id") or 0,
+                    "service": row.get("service") or row.get("name") or row.get("proto") or "unknown",
+                    "version": row.get("version") or row.get("banner") or row.get("product") or "",
+                }
+            )
+            continue
+        if isinstance(row, str):
+            if "/" in row:
+                parts = row.split()
+                try:
+                    port_num = int(parts[0].split("/")[0]) if parts else 0
+                except (ValueError, TypeError):
+                    port_num = 0
+                service = parts[2] if len(parts) > 2 else "unknown"
+                version = " ".join(parts[3:]) if len(parts) > 3 else ""
+                open_ports.append({"port": port_num, "service": service, "version": version})
+            else:
+                try:
+                    open_ports.append({"port": int(row), "service": "unknown", "version": ""})
+                except (ValueError, TypeError):
+                    continue
 
     raw_cves = content.get("cve_list")
     if not isinstance(raw_cves, list):
@@ -619,7 +667,10 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root
             logging.warning("Failed to start %s: %s", cmd, exc)
 
     # slave_fd is now owned by the child; close our copy in the parent
-    os.close(slave_fd)
+    try:
+        os.close(slave_fd)
+    except OSError:
+        pass
 
     if not proc:
         os.close(master_fd)
@@ -732,6 +783,7 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root
                 try:
                     raw = os.read(master_fd, 4096)
                     if not raw:
+                        ws_emit("scan_complete", {"scan_id": scan_id, "status": "done"}, room=scan_id)
                         break
                     no_output_count = 0
                     text = line_buf + raw.decode("utf-8", errors="replace")
@@ -746,6 +798,7 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root
                     for line in lines:
                         _process_line(line)
                 except OSError:
+                    ws_emit("scan_complete", {"scan_id": scan_id, "status": "done"}, room=scan_id)
                     break
             else:
                 if proc_done:
@@ -840,7 +893,7 @@ def run_scorecard(target: str) -> dict:
 @app.route("/")
 def index():
     try:
-        return send_from_directory(".", "index.html")
+        return send_from_directory(WEB_DIR, "index.html")
     except OSError as exc:
         logging.error("Index serve error: %s", exc)
         return jsonify({"error": "index unavailable"}), 500
@@ -849,7 +902,7 @@ def index():
 @app.route("/<path:filename>")
 def static_files(filename):
     try:
-        return send_from_directory(".", filename)
+        return send_from_directory(WEB_DIR, filename)
     except OSError as exc:
         logging.error("Static serve error: %s", exc)
         return jsonify({"error": "static unavailable"}), 500
@@ -1013,6 +1066,9 @@ def history():
                     "ports": len(normalized.get("open_ports", [])),
                     "score": normalized.get("score"),
                     "grade": normalized.get("grade"),
+                    "file": os.path.basename(path),
+                    "date": normalized.get("scan_started_at")
+                    or datetime.fromtimestamp(os.path.getmtime(path), tz=timezone.utc).isoformat(),
                     "timestamp": normalized.get("scan_started_at")
                     or datetime.fromtimestamp(os.path.getmtime(path), tz=timezone.utc).isoformat(),
                 }
@@ -1020,54 +1076,25 @@ def history():
         combined = list(scan_history) + from_files
         combined.sort(key=lambda x: x.get("timestamp") or "", reverse=True)
         return jsonify(combined[:20])
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, TypeError) as exc:
         logging.error("history error: %s", exc)
-        return jsonify({"error": "history fetch failed"}), 500
+        return jsonify([])
 
 
 @app.route("/api/results", methods=["GET"])
 def latest_results():
     try:
-        os.makedirs(REPORTS_DIR, exist_ok=True)
         target = sanitize_input(request.args.get("target") or "")
-        files = glob.glob(os.path.join(REPORTS_DIR, "*.json"))
-        if not files:
-            return (
-                jsonify(
-                    {
-                        "error": "No report files found",
-                        "target": target or "N/A",
-                        "open_ports": [],
-                        "subdomains": [],
-                        "cve_list": [],
-                    }
-                ),
-                404,
-            )
-
-        candidates = files
-        if target:
-            safe = safe_target(target)
-            candidates = [f for f in files if safe in os.path.basename(f)] or files
-
-        def sort_key(path: str) -> float:
-            payload = load_report_file(path) or {}
-            started = payload.get("scan_started_at")
-            dt = parse_iso_datetime(started) if isinstance(started, str) else None
-            if dt:
-                return dt.timestamp()
-            if isinstance(started, (int, float)):
-                return float(started)
-            return os.path.getmtime(path)
-
-        latest = max(candidates, key=sort_key)
+        latest = find_latest_report(target=target)
+        if not latest:
+            return jsonify({"error": "No report found"}), 404
         report = load_report_file(latest)
         if not report:
-            return jsonify({"error": "Failed to parse latest report", "open_ports": [], "subdomains": [], "cve_list": []}), 500
+            return jsonify({"error": "Failed to parse latest report"}), 500
         return jsonify(normalize_report_payload(report, latest))
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, TypeError) as exc:
         logging.error("latest_results error: %s", exc)
-        return jsonify({"error": "Failed to fetch latest results", "open_ports": [], "subdomains": [], "cve_list": []}), 500
+        return jsonify({"error": str(exc)}), 500
 
 
 @app.route("/api/compare", methods=["POST"])
