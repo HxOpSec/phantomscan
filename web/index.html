@@ -7,8 +7,10 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a0816'/><text y='24' x='4' font-size='22' font-family='monospace' fill='%237b2fff'>👻</text></svg>">
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.socket.io/4.7.4/socket.io.min.js" defer crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer crossorigin="anonymous"></script>
   <script src="app.js" defer></script>
 </head>
 <body>
@@ -176,10 +178,12 @@
         <div class="panel-head">
           <span>SCAN RESULTS</span>
           <span class="small" id="resultTarget">—</span>
+          <span class="small" id="result-target" style="display:none">—</span>
         </div>
         <div class="result-grid">
           <div class="card soft">
             <div class="map-wrap">
+              <div id="map-container"></div>
               <div class="map-glow"></div>
               <div class="map-target" id="mapTarget"></div>
               <div class="map-lines"></div>
@@ -193,29 +197,43 @@
           <div class="card soft">
             <div class="mini-stats">
               <div class="mini" id="resultIp">IP: —</div>
+              <div class="mini" id="result-ip" style="display:none">IP: —</div>
               <div class="mini" id="osInfo">OS: —</div>
+              <div class="mini" id="result-os" style="display:none">OS: —</div>
               <div class="mini" id="countryInfo">Country: —</div>
+              <div class="mini" id="result-country" style="display:none">Country: —</div>
               <div class="mini" id="ispInfo">ISP: —</div>
+              <div class="mini" id="result-isp" style="display:none">ISP: —</div>
               <div class="mini" id="fwInfo">Firewall: —</div>
+              <div class="mini" id="result-firewall" style="display:none">Firewall: —</div>
               <div class="mini" id="resultStarted">Started: —</div>
+              <div class="mini" id="result-started" style="display:none">Started: —</div>
               <div class="mini" id="resultDuration">Duration: —</div>
+              <div class="mini" id="result-duration" style="display:none">Duration: —</div>
             </div>
             <div class="cve-chip" id="cveSummary">CVE: —</div>
+            <div style="display:none">
+              <span id="result-cve-total">0</span>
+              <span id="result-cve-critical">0</span>
+            </div>
           </div>
         </div>
         <div class="result-grid result-lists">
           <div class="card soft">
             <div class="panel-head"><span>SUBDOMAINS</span></div>
             <ul id="subdomainsList" class="result-list"></ul>
+            <ul id="subdomains-list" class="result-list" style="display:none"></ul>
           </div>
           <div class="card soft">
             <div class="panel-head"><span>WHOIS</span></div>
             <div id="whoisInfo" class="whois-box"></div>
+            <div id="whois-info" class="whois-box" style="display:none"></div>
           </div>
         </div>
         <div class="card soft">
           <div class="panel-head"><span>CVE LIST</span></div>
           <ul id="cveList" class="result-list"></ul>
+          <ul id="cve-list" class="result-list" style="display:none"></ul>
         </div>
         <div class="table-wrap">
           <div class="panel-head">
@@ -227,6 +245,7 @@
               <tr><th>#</th><th>Port</th><th>Service</th><th>Version</th><th>Status</th></tr>
             </thead>
             <tbody id="portsBody"></tbody>
+            <tbody id="ports-table-body" style="display:none"></tbody>
           </table>
         </div>
       </div>
@@ -284,6 +303,7 @@
           <span class="small">Tap card to load</span>
         </div>
         <div class="history-grid" id="historyGrid"></div>
+        <div id="history-list" style="display:none"></div>
       </div>
     </section>
 
