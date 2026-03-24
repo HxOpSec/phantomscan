@@ -1,7 +1,6 @@
 #include "utils/colors.h"
 #include "core/scanner.h"
 #include "modules/service_detect.h"
-#include <algorithm>
 #include <deque>
 #include <future>
 #include <iostream>
@@ -9,6 +8,7 @@
 #include <optional>
 #include <thread>
 #include <unordered_map>
+#include <algorithm>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
