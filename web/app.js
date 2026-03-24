@@ -364,6 +364,12 @@ const els = {
   fwInfo: document.getElementById('fwInfo'),
   cveSummary: document.getElementById('cveSummary'),
   portsBody: document.getElementById('portsBody'),
+  subdomainsList: document.getElementById('subdomainsList'),
+  whoisInfo: document.getElementById('whoisInfo'),
+  cveList: document.getElementById('cveList'),
+  resultIp: document.getElementById('resultIp'),
+  resultStarted: document.getElementById('resultStarted'),
+  resultDuration: document.getElementById('resultDuration'),
   ring: document.getElementById('ringFg'),
   ringGrade: document.getElementById('ringGrade'),
   ringScore: document.getElementById('ringScore'),
@@ -396,6 +402,7 @@ const els = {
 
 let socket = null;
 let reconnectTimer = null;
+let reconnecting = false;
 let pollTimer = null;
 let elapsedTimer = null;
 let silentTimer = null;
@@ -913,6 +920,7 @@ function connectSocket() {
     setStatus(false, 'Socket.IO unavailable');
     return;
   }
+  reconnecting = false;
   if (socket) socket.disconnect();
   socket = io({ transports: ['polling', 'websocket'], reconnection: true, reconnectionAttempts: 10, reconnectionDelay: 1500 });
 
@@ -922,6 +930,7 @@ function connectSocket() {
   socket.on('connect', () => {
     console.log('[socket] connect');
     setStatus(true, 'API ONLINE');
+    reconnecting = false;
     if (currentScanId) socket.emit('join_scan', { scan_id: currentScanId });
   });
   socket.on('connect_error', err => {
@@ -933,7 +942,10 @@ function connectSocket() {
     console.log('[socket] disconnect');
     setStatus(false, 'API OFFLINE');
     if (reconnectTimer) clearTimeout(reconnectTimer);
-    reconnectTimer = setTimeout(connectSocket, 2000);
+    if (!reconnecting) {
+      reconnecting = true;
+      reconnectTimer = setTimeout(connectSocket, 2000);
+    }
   });
   socket.on('log_line', payload => {
     console.log('[socket] log_line', payload);
@@ -966,7 +978,12 @@ function connectSocket() {
     console.log('[socket] scan_complete', payload);
     if (!payload || payload.scan_id !== currentScanId) return;
     lastSocketEvent = Date.now();
-    finalizeScan(payload.result, payload.stats);
+    const target = payload?.result?.target || payload?.result?.ip || '';
+    if (target) {
+      loadLatestReport(target).finally(() => finalizeScan(payload.result, payload.stats));
+    } else {
+      finalizeScan(payload.result, payload.stats);
+    }
   });
   socket.on('scan_cancelled', payload => {
     if (!payload || payload.scan_id !== currentScanId) return;
@@ -1083,7 +1100,7 @@ function renderStats(data) {
 function renderPorts(ports) {
   if (!els.portsBody) return;
   const body = els.portsBody;
-  if (!ports.length) {
+  if (!Array.isArray(ports) || !ports.length) {
     body.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">Нет открытых портов</td></tr>';
     return;
   }
@@ -1091,7 +1108,7 @@ function renderPorts(ports) {
   ports.forEach((p, idx) => {
     const tr = document.createElement('tr');
     tr.className = 'port-row';
-    const cells = [idx + 1, p.port, p.service || '—', p.version || '—', 'OPEN'];
+    const cells = [idx + 1, p?.port ?? 'N/A', p?.service ?? 'N/A', p?.version ?? 'N/A', 'OPEN'];
     cells.forEach((c, i) => {
       const td = document.createElement('td');
       td.textContent = c;
@@ -1105,10 +1122,12 @@ function renderPorts(ports) {
 
 function renderMap(data) {
   if (!els.mapInfo || !els.mapTarget) return;
+  const ip = data?.ip || 'N/A';
   const info = [
-    ['Target', data.ip || data.target || '—'],
-    ['Country', data.country || data.city || '—'],
-    ['ISP', data.isp || '—'],
+    ['Target', data?.target || 'N/A'],
+    ['IP', ip],
+    ['Country', data?.country || data?.whois?.country || 'N/A'],
+    ['ISP', data?.isp || data?.whois?.isp || 'N/A'],
   ];
   els.mapInfo.innerHTML = '';
   info.forEach(([k, v]) => {
@@ -1200,37 +1219,100 @@ function renderScorecard(data) {
 
 function renderAll(data) {
   if (!data) return;
+  const ports = Array.isArray(data.open_ports) ? data.open_ports : (Array.isArray(data.ports) ? data.ports : []);
+  const subdomains = Array.isArray(data.subdomains) ? data.subdomains : [];
+  const cves = Array.isArray(data.cve_list) ? data.cve_list : (Array.isArray(data.cve) ? data.cve : []);
+  const whois = (data.whois && typeof data.whois === 'object') ? data.whois : {};
+  const osDetected = data.os_detection || data.os || 'N/A';
+  const ip = data.ip || 'N/A';
+
   renderStats(data);
-  renderPorts(data.ports || []);
+  renderPorts(ports);
   renderMap(data);
   renderScorecard(data);
-  if (els.resultTarget) els.resultTarget.textContent = data.target || data.ip || '—';
-  if (els.osInfo) els.osInfo.textContent = `OS: ${data.os || '—'}`;
-  if (els.countryInfo) els.countryInfo.textContent = `Country: ${data.country || '—'}`;
-  if (els.ispInfo) els.ispInfo.textContent = `ISP: ${data.isp || '—'}`;
-  if (els.fwInfo) els.fwInfo.textContent = `Firewall: ${data.firewall ? 'Detected' : '—'}`;
+  if (els.resultTarget) els.resultTarget.textContent = data.target || 'N/A';
+  if (els.resultIp) els.resultIp.textContent = `IP: ${ip}`;
+  if (els.osInfo) els.osInfo.textContent = `OS: ${osDetected}`;
+  if (els.countryInfo) els.countryInfo.textContent = `Country: ${data.country || whois.country || 'N/A'}`;
+  if (els.ispInfo) els.ispInfo.textContent = `ISP: ${data.isp || whois.isp || 'N/A'}`;
+  if (els.fwInfo) els.fwInfo.textContent = `Firewall: ${data.firewall ? 'Detected' : 'N/A'}`;
+  if (els.resultStarted) {
+    els.resultStarted.textContent = `Started: ${data.scan_started_at ? new Date(data.scan_started_at).toLocaleString() : 'N/A'}`;
+  }
+  if (els.resultDuration) {
+    const dur = Number(data.scan_duration);
+    els.resultDuration.textContent = `Duration: ${Number.isFinite(dur) && dur > 0 ? `${dur.toFixed(1)}s` : 'N/A'}`;
+  }
   if (els.cveSummary) {
-    const c = collectCves(data);
+    const c = collectCves({ ...data, cve: cves });
     els.cveSummary.textContent = `CVE total: ${c.total} | Critical: ${c.critical}`;
+  }
+  if (els.subdomainsList) {
+    els.subdomainsList.innerHTML = '';
+    if (!subdomains.length) {
+      const li = document.createElement('li');
+      li.textContent = 'N/A';
+      els.subdomainsList.appendChild(li);
+    } else {
+      subdomains.forEach((sub) => {
+        const li = document.createElement('li');
+        const label = document.createElement('span');
+        label.textContent = sub || 'N/A';
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'mini-copy';
+        copyBtn.textContent = 'COPY';
+        copyBtn.addEventListener('click', () => {
+          navigator.clipboard?.writeText(sub || '').then(() => toast('Subdomain copied')).catch(() => toast('Failed to copy subdomain: clipboard access denied'));
+        });
+        li.appendChild(label);
+        li.appendChild(copyBtn);
+        els.subdomainsList.appendChild(li);
+      });
+    }
+  }
+  if (els.whoisInfo) {
+    const entries = [
+      ['Country', whois.country || data.country || 'N/A'],
+      ['City', whois.city || data.city || 'N/A'],
+      ['ISP', whois.isp || data.isp || 'N/A'],
+      ['Registrar', whois.registrar || 'N/A'],
+    ];
+    els.whoisInfo.innerHTML = '';
+    entries.forEach(([k, v]) => {
+      const line = document.createElement('div');
+      line.textContent = `${k}: ${v || 'N/A'}`;
+      els.whoisInfo.appendChild(line);
+    });
+  }
+  if (els.cveList) {
+    els.cveList.innerHTML = '';
+    if (!cves.length) {
+      const li = document.createElement('li');
+      li.textContent = 'N/A';
+      els.cveList.appendChild(li);
+    } else {
+      cves.forEach((c) => {
+        const li = document.createElement('li');
+        const sev = c?.severity || 'N/A';
+        li.textContent = `${c?.id || 'N/A'} (${sev})`;
+        els.cveList.appendChild(li);
+      });
+    }
   }
 }
 
 async function loadLatestReport(target) {
   try {
-    const res = await fetch(`${API}/api/reports`);
-    const files = await res.json();
-    const safe = safeName(target);
-    const picked = (files || []).find(f => f.filename.includes(safe));
-    if (picked) {
-      const r = await fetch(`${API}/api/reports/${picked.filename}`);
-      const data = await r.json();
-      renderAll(data);
-      toast(`Загружен отчёт: ${target}`);
-      switchTab('results');
-    } else {
-      toast('Нет отчётов для цели');
-    }
+    const qs = target ? `?target=${encodeURIComponent(target)}` : '';
+    const r = await fetch(`${API}/api/results${qs}`);
+    const data = await r.json();
+    if (!r.ok || data?.error) throw new Error(data?.error || 'Нет отчётов для цели');
+    renderAll(data);
+    toast(`Загружен отчёт: ${target || data?.target || ''}`);
+    switchTab('results');
   } catch (e) {
+    toast(e?.message || 'Ошибка загрузки отчёта');
     if (DEBUG) console.warn('loadLatestReport', e);
   }
 }
@@ -1257,6 +1339,7 @@ async function deleteLatestReport(target) {
 async function fetchHistory() {
   try {
     const res = await fetch(`${API}/api/history`);
+    if (!res.ok) throw new Error('history fetch failed');
     const rows = await res.json();
     if (!Array.isArray(rows) || !els.historyGrid) return;
     els.historyGrid.innerHTML = '';
@@ -1290,13 +1373,14 @@ async function fetchHistory() {
       card.addEventListener('click', () => {
         if (row.target) loadLatestReport(row.target);
       });
-      card.querySelector('.mini-del').addEventListener('click', e => {
+      card.querySelector('.mini-del')?.addEventListener('click', e => {
         e.stopPropagation();
         if (row.target) deleteLatestReport(row.target);
       });
       els.historyGrid.appendChild(card);
     });
   } catch (e) {
+    toast('Ошибка загрузки истории');
     if (DEBUG) console.warn('history error', e);
   }
 }
@@ -1335,11 +1419,13 @@ async function compareTargets() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ target_a: a, target_b: b }),
     });
+    if (!res.ok) throw new Error('compare failed');
     const data = await res.json();
+    if (data?.error) throw new Error(data.error);
     renderCompare(data?.a, data?.b);
     toast('Сравнение завершено');
   } catch (e) {
-    toast('Ошибка сравнения');
+    toast(e?.message || 'Ошибка сравнения');
   } finally {
     els.compareBtn?.removeAttribute('disabled');
   }
@@ -1549,95 +1635,75 @@ function flashCritical() {
 
 // ─── Deep Space Modal ────────────────────────────────────────────────────────
 class SpaceScene {
+  static MOBILE_BREAKPOINT = 768;
+  static MOBILE_STAR_COUNT = 750;
+  static DESKTOP_STAR_COUNT = 2200;
+
+  static alphaToHex(alpha) {
+    return Math.round(Math.max(0, Math.min(1, alpha)) * 255).toString(16).padStart(2, '0');
+  }
+
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.animId = null;
-    this.stars = [];
     this.diskAngle = 0;
     this.galaxyAngle = 0;
-    this.hwParticles = [];
-    this.explodeParticles = [];
+    this.mouse = { x: 0, y: 0 };
     this.soundOn = false;
     this.ambienceNode = null;
-
-    // 10-comet pool
+    this.blackHoleRadius = 120;
     this.comets = [];
-    for (let i = 0; i < 10; i++) this.comets.push(this._makeComet(true));
-
-    this.resize();
-    this.initStars();
-
-    this.canvas.addEventListener('click', e => this._explode(e.offsetX, e.offsetY));
-  }
-
-  _makeComet(offscreen = false) {
-    const W = this.W || window.innerWidth;
-    const H = this.H || window.innerHeight;
-    return {
-      active: !offscreen,
-      x: offscreen ? -200 : -20,
-      y: offscreen ? -200 : Math.random() * H * 0.4,
-      vx: 9 + Math.random() * 7,
-      vy: 2 + Math.random() * 3,
-      life: offscreen ? 0 : 1,
-      len: 80 + Math.random() * 60,
-      nextSpawn: Date.now() + Math.random() * 8000,
+    this._onResize = () => this.resize();
+    this._onMouseMove = (e) => {
+      const nx = (e.clientX / Math.max(1, this.W)) - 0.5;
+      const ny = (e.clientY / Math.max(1, this.H)) - 0.5;
+      this.mouse.x = nx * 40;
+      this.mouse.y = ny * 40;
     };
+    this.resize();
+    this.initScene();
+    window.addEventListener('resize', this._onResize);
+    window.addEventListener('mousemove', this._onMouseMove);
   }
 
   resize() {
     this.W = this.canvas.width = this.canvas.offsetWidth || window.innerWidth;
     this.H = this.canvas.height = this.canvas.offsetHeight || window.innerHeight;
-    this.bhX = this.W * 0.5;
-    this.bhY = this.H * 0.45;
-    this.galX = this.W * 0.75;
-    this.galY = this.H * 0.40;
+    this.bhX = this.W * 0.42;
+    this.bhY = this.H * 0.5;
+    this.galX = this.W * 0.56;
+    this.galY = this.H * 0.52;
   }
 
-  initStars() {
-    this.stars = [];
-    const n = Math.min(350, Math.floor(this.W * this.H / 7000));
-    for (let i = 0; i < n; i++) {
-      this.stars.push({
-        x: Math.random() * this.W,
-        y: Math.random() * this.H,
-        r: Math.random() * 1.5 + 0.3,
-        twinkleSpeed: Math.random() * 0.025 + 0.005,
-        twinklePhase: Math.random() * Math.PI * 2,
-        baseBrightness: Math.random() * 0.6 + 0.4,
-        vx: (Math.random() - 0.5) * 0.02,
-        vy: (Math.random() - 0.5) * 0.02,
-      });
-    }
-  }
-
-  spawnHawking() {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 0.6 + Math.random() * 1.8;
-    this.hwParticles.push({
-      x: this.bhX + Math.cos(angle) * 75,
-      y: this.bhY + Math.sin(angle) * 75,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      life: 1,
-      r: Math.random() * 1.5 + 0.5,
+  initScene() {
+    this.starCount = this.W < SpaceScene.MOBILE_BREAKPOINT
+      ? SpaceScene.MOBILE_STAR_COUNT
+      : SpaceScene.DESKTOP_STAR_COUNT;
+    this.bgStars = Array.from({ length: this.starCount }, () => {
+      const p = Math.random();
+      let r = 0.5;
+      let a = 0.35;
+      if (p > 0.9) { r = 1.5 + Math.random() * 0.5; a = 0.65; }
+      else if (p > 0.7) { r = 1; a = 0.5; }
+      const tint = p > 0.9
+        ? ['rgba(180,210,255,', 'rgba(255,220,160,', 'rgba(255,170,170,'][Math.floor(Math.random() * 3)]
+        : 'rgba(230,240,255,';
+      return { x: Math.random() * this.W, y: Math.random() * this.H, r, a, tint };
     });
-  }
-
-  _explode(cx, cy) {
-    for (let i = 0; i < 40; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 1 + Math.random() * 5;
-      this.explodeParticles.push({
-        x: cx, y: cy,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: 1,
-        r: Math.random() * 3 + 1,
-        color: `hsl(${Math.floor(Math.random() * 60 + 260)},100%,70%)`,
-      });
-    }
+    this.distantSmudges = Array.from({ length: 4 }, () => ({
+      x: Math.random() * this.W,
+      y: Math.random() * this.H,
+      rx: 20 + Math.random() * 60,
+      ry: 6 + Math.random() * 14,
+      alpha: 0.03 + Math.random() * 0.03,
+      rot: Math.random() * Math.PI,
+    }));
+    this.galaxyStars = this.buildGalaxyStars();
+    this.clusters = this.buildClusters();
+    this.nebula = this.buildNebula();
+    this.comets = Array.from({ length: 8 }, (_, i) => this.spawnComet(i));
+    this.buildOffscreen();
   }
 
   toggleSound(sc) {
@@ -1661,189 +1727,274 @@ class SpaceScene {
     }
   }
 
-  _drawGalaxy(ctx) {
-    const { galX, galY, galaxyAngle } = this;
-    ctx.save();
-    ctx.translate(galX, galY);
-    ctx.rotate(galaxyAngle);
-
-    // Core glow
-    const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 28);
-    coreGrad.addColorStop(0, 'rgba(255,240,200,0.35)');
-    coreGrad.addColorStop(0.5, 'rgba(180,100,255,0.12)');
-    coreGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = coreGrad;
-    ctx.beginPath(); ctx.arc(0, 0, 28, 0, Math.PI * 2); ctx.fill();
-
-    // Spiral arms
-    for (let arm = 0; arm < 2; arm++) {
-      const armOff = arm * Math.PI;
-      ctx.beginPath();
-      for (let t = 0; t <= 1; t += 0.01) {
-        const r = t * 90;
-        const theta = armOff + t * Math.PI * 3;
-        const x = r * Math.cos(theta);
-        const y = r * Math.sin(theta) * 0.45;
-        if (t === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  buildGalaxyStars() {
+    const armCount = 4;
+    const starsPerArm = this.W < 768 ? 500 : 900;
+    const b = 0.25;
+    const a = 9;
+    const size = this.W * 0.35;
+    const out = [];
+    for (let arm = 0; arm < armCount; arm++) {
+      const armOffset = arm * (Math.PI / 2);
+      for (let i = 0; i < starsPerArm; i++) {
+        const theta = (i / starsPerArm) * Math.PI * 4 + (Math.random() - 0.5) * 0.25;
+        const r = Math.min(size, a * Math.exp(b * theta));
+        const x = r * Math.cos(theta + armOffset) + (Math.random() - 0.5) * 7;
+        const y = r * Math.sin(theta + armOffset) + (Math.random() - 0.5) * 7;
+        const centerFactor = Math.max(0, 1 - (r / size));
+        const radius = 0.4 + centerFactor * 1.2 + Math.random() * 0.8;
+        const alpha = 0.22 + centerFactor * 0.6;
+        const color = centerFactor > 0.6
+          ? `rgba(255,245,210,${alpha})`
+          : (Math.random() > 0.55 ? `rgba(185,220,255,${alpha * 0.75})` : `rgba(255,185,170,${alpha * 0.65})`);
+        out.push({ x, y, r: radius, color });
       }
-      ctx.strokeStyle = `rgba(180,100,255,0.12)`;
-      ctx.lineWidth = 6;
-      ctx.stroke();
-      ctx.strokeStyle = `rgba(100,180,255,0.08)`;
-      ctx.lineWidth = 2;
-      ctx.stroke();
     }
-
-    ctx.restore();
-    this.galaxyAngle += 0.0002;
+    return out;
   }
 
-  draw() {
-    const { ctx, W, H, bhX, bhY } = this;
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, W, H);
+  buildClusters() {
+    const n = 5 + Math.floor(Math.random() * 4);
+    return Array.from({ length: n }, () => ({
+      x: (Math.random() - 0.5) * this.W * 0.4,
+      y: (Math.random() - 0.5) * this.H * 0.16,
+      stars: 20 + Math.floor(Math.random() * 20),
+    }));
+  }
 
-    // Nebula
-    const g1 = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.6);
-    g1.addColorStop(0, 'rgba(60,0,120,0.14)');
-    g1.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = g1; ctx.fillRect(0, 0, W, H);
-    const g2 = ctx.createRadialGradient(W, H, 0, W, H, W * 0.5);
-    g2.addColorStop(0, 'rgba(0,30,80,0.1)');
-    g2.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+  buildNebula() {
+    const colors = ['#7b2fff', '#00d4ff', '#0033ff'];
+    const n = 4 + Math.floor(Math.random() * 3);
+    return Array.from({ length: n }, () => ({
+      x: (Math.random() - 0.5) * this.W * 0.7,
+      y: (Math.random() - 0.5) * this.H * 0.24,
+      r: 45 + Math.random() * 90,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      alpha: 0.08 + Math.random() * 0.07,
+    }));
+  }
 
-    // Galaxy
-    this._drawGalaxy(ctx);
+  spawnComet(i = 0) {
+    const side = Math.floor(Math.random() * 4);
+    const speed = 2.8 + Math.random() * 3.2;
+    const angle = Math.random() * Math.PI * 2;
+    const behindGalaxy = i % 2 === 0;
+    let x = 0; let y = 0;
+    if (side === 0) { x = -80; y = Math.random() * this.H; }
+    if (side === 1) { x = this.W + 80; y = Math.random() * this.H; }
+    if (side === 2) { x = Math.random() * this.W; y = -80; }
+    if (side === 3) { x = Math.random() * this.W; y = this.H + 80; }
+    return {
+      x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+      len: 50 + Math.random() * 100, alpha: 0.65, flicker: Math.random() * Math.PI * 2,
+      behindGalaxy, life: 1,
+    };
+  }
 
-    // Stars with gravitational lensing
-    this.stars.forEach(s => {
-      s.twinklePhase += s.twinkleSpeed;
-      const brightness = s.baseBrightness * (0.6 + 0.4 * Math.sin(s.twinklePhase));
-      const dx = bhX - s.x, dy = bhY - s.y;
-      const dist = Math.hypot(dx, dy) || 1;
-      // Gravitational lensing: pull stars near BH
-      if (dist < 220) {
-        const pull = (220 - dist) / 220 * 0.06;
-        s.x += (dx / dist) * pull;
-        s.y += (dy / dist) * pull;
-      }
-      s.x += s.vx; s.y += s.vy;
-      if (s.x < 0) s.x = W; if (s.x > W) s.x = 0;
-      if (s.y < 0) s.y = H; if (s.y > H) s.y = 0;
-      if (Math.hypot(bhX - s.x, bhY - s.y) < 72) return;
+  buildOffscreen() {
+    this.staticCanvas = document.createElement('canvas');
+    this.staticCanvas.width = this.W;
+    this.staticCanvas.height = this.H;
+    const sctx = this.staticCanvas.getContext('2d');
+    sctx.fillStyle = '#000000';
+    sctx.fillRect(0, 0, this.W, this.H);
+    this.bgStars.forEach((s) => {
+      sctx.beginPath();
+      sctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      sctx.fillStyle = `${s.tint}${s.a})`;
+      sctx.fill();
+    });
+    this.distantSmudges.forEach((g) => {
+      sctx.save();
+      sctx.translate(g.x, g.y);
+      sctx.rotate(g.rot);
+      const grd = sctx.createRadialGradient(0, 0, 0, 0, 0, g.rx);
+      grd.addColorStop(0, `rgba(160,180,255,${g.alpha})`);
+      grd.addColorStop(1, 'rgba(0,0,0,0)');
+      sctx.fillStyle = grd;
+      sctx.scale(1, g.ry / g.rx);
+      sctx.beginPath();
+      sctx.arc(0, 0, g.rx, 0, Math.PI * 2);
+      sctx.fill();
+      sctx.restore();
+    });
+  }
+
+  drawGalaxyLayer(ctx) {
+    ctx.save();
+    ctx.translate(this.galX, this.galY);
+    ctx.rotate(this.galaxyAngle);
+    ctx.scale(1, 0.45);
+
+    this.nebula.forEach((n) => {
+      const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
+      grad.addColorStop(0, `${n.color}${SpaceScene.alphaToHex(n.alpha)}`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    this.galaxyStars.forEach((s) => {
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.7 * brightness})`;
+      ctx.fillStyle = s.color;
       ctx.fill();
     });
 
-    // Comets pool (10 slots)
-    const now = Date.now();
-    this.comets.forEach(c => {
-      if (!c.active) {
-        if (now >= c.nextSpawn) {
-          c.x = -20;
-          c.y = Math.random() * H * 0.4;
-          c.vx = 9 + Math.random() * 7;
-          c.vy = 2 + Math.random() * 3;
-          c.life = 1;
-          c.len = 80 + Math.random() * 60;
-          c.active = true;
-        }
-        return;
+    this.clusters.forEach((cluster) => {
+      for (let i = 0; i < cluster.stars; i++) {
+        const x = cluster.x + (Math.random() - 0.5) * 26;
+        const y = cluster.y + (Math.random() - 0.5) * 16;
+        ctx.beginPath();
+        ctx.arc(x, y, 0.5 + Math.random() * 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${0.45 + Math.random() * 0.4})`;
+        ctx.fill();
       }
-      const speed = Math.hypot(c.vx, c.vy) || 1;
+    });
+
+    for (let i = 0; i < 4; i++) {
       ctx.beginPath();
-      ctx.moveTo(c.x, c.y);
-      ctx.lineTo(c.x - (c.vx / speed) * c.len * c.life, c.y - (c.vy / speed) * c.len * c.life);
-      const grad = ctx.createLinearGradient(
-        c.x - (c.vx / speed) * c.len, c.y - (c.vy / speed) * c.len, c.x, c.y);
-      grad.addColorStop(0, 'rgba(255,255,255,0)');
-      grad.addColorStop(1, `rgba(200,180,255,${c.life * 0.9})`);
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = 1.5;
+      ctx.ellipse(0, 0, this.W * 0.08 + i * 25, this.W * 0.017 + i * 7, 0, (i * Math.PI) / 4, ((i + 1.8) * Math.PI) / 4);
+      ctx.strokeStyle = `rgba(0,0,0,${0.15 + i * 0.03})`;
+      ctx.lineWidth = 6;
       ctx.stroke();
-      c.x += c.vx; c.y += c.vy; c.life -= 0.012;
-      if (c.life <= 0 || c.x > W + 100) {
-        c.active = false;
-        c.nextSpawn = Date.now() + 2000 + Math.random() * 8000;
-      }
-    });
-
-    // Black hole shadow
-    const shadow = ctx.createRadialGradient(bhX, bhY, 66, bhX, bhY, 200);
-    shadow.addColorStop(0, 'rgba(0,0,0,0.97)');
-    shadow.addColorStop(0.35, 'rgba(0,0,10,0.6)');
-    shadow.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = shadow;
-    ctx.beginPath(); ctx.arc(bhX, bhY, 200, 0, Math.PI * 2); ctx.fill();
-
-    // Accretion disk (3 bright layers)
-    ctx.save();
-    ctx.translate(bhX, bhY);
-    ctx.rotate(this.diskAngle);
-    for (let layer = 0; layer < 3; layer++) {
-      const rx = 110 - layer * 14;
-      const ry = 22 - layer * 4;
-      const alpha = 0.55 - layer * 0.12;
-      const innerColor = layer === 0
-        ? `rgba(255,230,160,${alpha})`
-        : layer === 1 ? `rgba(255,140,60,${alpha * 0.8})` : `rgba(220,80,20,${alpha * 0.6})`;
-      const diskGrad = ctx.createRadialGradient(0, 0, rx * 0.25, 0, 0, rx);
-      diskGrad.addColorStop(0, innerColor);
-      diskGrad.addColorStop(0.7, `rgba(200,60,0,${alpha * 0.3})`);
-      diskGrad.addColorStop(1, 'rgba(180,40,0,0)');
-      ctx.beginPath();
-      ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
-      ctx.fillStyle = diskGrad;
-      ctx.fill();
     }
-    ctx.restore();
-    this.diskAngle += (Math.PI * 2) / (8 * 60);
 
-    // Event horizon ring
+    const core = ctx.createRadialGradient(0, 0, 0, 0, 0, 60);
+    core.addColorStop(0, 'rgba(255,255,255,0.95)');
+    core.addColorStop(0.35, 'rgba(255,240,180,0.7)');
+    core.addColorStop(0.65, 'rgba(255,170,80,0.35)');
+    core.addColorStop(1, 'rgba(255,120,40,0)');
+    ctx.fillStyle = core;
     ctx.beginPath();
-    ctx.arc(bhX, bhY, 73, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(180,100,255,0.7)';
-    ctx.lineWidth = 3;
-    ctx.shadowColor = 'rgba(150,50,255,1)';
-    ctx.shadowBlur = 24;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    // Black hole core (radius 70px)
-    ctx.beginPath();
-    ctx.arc(bhX, bhY, 70, 0, Math.PI * 2);
-    ctx.fillStyle = '#000000';
+    ctx.arc(0, 0, 60, 0, Math.PI * 2);
     ctx.fill();
 
-    // Hawking radiation
-    if (Math.random() < 0.1) this.spawnHawking();
-    for (let i = this.hwParticles.length - 1; i >= 0; i--) {
-      const p = this.hwParticles[i];
-      p.x += p.vx; p.y += p.vy; p.life -= 0.018;
-      if (p.life <= 0) { this.hwParticles.splice(i, 1); continue; }
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(200,150,255,${p.life * 0.7})`;
-      ctx.fill();
-    }
+    ctx.restore();
+    this.galaxyAngle += (Math.PI * 2) / (120 * 60);
+  }
 
-    // Click explosion particles
-    for (let i = this.explodeParticles.length - 1; i >= 0; i--) {
-      const p = this.explodeParticles[i];
-      p.x += p.vx; p.y += p.vy;
-      p.vx *= 0.96; p.vy *= 0.96;
-      p.life -= 0.022;
-      if (p.life <= 0) { this.explodeParticles.splice(i, 1); continue; }
+  drawComets(ctx, behindGalaxy = false) {
+    this.comets.forEach((c, idx) => {
+      if (c.behindGalaxy !== behindGalaxy) return;
+      c.x += c.vx;
+      c.y += c.vy;
+      c.life -= 0.0025;
+      c.flicker += 0.08;
+      const headAlpha = Math.max(0.2, c.alpha * (0.75 + 0.25 * Math.sin(c.flicker)));
+      const speed = Math.hypot(c.vx, c.vy) || 1;
+      const tailX = c.x - (c.vx / speed) * c.len;
+      const tailY = c.y - (c.vy / speed) * c.len;
+      const grad = ctx.createLinearGradient(tailX, tailY, c.x, c.y);
+      grad.addColorStop(0, 'rgba(123,47,255,0)');
+      grad.addColorStop(0.5, `rgba(0,212,255,${headAlpha * 0.35})`);
+      grad.addColorStop(1, `rgba(255,255,255,${headAlpha})`);
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
-      ctx.fillStyle = p.color.replace(')', `,${p.life})`).replace('hsl', 'hsla');
+      ctx.moveTo(c.x, c.y);
+      ctx.lineTo(tailX, tailY);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 1.5 + Math.random() * 1.2;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 1.8 + Math.random() * 1.2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${headAlpha})`;
       ctx.fill();
-    }
+      if (c.life <= 0 || c.x < -200 || c.x > this.W + 200 || c.y < -200 || c.y > this.H + 200) {
+        this.comets[idx] = this.spawnComet(idx);
+      }
+    });
+  }
 
-    this.animId = requestAnimationFrame(() => this.draw());
+  drawBlackHole(ctx, time) {
+    const x = this.bhX;
+    const y = this.bhY;
+    const halo = ctx.createRadialGradient(x, y, 30, x, y, this.blackHoleRadius + 40);
+    halo.addColorStop(0, 'rgba(0,0,0,0.95)');
+    halo.addColorStop(0.5, 'rgba(123,47,255,0.18)');
+    halo.addColorStop(0.8, 'rgba(0,212,255,0.12)');
+    halo.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(x, y, this.blackHoleRadius + 40, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate((20 * Math.PI) / 180);
+    ctx.scale(1, 0.56);
+    const diskShift = Math.sin(time * 0.0002) * 0.12;
+    const rings = [
+      { rx: 125, ry: 40, c0: `rgba(255,245,210,${0.85 + diskShift * 0.1})`, c1: 'rgba(255,210,80,0.4)', c2: 'rgba(255,170,60,0)' },
+      { rx: 148, ry: 48, c0: 'rgba(255,185,70,0.58)', c1: 'rgba(255,110,20,0.30)', c2: 'rgba(180,40,0,0)' },
+      { rx: 172, ry: 56, c0: 'rgba(200,55,25,0.42)', c1: 'rgba(140,30,20,0.18)', c2: 'rgba(80,0,0,0)' },
+    ];
+    rings.forEach((r, i) => {
+      const g = ctx.createRadialGradient(0, 0, r.rx * 0.15, 0, 0, r.rx);
+      g.addColorStop(0, r.c0);
+      g.addColorStop(0.55, r.c1);
+      g.addColorStop(1, r.c2);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r.rx, r.ry, this.diskAngle + i * 0.15, 0, Math.PI * 2);
+      ctx.fillStyle = g;
+      ctx.fill();
+    });
+    ctx.restore();
+    this.diskAngle += 0.002;
+
+    const shimmer = ctx.createRadialGradient(x, y, 24, x, y, this.blackHoleRadius + 20);
+    shimmer.addColorStop(0, 'rgba(0,212,255,0.22)');
+    shimmer.addColorStop(1, 'rgba(0,212,255,0)');
+    ctx.fillStyle = shimmer;
+    ctx.beginPath();
+    ctx.arc(x, y, this.blackHoleRadius + 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    const jetAlpha = 0.35 + Math.sin(time * 0.01) * 0.1;
+    const jetGradUp = ctx.createLinearGradient(x, y - 8, x, y - 260);
+    jetGradUp.addColorStop(0, `rgba(255,255,255,${jetAlpha})`);
+    jetGradUp.addColorStop(0.4, `rgba(0,212,255,${jetAlpha * 0.8})`);
+    jetGradUp.addColorStop(1, 'rgba(0,212,255,0)');
+    ctx.strokeStyle = jetGradUp;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y - 8);
+    ctx.lineTo(x + Math.sin(time * 0.001) * 2, y - 260);
+    ctx.stroke();
+
+    const jetGradDown = ctx.createLinearGradient(x, y + 8, x, y + 260);
+    jetGradDown.addColorStop(0, `rgba(255,255,255,${jetAlpha})`);
+    jetGradDown.addColorStop(0.4, `rgba(0,212,255,${jetAlpha * 0.8})`);
+    jetGradDown.addColorStop(1, 'rgba(0,212,255,0)');
+    ctx.strokeStyle = jetGradDown;
+    ctx.beginPath();
+    ctx.moveTo(x, y + 8);
+    ctx.lineTo(x + Math.sin(time * 0.0013) * 2, y + 260);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(x, y, 72, 0, Math.PI * 2);
+    ctx.fillStyle = '#000000';
+    ctx.fill();
+  }
+
+  draw(time = 0) {
+    const { ctx } = this;
+    ctx.clearRect(0, 0, this.W, this.H);
+    ctx.drawImage(this.staticCanvas, this.mouse.x * 0.3, this.mouse.y * 0.3);
+
+    const vignette = ctx.createRadialGradient(this.W / 2, this.H / 2, this.W * 0.25, this.W / 2, this.H / 2, this.W * 0.7);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.65)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, this.W, this.H);
+
+    this.drawComets(ctx, true);
+    this.drawGalaxyLayer(ctx);
+    this.drawComets(ctx, false);
+    this.drawBlackHole(ctx, time);
+    this.animId = requestAnimationFrame((ts) => this.draw(ts));
   }
 
   start() {
@@ -1852,6 +2003,8 @@ class SpaceScene {
 
   stop() {
     if (this.animId) { cancelAnimationFrame(this.animId); this.animId = null; }
+    window.removeEventListener('resize', this._onResize);
+    window.removeEventListener('mousemove', this._onMouseMove);
     if (this.ambienceNode) {
       try {
         this.ambienceNode.osc.stop();

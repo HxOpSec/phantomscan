@@ -5,6 +5,7 @@
 #  Open: http://localhost:5000
 # ─────────────────────────────────────────────────────────────────────────────
 
+import ipaddress
 import glob
 import json
 import logging
@@ -15,7 +16,6 @@ import select
 import subprocess
 import threading
 import time
-import ipaddress
 from collections import deque
 from datetime import datetime, timezone
 from typing import Dict, Optional, Tuple
@@ -169,11 +169,132 @@ def find_latest_report(target: str, started_at: float) -> Optional[str]:
     return max(pool, key=os.path.getmtime)
 
 
+def parse_iso_datetime(raw: str) -> Optional[datetime]:
+    try:
+        txt = str(raw).strip()
+        if txt.endswith("Z"):
+            txt = txt[:-1] + "+00:00"
+        dt = datetime.fromisoformat(txt)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except (ValueError, TypeError):
+        return None
+
+
+def normalize_report_payload(content: dict, path: Optional[str] = None) -> dict:
+    if not isinstance(content, dict):
+        content = {}
+    mtime = None
+    if path:
+        try:
+            mtime = os.path.getmtime(path)
+        except OSError:
+            mtime = None
+
+    duration_raw = content.get("scan_duration", content.get("scan_time", 0))
+    try:
+        scan_duration = float(duration_raw or 0)
+    except (TypeError, ValueError):
+        scan_duration = 0.0
+
+    started_raw = content.get("scan_started_at")
+    started_at_dt = None
+    if isinstance(started_raw, (int, float)):
+        try:
+            started_at_dt = datetime.fromtimestamp(float(started_raw), tz=timezone.utc)
+        except (OSError, OverflowError, ValueError):
+            started_at_dt = None
+    elif isinstance(started_raw, str):
+        started_at_dt = parse_iso_datetime(started_raw)
+
+    if started_at_dt is None and mtime is not None:
+        started_at_dt = datetime.fromtimestamp(max(0.0, mtime - max(scan_duration, 0.0)), tz=timezone.utc)
+
+    raw_ports = content.get("open_ports")
+    if not isinstance(raw_ports, list):
+        raw_ports = content.get("ports", [])
+    open_ports = []
+    for row in raw_ports if isinstance(raw_ports, list) else []:
+        if not isinstance(row, dict):
+            continue
+        port = row.get("port", "N/A")
+        service = row.get("service", "N/A")
+        version = row.get("version", row.get("banner", "N/A"))
+        open_ports.append({"port": port, "service": service, "version": version})
+
+    raw_cves = content.get("cve_list")
+    if not isinstance(raw_cves, list):
+        raw_cves = content.get("cve", [])
+    cve_list = []
+    for row in raw_cves if isinstance(raw_cves, list) else []:
+        if isinstance(row, dict):
+            cve_list.append(
+                {
+                    "id": row.get("id", row.get("cve_id", "N/A")),
+                    "severity": row.get("severity", "N/A"),
+                    "service": row.get("service", "N/A"),
+                    "description": row.get("description", ""),
+                }
+            )
+
+    whois_raw = content.get("whois")
+    whois_data = whois_raw if isinstance(whois_raw, dict) else {}
+    if not whois_data:
+        whois_data = {
+            "country": content.get("country", "N/A"),
+            "city": content.get("city", "N/A"),
+            "isp": content.get("isp", "N/A"),
+        }
+
+    subdomains = content.get("subdomains", [])
+    if not isinstance(subdomains, list):
+        subdomains = []
+    subdomains = [str(s) for s in subdomains if s is not None]
+
+    normalized = {
+        "target": content.get("target", "N/A"),
+        "ip": content.get("ip", content.get("resolved_ip", "N/A")),
+        "os_detection": content.get("os_detection", content.get("os", "N/A")),
+        "open_ports": open_ports,
+        "subdomains": subdomains,
+        "whois": whois_data,
+        "cve_list": cve_list,
+        "scan_started_at": started_at_dt.isoformat() if started_at_dt else None,
+        "scan_duration": scan_duration,
+        # Compatibility fields for existing frontend render paths
+        "ports": open_ports,
+        "os": content.get("os", content.get("os_detection", "N/A")),
+        "country": content.get("country", whois_data.get("country", "N/A")),
+        "city": content.get("city", whois_data.get("city", "N/A")),
+        "isp": content.get("isp", whois_data.get("isp", "N/A")),
+        "cve": cve_list,
+        "firewall": content.get("firewall", False),
+        "score": content.get("score", 0),
+        "grade": content.get("grade", ""),
+        "verdict": content.get("verdict", ""),
+        "dns": content.get("dns", {}),
+        "tls": content.get("tls", {}),
+        "http": content.get("http", {}),
+        "recommendations": content.get("recommendations", []),
+    }
+    return normalized
+
+
 def load_report_file(path: str) -> Optional[dict]:
     try:
-        with open(path, "r", encoding="utf-8") as fh:
+        with open(path, "r", encoding="utf-8", errors="replace") as fh:
             return json.load(fh)
-    except (OSError, json.JSONDecodeError) as exc:
+    except FileNotFoundError as exc:
+        logging.error("Report file not found %s: %s", path, exc)
+        return None
+    except json.JSONDecodeError as exc:
+        logging.error("Report JSON decode failed %s: %s", path, exc)
+        return None
+    except UnicodeDecodeError as exc:
+        logging.error("Report decode failed %s: %s", path, exc)
+        return None
+    except OSError as exc:
         logging.error("Failed to read report %s: %s", path, exc)
         return None
 
@@ -538,9 +659,11 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root
         delays = [0.5, 0.3] + [0.2] * max(0, len(input_seq) - 2)
         for text, delay in zip(input_seq, delays):
             try:
+                if proc.poll() is not None:
+                    break
                 os.write(master_fd, f"{text}\n".encode())
                 time.sleep(delay)
-            except OSError:
+            except (BrokenPipeError, ChildProcessError, OSError):
                 break
 
     input_thread = threading.Thread(target=write_inputs, daemon=True)
@@ -643,9 +766,11 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root
     report_file = find_latest_report(target, started_at=started_at)
     result = None
     if report_file:
-        result = load_report_file(report_file)
+        loaded = load_report_file(report_file)
+        if loaded:
+            result = normalize_report_payload(loaded, report_file)
     if not result:
-        result = parse_stdout_fallback("\n".join(captured_output), target)
+        result = normalize_report_payload(parse_stdout_fallback("\n".join(captured_output), target))
 
     scan["stats"] = {"ports": port_count, "cve": cve_count, "subdomains": sub_count, "score": score_value}
     scan["status"] = "done"
@@ -875,30 +1000,74 @@ def cancel_scan(scan_id: str):
 @app.route("/api/history", methods=["GET"])
 def history():
     try:
-        files = sorted(
-            glob.glob(os.path.join(REPORTS_DIR, "*.json")),
-            key=os.path.getmtime,
-            reverse=True,
-        )[:20]
+        files = sorted(glob.glob(os.path.join(REPORTS_DIR, "*.json")), key=os.path.getmtime, reverse=True)[:20]
         from_files = []
         for path in files:
             content = load_report_file(path)
             if not content:
                 continue
+            normalized = normalize_report_payload(content, path)
             from_files.append(
                 {
-                    "target": content.get("target"),
-                    "ports": len(content.get("ports", [])),
-                    "score": content.get("score"),
-                    "grade": content.get("grade"),
-                    "timestamp": datetime.fromtimestamp(os.path.getmtime(path), tz=timezone.utc).isoformat(),
+                    "target": normalized.get("target"),
+                    "ports": len(normalized.get("open_ports", [])),
+                    "score": normalized.get("score"),
+                    "grade": normalized.get("grade"),
+                    "timestamp": normalized.get("scan_started_at")
+                    or datetime.fromtimestamp(os.path.getmtime(path), tz=timezone.utc).isoformat(),
                 }
             )
         combined = list(scan_history) + from_files
+        combined.sort(key=lambda x: x.get("timestamp") or "", reverse=True)
         return jsonify(combined[:20])
     except (OSError, ValueError) as exc:
         logging.error("history error: %s", exc)
         return jsonify({"error": "history fetch failed"}), 500
+
+
+@app.route("/api/results", methods=["GET"])
+def latest_results():
+    try:
+        os.makedirs(REPORTS_DIR, exist_ok=True)
+        target = sanitize_input(request.args.get("target") or "")
+        files = glob.glob(os.path.join(REPORTS_DIR, "*.json"))
+        if not files:
+            return (
+                jsonify(
+                    {
+                        "error": "No report files found",
+                        "target": target or "N/A",
+                        "open_ports": [],
+                        "subdomains": [],
+                        "cve_list": [],
+                    }
+                ),
+                404,
+            )
+
+        candidates = files
+        if target:
+            safe = safe_target(target)
+            candidates = [f for f in files if safe in os.path.basename(f)] or files
+
+        def sort_key(path: str) -> float:
+            payload = load_report_file(path) or {}
+            started = payload.get("scan_started_at")
+            dt = parse_iso_datetime(started) if isinstance(started, str) else None
+            if dt:
+                return dt.timestamp()
+            if isinstance(started, (int, float)):
+                return float(started)
+            return os.path.getmtime(path)
+
+        latest = max(candidates, key=sort_key)
+        report = load_report_file(latest)
+        if not report:
+            return jsonify({"error": "Failed to parse latest report", "open_ports": [], "subdomains": [], "cve_list": []}), 500
+        return jsonify(normalize_report_payload(report, latest))
+    except (OSError, ValueError) as exc:
+        logging.error("latest_results error: %s", exc)
+        return jsonify({"error": "Failed to fetch latest results", "open_ports": [], "subdomains": [], "cve_list": []}), 500
 
 
 @app.route("/api/compare", methods=["POST"])
@@ -952,7 +1121,7 @@ def get_report(filename: str):
         content = load_report_file(fp)
         if content is None:
             return jsonify({"error": "Failed to read report"}), 500
-        return jsonify(content)
+        return jsonify(normalize_report_payload(content, fp))
     except (OSError, ValueError) as exc:
         logging.error("get_report error: %s", exc)
         return jsonify({"error": "Failed to fetch report"}), 500
