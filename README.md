@@ -76,16 +76,16 @@ across 6 security categories:
 
 PhantomScan/
 ├── src/
-│   ├── core/               # C++17 движок сканирования
-│   └── modules/            # 20 модулей
-├── include/                # Заголовочные файлы
+│   ├── core/           # C++17 движок сканирования
+│   └── modules/        # 20 модулей
+├── include/            # Заголовочные файлы
 ├── web/
-│   ├── app.py              # Flask API + WebSocket сервер
-│   ├── app.js              # Логика фронтенда
-│   ├── index.html          # Интерфейс панели управления
-│   └── style.css           # Стили Shadow Monarch
-├── report/                 # TXT / JSON / HTML отчёты
-├── logs/                   # Журналы сканирований
+│   ├── app.py           # Flask API + WebSocket сервер
+│   ├── app.js           # Логика фронтенда
+│   ├── index.html       # Интерфейс панели управления
+│   └── style.css        # Стили Shadow Monarch
+├── report/             # TXT / JSON / HTML отчёты
+├── logs/               # Журналы сканирований
 └── Makefile
 
 **Stack:**
