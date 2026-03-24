@@ -1,6 +1,7 @@
 #include "utils/colors.h"
 #include "core/scanner.h"
 #include "modules/service_detect.h"
+#include <algorithm>
 #include <deque>
 #include <future>
 #include <iostream>
@@ -59,7 +60,6 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
     std::mutex cache_mutex;
     auto start_time = std::chrono::steady_clock::now();
     int  total      = end_port - start_port + 1;
-    ServiceDetector detector;
 
     const unsigned int concurrency =
         std::max(4u, std::thread::hardware_concurrency());
@@ -74,7 +74,7 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
     auto launch_task = [&](int port) {
         tasks.push_back(Task{
             port,
-            std::async(std::launch::async, [this, port, &detector, &service_cache, &cache_mutex]() {
+            std::async(std::launch::async, [this, port, &service_cache, &cache_mutex]() {
                 {
                     std::lock_guard<std::mutex> lock(cache_mutex);
                     auto cached = service_cache.find(port);
@@ -91,6 +91,7 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
                 PortResult result;
                 result.port    = port;
                 result.is_open = true;
+                ServiceDetector detector;
                 result.service = detector.detect(target_ip, port);
                 {
                     std::lock_guard<std::mutex> lock(cache_mutex);
@@ -161,6 +162,11 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
               << "Сканирование завершено за "
               << Color::YELLOW << total_sec << " секунд"
               << Color::RESET << "\n";
+
+    std::sort(results.begin(), results.end(),
+        [](const PortResult& a, const PortResult& b) {
+            return a.port < b.port;
+        });
 
     return results;
 }
