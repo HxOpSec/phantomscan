@@ -1,271 +1,168 @@
-<div align="center">
+# PhantomScan v1.2.0 — Shadow Monarch Edition
 
-<pre>
-██████╗ ██╗  ██╗ █████╗ ███╗  ██╗████████╗ ██████╗ ███╗   ███╗
-██╔══██╗██║  ██║██╔══██╗████╗ ██║╚══██╔══╝██╔═══██╗████╗ ████║
-██████╔╝███████║███████║██╔██╗██║   ██║   ██║   ██║██╔████╔██║
-██╔═══╝ ██╔══██║██╔══██║██║╚████║   ██║   ██║   ██║██║╚██╔╝██║
-██║     ██║  ██║██║  ██║██║ ╚███║   ██║   ╚██████╔╝██║ ╚═╝ ██║
-╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚══╝  ╚═╝    ╚═════╝ ╚═╝     ╚═╝
-</pre>
 
-### Модульный инструмент сетевой разведки и пентеста — C++17
-
-[![Version](https://img.shields.io/badge/version-1.2.0-blue?style=flat-square)](https://github.com/HxOpSec/phantomscan/releases)
-[![Language](https://img.shields.io/badge/C%2B%2B-17-orange?style=flat-square)](https://github.com/HxOpSec/phantomscan)
-[![Platform](https://img.shields.io/badge/platform-Linux-lightgrey?style=flat-square)](https://github.com/HxOpSec/phantomscan)
-[![Build](https://img.shields.io/badge/build-passing-brightgreen?style=flat-square)](https://github.com/HxOpSec/phantomscan)
-[![Warnings](https://img.shields.io/badge/warnings-0-brightgreen?style=flat-square)](https://github.com/HxOpSec/phantomscan)
-[![License](https://img.shields.io/badge/license-MIT-purple?style=flat-square)](LICENSE)
-
-*Написан с нуля. Никаких обёрток. Только сырые сокеты и реальные протоколы.*
-
-</div>
 
 ---
 
-## О проекте
+## What is PhantomScan?
 
-**PhantomScan** — это терминальный инструмент для сетевой разведки,
-написанный целиком на **C++17** без внешних зависимостей (кроме libpcap).
+PhantomScan is a modular network reconnaissance and vulnerability
+analysis framework. It combines a high-performance C++17 scanning
+engine with a cinematic glassmorphism web dashboard.
 
-Проект начинался как попытка разобраться — как устроены инструменты
-безопасности изнутри. Не вызвать `nmap` и распарсить его вывод,
-а написать то, что nmap делает сам: собрать TCP-заголовок руками,
-отправить сырой пакет, обработать ответ на уровне протокола.
-
-Сейчас это полноценный инструмент разведки с 20 модулями,
-собственной CVE базой на 271 запись и поддержкой параллельного
-сканирования нескольких целей. Каждый модуль тестировался на
-живых целях в реальных сетях.
-
-```
-scanme.nmap.org  →  SSH CRITICAL (OpenSSH 6.6.1),  Apache HIGH (2.4.7)
-cloudflare.com   →  WAF: Cloudflare [DETECTED]
-google.com       →  30 поддоменов,  29 DNS записей,  SSL: Valid
-8.8.8.8 + 1.1.1.1  →  параллельно,  104 CVE,  ~44 сек
-```
+Run 20 specialized modules directly from the terminal or control
+everything through a live web interface with WebSocket streaming,
+real-time logs, interactive maps, and a Security Scorecard.
 
 ---
 
-## Быстрый старт
+## Features
 
+- **20 scanning modules** — ports, subdomains, CVE, SSL/TLS, WAF,
+  ARP, traceroute, DNS recon, exploit suggestions, and more
+- **Security Scorecard** — 0–100 score with A+/F grade (flagship module)
+- **Live web dashboard** — glassmorphism UI with WebSocket streaming
+- **Space Modal** — cinematic 3D galaxy + black hole canvas animation
+- **Multi-format reports** — TXT / JSON / HTML saved per scan
+- **Parallel scanning** — C++17 thread pool, std::async
+- **Geolocation** — real-time IP geo via ip-api.com
+
+---
+
+## All 20 Modules
+
+| # | Module | Description | Sudo |
+|---|--------|-------------|:----:|
+| 1 | Full Scan | WHOIS, OS detection, ports 1–1024, CVE, subdomains, report | — |
+| 2 | Quick Scan | Fast top-1024 port scan | — |
+| 3 | Subdomains | 132 subdomain variant enumeration | — |
+| 4 | Packet Monitor | Live packet capture via libpcap | ✓ |
+| 5 | ARP Scan | LAN host discovery (192.168.1.0/24) | ✓ |
+| 6 | Traceroute | Route tracing to target | — |
+| 7 | SYN Stealth | Stealth SYN scan via raw socket | ✓ |
+| 8 | SSL/TLS Analysis | Certificates, TLS versions, cipher suites | — |
+| 9 | WAF Detection | Web Application Firewall fingerprinting | — |
+| 10 | Vuln Scanner | Vulnerable service version detection | — |
+| 11 | Wordlist Gen | HTTP directory wordlist generation | — |
+| 12 | Shodan Lookup | Shodan API integration (API key required) | — |
+| 13 | Exploit Suggester | CVE exploits by service (ssh/http/ftp...) | — |
+| 14 | Network Topology | Visual hop map via traceroute | — |
+| 15 | UDP Scan | UDP port range scan | ✓ |
+| 16 | Change Target | Switch active scan target | — |
+| 17 | Scorecard | Security grade 0–100 across 6 categories | — |
+| 18 | HTTP Dir Scan | Directory bruteforce (port 80/443) | — |
+| 19 | DNS Recon | DNS enumeration + AXFR zone transfer | — |
+| 20 | Multi Scan | Parallel scan from targets file | — |
+
+---
+
+## Security Scorecard (Module 17)
+
+PhantomScan's flagship module grades any target from 0 to 100
+across 6 security categories:
+
+| Category | Max Deduction | Details |
+|----------|:-------------:|---------|
+| CVE Vulnerabilities | −40 pts | CVSS 9.0+ = −15 per CVE |
+| Dangerous Open Ports | −20 pts | Telnet −15, FTP −10, RDP −8 |
+| DNS Configuration | −20 pts | SPF, DMARC, DNSSEC, CAA, DKIM, MX |
+| TLS/SSL | −15 pts | TLS 1.0/1.1, self-signed cert |
+| HTTP Security Headers | −10 pts | CSP, HSTS, X-Frame-Options |
+| Firewall | ±5 pts | +5 detected / −5 not detected |
+
+**Grades:** `A+` 90–100 · `A` 80–89 · `B` 70–79 · `C` 60–69 · `D` 50–59 · `F` 0–49
+
+---
+
+## Architecture
+PhantomScan/ ├── src/ │ ├── core/ C++17 движок сканирования │ └── modules/ 20 модулей сканирования ├── include/ Заголовочные файлы ├── web/ │ ├── app.py Flask API + WebSocket сервер │ ├── app.js Логика фронтенда │ ├── index.html Пользовательский интерфейс панели управления │ └── style.css Стили Shadow Monarch ├── reports/ TXT / JSON / HTML вывод сканирования ├── logs/ Журналы истории оценочной таблицы └── Makefile
+
+**Stack:**
+- Core: C++17 · libpcap · pthread · resolv
+- Web: Python Flask · flask-socketio · pty streaming
+- UI: Glassmorphism · WebSocket · Leaflet.js · Canvas 3D
+
+---
+
+## Requirements
+
+- Linux (Parrot OS / Kali / Ubuntu 22.04+)
+- g++ with C++17 support
+- `libpcap-dev`
+- Python 3.10+
+- pip: `flask` `flask-socketio`
+
+---
+
+## Installation
 ```bash
-# Клонировать
-git clone https://github.com/HxOpSec/phantomscan.git
+git clone https://github.com/HxOpSec/phantomscan
 cd phantomscan
-
-# Зависимости
-sudo apt install g++ make libpcap-dev
-
-# Собрать
+sudo apt install libpcap-dev build-essential
+pip3 install flask flask-socketio
 make rebuild
+```
 
-# Запустить (raw sockets требуют sudo)
+---
+
+## Usage
+
+### Terminal mode
+```bash
 sudo ./builds/phantomscan
 ```
 
----
-
-## Модули
-
-```
- ┌─────────────────────────────────────────────────────────────────┐
- │  РАЗВЕДКА СЕТИ                                                  │
- ├──────┬───────────────────────────┬──────────────────────────────┤
- │  [1] │ Полное сканирование       │ TCP + CVE + ОС + Firewall    │
- │  [2] │ Быстрый скан              │ Топ-100 портов за секунды    │
- │  [5] │ ARP скан                  │ Устройства в локальной сети  │
- │  [6] │ Трассировка маршрута      │ ASCII дерево хопов           │
- │  [7] │ SYN Stealth скан          │ Невидимый режим              │
- │ [15] │ UDP скан                  │ Протокольные probe           │
- │ [20] │ Параллельный скан         │ Несколько целей из файла     │
- ├──────┼───────────────────────────┼──────────────────────────────┤
- │  АНАЛИЗ УГРОЗ                                                   │
- ├──────┼───────────────────────────┼──────────────────────────────┤
- │ [10] │ Уязвимые версии           │ 45 сервисов, banner grabbing │
- │ [13] │ Exploit Suggester         │ 60+ эксплойтов + Exploit-DB  │ 
- │ [17] │ Security Scorecard        │ Итоговая оценка A+ до F      │
- ├──────┼───────────────────────────┼──────────────────────────────┤
- │  ВЕБ                                                            │
- ├──────┼───────────────────────────┼──────────────────────────────┤
- │  [8] │ SSL/TLS анализ            │ Сертификат, срок, CA         │
- │  [9] │ WAF детектор              │ 15 систем защиты             │
- │ [18] │ HTTP директори скан       │ 160+ путей                   │
- ├──────┼───────────────────────────┼──────────────────────────────┤
- │  DNS                                                            │
- ├──────┼───────────────────────────┼──────────────────────────────┤
- │  [3] │ Поиск поддоменов          │ 132 варианта                 │
- │ [11] │ Wordlist генератор        │ Вариации имени домена        │
- │ [19] │ DNS enum + AXFR           │ A/AAAA/MX/NS/TXT/SOA/CNAME   │
- ├──────┼───────────────────────────┼──────────────────────────────┤
- │  ПРОЧЕЕ                                                         │
- ├──────┼───────────────────────────┼──────────────────────────────┤
- │  [4] │ Мониторинг пакетов        │ Захват с TCP флагами         │
- │ [12] │ Shodan поиск              │ Требует API ключ             │
- │ [14] │ Топология сети            │ ASCII карта маршрута         │
- └──────┴───────────────────────────┴──────────────────────────────┘
-```
-
----
-
-## Архитектура
-
-```
-phantomscan/
-├── src/
-│   ├── core/scanner.cpp          ← TCP + CVE + OS + firewall
-│   └── modules/
-│       ├── syn_scan.cpp          ← SYN stealth, raw sockets
-│       ├── udp_scan.cpp          ← UDP с протокольными probe
-│       ├── packet_capture.cpp    ← libpcap, TCP флаги
-│       ├── os_detect.cpp         ← TTL + SSH banner
-│       ├── ssl_scan.cpp          ← сертификат, срок, CA
-│       ├── waf_detect.cpp        ← 15 WAF сигнатур
-│       ├── vuln_scan.cpp         ← 45 сервисов, banner grabbing
-│       ├── exploit.cpp           ← 60+ эксплойтов
-│       ├── subdomain.cpp         ← DNS enumeration
-│       ├── http_scan.cpp         ← 160+ путей
-│       ├── dns_enum.cpp          ← AXFR + полный dump
-│       ├── whois.cpp             ← IP геолокация, ASN
-│       ├── threads.cpp           ← собственный ThreadPool
-│       └── ...
-├── include/
-├── data/cve.json                 ← 271+ CVE, 39 сервисов
-├── reports/                      ← TXT, JSON, HTML
-└── Makefile
-```
-
----
-
-## CVE база
-
-```json
-{
-  "total_cves"  : 271,
-  "services"    : 39,
-  "categories"  : [
-    "SSH", "HTTP", "FTP", "MySQL", "PostgreSQL", "Redis",
-    "MongoDB", "Elasticsearch", "SMB", "RDP", "VNC",
-    "Docker", "WebLogic", "ActiveMQ", "PHP", "Grafana",
-    "Consul", "CouchDB", "SAP", "Java RMI", "Rsync" ...
-  ]
-}
-```
-
+### Web Dashboard
 ```bash
-# Обновить базу
-python3 scripts/update_cve.py
+cd web && python3 app.py
+# Open http://localhost:5000
 ```
 
----
-
-## Примеры
-
+### Sudo-free operation (optional)
 ```bash
-# Полный скан цели
-sudo ./builds/phantomscan
-# → ввести IP → [1]
-
-# Stealth сканирование
-# → [7] → диапазон портов 1-1024
-
-# Несколько целей параллельно
-echo -e "192.168.1.1\n10.0.0.1\n8.8.8.8" > targets.txt
-# → [20] → targets.txt
-
-# Найти уязвимые версии
-# → [10] → проверит 45 сервисов
-
-# Подобрать эксплойты
-# → [13] → ввести сервис: smb / rdp / ssh / docker
+sudo setcap cap_net_raw,cap_net_admin+eip builds/phantomscan
+./builds/phantomscan
 ```
 
 ---
 
-## Тесты
+## Web Dashboard
 
-| Цель | Результат |
-|------|-----------|
-| `scanme.nmap.org` | SSH CRITICAL (OpenSSH 6.6.1p1), Apache HIGH (2.4.7) |
-| `google.com` | 30 поддоменов, 29 DNS записей, SSL: Valid |
-| `cloudflare.com` | WAF: Cloudflare — определён корректно |
-| `8.8.8.8` | Порты 53/443/853, OS: Windows (TTL=108) |
-| `1.1.1.1` | Порты 53/443/853/80, OS: Linux (TTL=47) |
+Five tabs powered by WebSocket streaming:
 
----
+| Tab | Description |
+|-----|-------------|
+| **SCAN** | Launch modules, live progress bar, real-time log |
+| **RESULTS** | Interactive map, open ports, subdomains, OS, WHOIS, CVE |
+| **SCORECARD** | Score ring, DNS / TLS / HTTP security panels |
+| **HISTORY** | Last 20 scans with grades |
+| **COMPARE** | Side-by-side comparison of two targets |
 
-## Сборка
-
-```bash
-make          # сборка
-make rebuild  # пересборка с нуля
-make clean    # очистка
-```
-
-Флаги: `-std=c++17 -Wall -Wextra -Wshadow -O2`
-Результат: **0 предупреждений, 0 ошибок.**
+**Design:** Shadow Monarch Edition
+- Glassmorphism panels with backdrop-filter blur
+- Color scheme: `#7b2fff` purple · `#00d4ff` cyan · `#ff2d6b` red
+- Space Modal: 3D galaxy + black hole with accretion disk
+- Sound Engine: Web Audio API (no external files)
 
 ---
 
-## Требования
-
-| | |
-|--|--|
-| Компилятор | g++ 9+ (C++17) |
-| Библиотека | libpcap |
-| ОС | Linux (Ubuntu, Debian, Parrot, Kali) |
-| Права | sudo — для raw sockets |
+## Test Targets
+scanme.nmap.org — классический тестовый хост Nmap (разрешение предоставлено) 8.8.8.8 — DNS Google (геопроверка)
 
 ---
 
-## Roadmap
+## Legal Notice
 
-**v2.0.0 — Веб дашборд**
-- React фронтенд с live прогрессом
-- C++ REST API сервер
-- WebSocket стриминг результатов
-- Интерактивная карта топологии
-- История сканирований
-
-**Новые модули**
-- Брутфорс — SSH, FTP, HTTP Basic Auth
-- Полная интеграция Shodan
-- Certificate Transparency (crt.sh)
-- HTTP параметр-фаззер
+> PhantomScan is built for **authorized security testing only.**  
+> Only scan targets you own or have explicit written permission to test.  
+> Unauthorized scanning may violate laws in your jurisdiction.  
+> The author is not responsible for misuse of this tool.
 
 ---
 
-## Автор
+## Author
 
-**Умеджон — HxOpSec**
-Студент второго курса, Таджикистан
-[github.com/HxOpSec](https://github.com/HxOpSec)
-
----
-
-## Дисклеймер
-
-PhantomScan — инструмент для специалистов по информационной безопасности.
-Он разработан в образовательных целях и для проведения **авторизованного**
-тестирования на проникновение.
-
-Использование инструмента против систем и сетей **без явного письменного
-разрешения** их владельца является незаконным в большинстве стран мира
-и влечёт уголовную ответственность.
-
-Автор не несёт никакой ответственности за ущерб, причинённый в результате
-неправомерного или халатного применения данного программного обеспечения.
-Вся ответственность лежит исключительно на пользователе.
-
-Перед любым сканированием убедитесь, что у вас есть разрешение.
+**Umedjon Narkaev** (HxOpSec) — Tajikistan  
+<a href="https://github.com/HxOpSec/phantomscan">github.com/HxOpSec/phantomscan</a>
 
 ---
-
-<div align="center">
-
-*PhantomScan v1.2.0 · 2026 · HxOpSec*
-
-**Если проект полезен — поставь звезду ⭐**
-
-</div>
