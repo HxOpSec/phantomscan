@@ -74,19 +74,22 @@ across 6 security categories:
 
 ---
 
+## 📂 Структура проекта
+
 PhantomScan/
 ├── src/
 │   ├── core/           # C++17 движок сканирования
-│   └── modules/        # 20 модулей
-├── include/            # Заголовочные файлы
+│   └── modules/        # 20 модулей (Network, OS, Port, etc.)
+├── include/            # Заголовочные файлы (.h, .hpp)
 ├── web/
-│   ├── app.py           # Flask API + WebSocket сервер
-│   ├── app.js           # Логика фронтенда
-│   ├── index.html       # Интерфейс панели управления
-│   └── style.css        # Стили Shadow Monarch
-├── report/             # TXT / JSON / HTML отчёты
+│   ├── app.py          # Flask API + WebSocket сервер
+│   ├── app.js          # Логика фронтенда (Socket.io)
+│   ├── index.html      # Интерфейс (Glassmorphism UI)
+│   └── style.css       # Стили Shadow Monarch
+├── report/             # Сгенерированные TXT / JSON / HTML отчёты
 ├── logs/               # Журналы сканирований
-└── Makefile
+└── Makefile            # Сборка проекта
+
 
 **Stack:**
 - Core: C++17 · libpcap · pthread · resolv
