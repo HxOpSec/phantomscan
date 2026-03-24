@@ -1103,12 +1103,22 @@ function renderPorts(ports) {
     return;
   }
   tbody.innerHTML = '';
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[c]));
   list.forEach((p, i) => {
+    const portVal = (p && typeof p === 'object') ? (p.port ?? p.number ?? p.id ?? 'N/A') : p;
+    const serviceVal = (p && typeof p === 'object') ? (p.service || p.name || 'unknown') : 'unknown';
+    const versionVal = (p && typeof p === 'object') ? (p.version || p.banner || p.product || '-') : '-';
     const row = `<tr class="port-row">
-      <td>${i + 1}</td>
-      <td>${(p && typeof p === 'object') ? (p.port ?? p.number ?? p.id ?? 'N/A') : p}</td>
-      <td>${(p && typeof p === 'object') ? (p.service || p.name || 'unknown') : 'unknown'}</td>
-      <td>${(p && typeof p === 'object') ? (p.version || p.banner || p.product || '-') : '-'}</td>
+      <td>${esc(i + 1)}</td>
+      <td>${esc(portVal)}</td>
+      <td>${esc(serviceVal)}</td>
+      <td>${esc(versionVal)}</td>
       <td><span class="status-open">OPEN</span></td>
     </tr>`;
     tbody.insertAdjacentHTML('beforeend', row);

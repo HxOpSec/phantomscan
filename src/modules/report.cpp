@@ -157,7 +157,7 @@ void Reporter::save_json(const ScanReport& report) {
     for (size_t i = 0; i < report.ports.size(); i++) {
         f << "    {\"port\": " << report.ports[i].port
           << ", \"service\": \"" << json_escape(report.ports[i].service) << "\""
-          << ", \"version\": \"" << json_escape(report.ports[i].version.empty() ? report.ports[i].service : report.ports[i].version) << "\"}";
+          << ", \"version\": \"" << json_escape(report.ports[i].version) << "\"}";
         if (i + 1 < report.ports.size()) f << ",";
         f << "\n";
     }

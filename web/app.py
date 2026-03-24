@@ -782,7 +782,7 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root
                 try:
                     raw = os.read(master_fd, 4096)
                     if not raw:
-                        raise OSError("EOF")
+                        raise OSError("PTY master returned EOF unexpectedly; scan process may have terminated prematurely")
                     no_output_count = 0
                     text = line_buf + raw.decode("utf-8", errors="replace")
                     line_buf = ""
@@ -1051,25 +1051,23 @@ def cancel_scan(scan_id: str):
 @app.route("/api/history", methods=["GET"])
 def api_history():
     try:
-        files = sorted(
-            glob.glob(os.path.join(REPORTS_DIR, "*.json")),
-            key=os.path.getmtime,
-            reverse=True,
-        )[:20]
+        files = sorted(glob.glob(os.path.join(REPORTS_DIR, "*.json")), key=os.path.getmtime, reverse=True)[:20]
         result = []
         for path in files:
             try:
-                with open(path, "r", encoding="utf-8", errors="replace") as fh:
-                    content = json.load(fh)
+                content = load_report_file(path)
+                if not content:
+                    continue
+                normalized = normalize_report(content, path)
                 result.append(
                     {
-                        "target": content.get("target", "unknown"),
-                        "date": content.get("scan_started_at", ""),
-                        "ports": len(content.get("ports") or []),
-                        "score": content.get("score", "N/A"),
-                        "grade": content.get("grade", "N/A"),
+                        "target": normalized.get("target", "unknown"),
+                        "date": normalized.get("scan_started_at", ""),
+                        "ports": len(normalized.get("open_ports") or []),
+                        "score": normalized.get("score", "N/A"),
+                        "grade": normalized.get("grade", "N/A"),
                         "file": os.path.basename(path),
-                        "timestamp": content.get("scan_started_at")
+                        "timestamp": normalized.get("scan_started_at")
                         or datetime.fromtimestamp(os.path.getmtime(path), tz=timezone.utc).isoformat(),
                     }
                 )
@@ -1087,8 +1085,9 @@ def api_results():
         filepath = find_latest_report(target)
         if not filepath:
             return jsonify({"error": "No report found"}), 404
-        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
-            raw = json.load(f)
+        raw = load_report_file(filepath)
+        if not raw:
+            return jsonify({"error": "No report found"}), 404
         return jsonify(normalize_report(raw, filepath))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
