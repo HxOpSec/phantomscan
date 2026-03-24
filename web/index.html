@@ -192,13 +192,30 @@
           </div>
           <div class="card soft">
             <div class="mini-stats">
+              <div class="mini" id="resultIp">IP: —</div>
               <div class="mini" id="osInfo">OS: —</div>
               <div class="mini" id="countryInfo">Country: —</div>
               <div class="mini" id="ispInfo">ISP: —</div>
               <div class="mini" id="fwInfo">Firewall: —</div>
+              <div class="mini" id="resultStarted">Started: —</div>
+              <div class="mini" id="resultDuration">Duration: —</div>
             </div>
             <div class="cve-chip" id="cveSummary">CVE: —</div>
           </div>
+        </div>
+        <div class="result-grid result-lists">
+          <div class="card soft">
+            <div class="panel-head"><span>SUBDOMAINS</span></div>
+            <ul id="subdomainsList" class="result-list"></ul>
+          </div>
+          <div class="card soft">
+            <div class="panel-head"><span>WHOIS</span></div>
+            <div id="whoisInfo" class="whois-box"></div>
+          </div>
+        </div>
+        <div class="card soft">
+          <div class="panel-head"><span>CVE LIST</span></div>
+          <ul id="cveList" class="result-list"></ul>
         </div>
         <div class="table-wrap">
           <div class="panel-head">
