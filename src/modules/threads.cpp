@@ -126,13 +126,26 @@ static bool check_port(const std::string& ip, int port) {
 void ThreadScanner::scan_range(int start, int end,
                                 std::vector<PortResult>& results) {
     ServiceDetector detector;
+    auto split_service_version = [](const std::string& detected,
+                                    std::string& service_out,
+                                    std::string& version_out) {
+        service_out = detected;
+        version_out.clear();
+        size_t sp = detected.find(' ');
+        if (sp != std::string::npos) {
+            service_out = detected.substr(0, sp);
+            if (sp + 1 < detected.size())
+                version_out = detected.substr(sp + 1);
+        }
+    };
     for (int port = start; port <= end; port++) {
         if (check_port(target_ip, port)) {
             PortResult result;
             result.port    = port;
             result.is_open = true;
 
-            result.service = detector.detect(target_ip, port);
+            std::string detected = detector.detect(target_ip, port);
+            split_service_version(detected, result.service, result.version);
 
             {
                 std::lock_guard<std::mutex> lock(results_mutex);

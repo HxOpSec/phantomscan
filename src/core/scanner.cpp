@@ -75,6 +75,18 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
         tasks.push_back(Task{
             port,
             std::async(std::launch::async, [this, port, &service_cache, &cache_mutex]() {
+                auto split_service_version = [](const std::string& detected,
+                                                std::string& service_out,
+                                                std::string& version_out) {
+                    service_out = detected;
+                    version_out.clear();
+                    size_t sp = detected.find(' ');
+                    if (sp != std::string::npos) {
+                        service_out = detected.substr(0, sp);
+                        if (sp + 1 < detected.size())
+                            version_out = detected.substr(sp + 1);
+                    }
+                };
                 {
                     std::lock_guard<std::mutex> lock(cache_mutex);
                     auto cached = service_cache.find(port);
@@ -82,7 +94,7 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
                         PortResult cached_result;
                         cached_result.port    = port;
                         cached_result.is_open = true;
-                        cached_result.service = cached->second;
+                        split_service_version(cached->second, cached_result.service, cached_result.version);
                         return std::optional<PortResult>(cached_result);
                     }
                 }
@@ -92,10 +104,11 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
                 result.port    = port;
                 result.is_open = true;
                 ServiceDetector detector;
-                result.service = detector.detect(target_ip, port);
+                std::string detected = detector.detect(target_ip, port);
+                split_service_version(detected, result.service, result.version);
                 {
                     std::lock_guard<std::mutex> lock(cache_mutex);
-                    service_cache.emplace(port, result.service);
+                    service_cache.emplace(port, detected);
                 }
                 return std::optional<PortResult>(result);
             })

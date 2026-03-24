@@ -979,8 +979,8 @@ function connectSocket() {
     console.log('[socket] scan_complete', payload);
     if (!payload || payload.scan_id !== currentScanId) return;
     lastSocketEvent = Date.now();
-    const target = payload?.result?.target || payload?.result?.ip || '';
-    loadLatestResults(target).finally(() => finalizeScan(payload.result, payload.stats));
+    const currentTarget = (els.targetInput?.value || '').trim() || payload?.result?.target || payload?.result?.ip || '';
+    loadLatestResults(currentTarget).finally(() => finalizeScan(payload.result, payload.stats));
   });
   socket.on('scan_cancelled', payload => {
     if (!payload || payload.scan_id !== currentScanId) return;
@@ -1096,28 +1096,24 @@ function renderStats(data) {
 
 function renderPorts(ports) {
   if (!els.portsBody) return;
-  const body = els.portsBody;
-  const normalized = Array.isArray(ports) ? ports : [];
-  if (!normalized.length) {
-    body.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">Нет открытых портов</td></tr>';
+  const tbody = els.portsBody;
+  const list = Array.isArray(ports) ? ports : [];
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">Нет открытых портов</td></tr>';
     return;
   }
-  body.innerHTML = '';
-  normalized.forEach((p, idx) => {
-    const tr = document.createElement('tr');
-    tr.className = 'port-row';
-    const port = (p && typeof p === 'object') ? (p.port ?? p.number ?? p.id ?? 'N/A') : p;
-    const service = (p && typeof p === 'object') ? (p.service ?? p.name ?? 'unknown') : 'unknown';
-    const version = (p && typeof p === 'object') ? (p.version ?? p.banner ?? p.product ?? '') : '';
-    const cells = [idx + 1, port ?? 'N/A', service ?? 'unknown', version ?? '', 'OPEN'];
-    cells.forEach((c, i) => {
-      const td = document.createElement('td');
-      td.textContent = c ?? 'N/A';
-      if (i === 4) td.className = 'badge-open';
-      tr.appendChild(td);
-    });
-    setTimeout(() => tr.classList.add('visible'), idx * 80);
-    body.appendChild(tr);
+  tbody.innerHTML = '';
+  list.forEach((p, i) => {
+    const row = `<tr class="port-row">
+      <td>${i + 1}</td>
+      <td>${(p && typeof p === 'object') ? (p.port ?? p.number ?? p.id ?? 'N/A') : p}</td>
+      <td>${(p && typeof p === 'object') ? (p.service || p.name || 'unknown') : 'unknown'}</td>
+      <td>${(p && typeof p === 'object') ? (p.version || p.banner || p.product || '-') : '-'}</td>
+      <td><span class="status-open">OPEN</span></td>
+    </tr>`;
+    tbody.insertAdjacentHTML('beforeend', row);
+    const tr = tbody.lastElementChild;
+    if (tr) setTimeout(() => tr.classList.add('visible'), i * 80);
   });
 }
 
