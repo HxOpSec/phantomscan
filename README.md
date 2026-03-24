@@ -73,9 +73,9 @@ across 6 security categories:
 **Grades:** `A+` 90–100 · `A` 80–89 · `B` 70–79 · `C` 60–69 · `D` 50–59 · `F` 0–49
 
 ---
-
 ## 📂 Структура проекта
 
+```text
 PhantomScan/
 ├── src/
 │   ├── core/           # C++17 движок сканирования
@@ -86,7 +86,7 @@ PhantomScan/
 │   ├── app.js          # Логика фронтенда (Socket.io)
 │   ├── index.html      # Интерфейс (Glassmorphism UI)
 │   └── style.css       # Стили Shadow Monarch
-├── report/             # Сгенерированные TXT / JSON / HTML отчёты
+├── report/             # TXT / JSON / HTML отчёты
 ├── logs/               # Журналы сканирований
 └── Makefile            # Сборка проекта
 
