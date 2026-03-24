@@ -26,20 +26,41 @@ static bool is_private_or_loopback_ipv4(const std::string& ip) {
 static std::string parse_json_field(const std::string& json,
                                      const std::string& key) {
     std::string search = "\"" + key + "\"";
-    size_t pos = json.find(search);
-    if (pos == std::string::npos) return "";
-    pos += search.size();
-    pos = json.find(':', pos);
-    if (pos == std::string::npos) return "";
-    ++pos;
-    while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\t' ||
-                                 json[pos] == '\n' || json[pos] == '\r')) {
-        ++pos;
+    size_t pos = 0;
+    while (true) {
+        pos = json.find(search, pos);
+        if (pos == std::string::npos) return "";
+
+        size_t before = pos;
+        while (before > 0 && (json[before - 1] == ' ' || json[before - 1] == '\t' ||
+                              json[before - 1] == '\n' || json[before - 1] == '\r')) {
+            --before;
+        }
+        if (before > 0 && json[before - 1] != '{' && json[before - 1] != ',') {
+            pos += search.size();
+            continue;
+        }
+
+        size_t after = pos + search.size();
+        while (after < json.size() && (json[after] == ' ' || json[after] == '\t' ||
+                                       json[after] == '\n' || json[after] == '\r')) {
+            ++after;
+        }
+        if (after >= json.size() || json[after] != ':') {
+            pos += search.size();
+            continue;
+        }
+        ++after;
+        while (after < json.size() && (json[after] == ' ' || json[after] == '\t' ||
+                                       json[after] == '\n' || json[after] == '\r')) {
+            ++after;
+        }
+        if (after >= json.size()) return "";
+        if (json.compare(after, 4, "null") == 0) return "";
+        if (json[after] != '"') return "";
+        pos = after + 1;
+        break;
     }
-    if (pos >= json.size()) return "";
-    if (json.compare(pos, 4, "null") == 0) return "";
-    if (json[pos] != '"') return "";
-    ++pos;
 
     std::string value;
     bool escaped = false;
@@ -55,6 +76,7 @@ static std::string parse_json_field(const std::string& json,
                 case 'n':  value.push_back('\n'); break;
                 case 'r':  value.push_back('\r'); break;
                 case 't':  value.push_back('\t'); break;
+                case 'u':  value += "\\u"; break;
                 default:   value.push_back(ch); break;
             }
             escaped = false;
@@ -181,6 +203,19 @@ static std::string fetch_ip_api_json(const std::string& ip) {
     return extract_http_body(response);
 }
 
+static bool is_safe_ip_target(const std::string& ip) {
+    if (ip.empty() || ip.size() > 64) return false;
+    for (char ch : ip) {
+        const bool is_digit = (ch >= '0' && ch <= '9');
+        const bool is_lower_hex = (ch >= 'a' && ch <= 'f');
+        const bool is_upper_hex = (ch >= 'A' && ch <= 'F');
+        if (!(is_digit || is_lower_hex || is_upper_hex || ch == '.' || ch == ':')) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static void set_private_fallback(WhoisResult& result) {
     result.country = "Private network (RFC1918)";
     result.region = "-";
@@ -230,6 +265,10 @@ WhoisResult Whois::lookup(const std::string& target) {
 
     if (is_private_or_loopback_ipv4(target)) {
         set_private_fallback(result);
+        return result;
+    }
+    if (!is_safe_ip_target(target)) {
+        set_public_fallback(result);
         return result;
     }
 
