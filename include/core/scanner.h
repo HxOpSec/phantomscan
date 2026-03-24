@@ -7,6 +7,7 @@ struct PortResult {
     int port;          // Номер порта (например 80)
     bool is_open;      // Открыт или закрыт
     std::string service; // Название службы (HTTP, SSH...)
+    std::string version; // Версия/баннер службы
 };
 
 // Класс Scanner — наш сканер портов

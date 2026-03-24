@@ -8,6 +8,7 @@
 #include <optional>
 #include <thread>
 #include <unordered_map>
+#include <algorithm>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -59,7 +60,6 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
     std::mutex cache_mutex;
     auto start_time = std::chrono::steady_clock::now();
     int  total      = end_port - start_port + 1;
-    ServiceDetector detector;
 
     const unsigned int concurrency =
         std::max(4u, std::thread::hardware_concurrency());
@@ -74,7 +74,19 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
     auto launch_task = [&](int port) {
         tasks.push_back(Task{
             port,
-            std::async(std::launch::async, [this, port, &detector, &service_cache, &cache_mutex]() {
+            std::async(std::launch::async, [this, port, &service_cache, &cache_mutex]() {
+                auto split_service_version = [](const std::string& detected,
+                                                std::string& service_out,
+                                                std::string& version_out) {
+                    service_out = detected;
+                    version_out.clear();
+                    size_t sp = detected.find(' ');
+                    if (sp != std::string::npos) {
+                        service_out = detected.substr(0, sp);
+                        if (sp + 1 < detected.size())
+                            version_out = detected.substr(sp + 1);
+                    }
+                };
                 {
                     std::lock_guard<std::mutex> lock(cache_mutex);
                     auto cached = service_cache.find(port);
@@ -82,7 +94,7 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
                         PortResult cached_result;
                         cached_result.port    = port;
                         cached_result.is_open = true;
-                        cached_result.service = cached->second;
+                        split_service_version(cached->second, cached_result.service, cached_result.version);
                         return std::optional<PortResult>(cached_result);
                     }
                 }
@@ -91,10 +103,12 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
                 PortResult result;
                 result.port    = port;
                 result.is_open = true;
-                result.service = detector.detect(target_ip, port);
+                ServiceDetector detector;
+                std::string detected = detector.detect(target_ip, port);
+                split_service_version(detected, result.service, result.version);
                 {
                     std::lock_guard<std::mutex> lock(cache_mutex);
-                    service_cache.emplace(port, result.service);
+                    service_cache.emplace(port, detected);
                 }
                 return std::optional<PortResult>(result);
             })
@@ -161,6 +175,11 @@ std::vector<PortResult> Scanner::scan(int start_port, int end_port) {
               << "Сканирование завершено за "
               << Color::YELLOW << total_sec << " секунд"
               << Color::RESET << "\n";
+
+    std::sort(results.begin(), results.end(),
+        [](const PortResult& a, const PortResult& b) {
+            return a.port < b.port;
+        });
 
     return results;
 }

@@ -219,7 +219,7 @@ static void parse_banner(PortsAnalysis::ServiceBanner& sb) {
 }
 
 // Known servers that are NOT Apache — show 0 Apache CVEs for these
-static bool is_non_apache(const std::string& product) {
+[[maybe_unused]] static bool is_non_apache(const std::string& product) {
     static const std::set<std::string> known = {
         "nginx","gws","cloudflare","openresty","lighttpd","iis",
         "microsoft-iis","litespeed","caddy","gunicorn","envoy","tengine"
@@ -294,7 +294,8 @@ static std::string score_color(int score) {
 }
 
 static void print_progress(int n, const std::string& msg) {
-    if (n<0) n=0; if (n>10) n=10;
+    if (n < 0) n = 0;
+    if (n > 10) n = 10;
     std::cout << "\r  \033[36m[";
     for (int i=0;i<10;i++) std::cout << (i<n?"■":"░");
     std::cout << "] \033[0m" << msg << "          " << std::flush;
@@ -355,9 +356,12 @@ DNSAnalysis Scorecard::check_dns(const std::string& domain) {
     if (!r.has_spf)          pen += 8;
     else if (r.spf_plusall)  pen += 8;
     else if (r.spf_softfail) pen += 4;
-    if (!r.has_dmarc)        pen += 7; else if (r.dmarc_none) pen += 4;
-    if (!r.has_dnssec) pen += 3; if (!r.has_caa)  pen += 2;
-    if (!r.has_dkim)   pen += 3; if (!r.has_mx)   pen += 2;
+    if (!r.has_dmarc)        pen += 7;
+    else if (r.dmarc_none)   pen += 4;
+    if (!r.has_dnssec)       pen += 3;
+    if (!r.has_caa)          pen += 2;
+    if (!r.has_dkim)         pen += 3;
+    if (!r.has_mx)           pen += 2;
     r.penalty = std::min(pen, 25);
     return r;
 }
@@ -417,9 +421,11 @@ WhoisAnalysis Scorecard::check_whois(const std::string& domain) {
 
     time_t now = time(nullptr);
     auto trim_tz = [](const std::string& s) -> std::string {
-        if (s.empty()) return s; std::string t = s;
+        if (s.empty()) return s;
+        std::string t = s;
         if (t.back() == 'Z') t.pop_back();
-        size_t p = t.rfind('+'); if (p!=std::string::npos && p>10) t=t.substr(0,p);
+        size_t p = t.rfind('+');
+        if (p != std::string::npos && p > 10) t = t.substr(0, p);
         return t;
     };
     time_t tc = parse_whois_date(trim_tz(created));
@@ -489,7 +495,9 @@ TLSAnalysis Scorecard::check_tls(const std::string& host) {
     r.weak_ciphers = ciph.find("RC4")!=std::string::npos || ciph.find("DES")!=std::string::npos;
     int pen=0;
     if (r.has_https) {
-        if (r.tls10) pen+=10; if (r.tls11) pen+=7; if (!r.tls13) pen+=3;
+        if (r.tls10) pen += 10;
+        if (r.tls11) pen += 7;
+        if (!r.tls13) pen += 3;
         if (r.self_signed) pen+=10;
         if (r.days_left>=0&&r.days_left<7) pen+=10;
         else if (r.days_left>=0&&r.days_left<30) pen+=5;
@@ -533,8 +541,10 @@ HTTPAnalysis Scorecard::check_http(const std::string& host) {
         r.server_version_exposed=hd;
     }
     int pen=0;
-    if (!r.x_frame_options)        pen+=2; if (!r.x_content_type_options) pen+=2;
-    if (!r.csp)                    pen+=3; if (!r.referrer_policy)        pen+=1;
+    if (!r.x_frame_options)        pen += 2;
+    if (!r.x_content_type_options) pen += 2;
+    if (!r.csp)                    pen += 3;
+    if (!r.referrer_policy)        pen += 1;
     if (r.server_version_exposed)  pen+=2;
     r.penalty=std::min(pen,10); return r;
 }
@@ -555,13 +565,21 @@ PortsAnalysis Scorecard::check_ports(const std::string& host) {
         int p=PORTS[i]; r.open_list.push_back(p);
         std::string svc=port_to_service(p);
         if (!svc.empty()) { PortsAnalysis::ServiceBanner sb; sb.port=p; sb.service=svc; r.banners.push_back(sb); }
-        if (p==21) r.port_21=true; if (p==23) r.port_23=true; if (p==25) r.port_25=true;
-        if (p==139) r.port_139=true; if (p==445) r.port_445=true; if (p==3389) r.port_3389=true;
+        if (p == 21) r.port_21 = true;
+        if (p == 23) r.port_23 = true;
+        if (p == 25) r.port_25 = true;
+        if (p == 139) r.port_139 = true;
+        if (p == 445) r.port_445 = true;
+        if (p == 3389) r.port_3389 = true;
         if (SAFE.find(p)==SAFE.end()&&DANGER.find(p)==DANGER.end()) r.extra_count++;
     }
     int pen=0;
-    if (r.port_23) pen+=15; if (r.port_21) pen+=10; if (r.port_3389) pen+=8;
-    if (r.port_445) pen+=8; if (r.port_139) pen+=6; if (r.port_25) pen+=4;
+    if (r.port_23) pen += 15;
+    if (r.port_21) pen += 10;
+    if (r.port_3389) pen += 8;
+    if (r.port_445) pen += 8;
+    if (r.port_139) pen += 6;
+    if (r.port_25) pen += 4;
     pen+=r.extra_count*2; r.penalty=std::min(pen,20); return r;
 }
 
@@ -884,7 +902,8 @@ void Scorecard::run(const std::string& target) {
     int score=100;
     int cve_pen=0; for (auto& c:cves) cve_pen+=c.penalty; cve_pen=std::min(cve_pen,40);
     int tls_pen=tls.has_https?tls.penalty:0;
-    if (tls.has_https&&!http.has_hsts) tls_pen+=3; tls_pen=std::min(tls_pen,15);
+    if (tls.has_https && !http.has_hsts) tls_pen += 3;
+    tls_pen = std::min(tls_pen, 15);
     score-=std::min(cve_pen,40); score-=std::min(ports.penalty,20);
     score-=std::min(dns.penalty,20); score-=tls_pen; score-=std::min(http.penalty,10);
     score+=firewall?5:-5; score=std::max(0,std::min(100,score));
@@ -915,10 +934,13 @@ ScoreCard Scorecard::calculate(const ScanResult& result) {
     if (cnt>20) pp=20; else if (cnt>10) pp=12; else if (cnt>5) pp=6; else if (cnt>2) pp=3;
     sc.ports_penalty=pp; score-=pp;
     int sp=0;
-    if (result.has_telnet) sp+=15; if (result.has_ftp) sp+=10; if (result.has_rdp) sp+=8;
+    if (result.has_telnet) sp += 15;
+    if (result.has_ftp) sp += 10;
+    if (result.has_rdp) sp += 8;
     sc.services_penalty=std::min(sp,20); score-=sc.services_penalty;
     int sl=0;
-    if (!result.has_ssl) sl+=10; if (result.ssl_expired) sl+=8;
+    if (!result.has_ssl) sl += 10;
+    if (result.ssl_expired) sl += 8;
     if (result.has_ssl&&!result.ssl_valid) sl+=5;
     sc.ssl_penalty=sl; score-=sl;
     if (result.firewall_detected) score+=5;
@@ -935,8 +957,10 @@ ScoreCard Scorecard::calculate(const ScanResult& result) {
 static void print_bar_legacy(const std::string& label,int penalty,int max_pen,const std::string& col) {
     int f=(max_pen>0)?std::min(penalty*20/max_pen,20):0;
     std::cout<<"  "<<std::left<<std::setw(18)<<label<<" "<<col;
-    for (int i=0;i<f;i++) std::cout<<"█"; std::cout<<"\033[0m";
-    for (int i=f;i<20;i++) std::cout<<"░"; std::cout<<"  -"<<penalty<<" pts\n";
+    for (int i = 0; i < f; i++) std::cout << "█";
+    std::cout << "\033[0m";
+    for (int i = f; i < 20; i++) std::cout << "░";
+    std::cout << "  -" << penalty << " pts\n";
 }
 
 void Scorecard::print(const ScoreCard& sc,const std::string& target) {

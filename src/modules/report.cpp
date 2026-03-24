@@ -156,7 +156,8 @@ void Reporter::save_json(const ScanReport& report) {
     f << "  \"ports\": [\n";
     for (size_t i = 0; i < report.ports.size(); i++) {
         f << "    {\"port\": " << report.ports[i].port
-          << ", \"service\": \"" << json_escape(report.ports[i].service) << "\"}";
+          << ", \"service\": \"" << json_escape(report.ports[i].service) << "\""
+          << ", \"version\": \"" << json_escape(report.ports[i].version) << "\"}";
         if (i + 1 < report.ports.size()) f << ",";
         f << "\n";
     }
@@ -173,17 +174,15 @@ void Reporter::save_json(const ScanReport& report) {
     // FIX #5: CVE теперь тоже в JSON экспортируются (раньше не было!)
     f << "  \"cve\": [\n";
     CVEScanner cve;
-    std::vector<std::pair<std::string,CVEEntry>> all;
+    std::vector<CVEEntry> all;
     for (const auto& p : report.ports)
         for (const auto& c : cve.search(p.service))
-            all.push_back({p.service, c});
+            all.push_back(c);
 
     for (size_t i = 0; i < all.size(); i++) {
-        const auto& c = all[i].second;
-        f << "    {\"service\": \""  << json_escape(all[i].first) << "\""
-          << ", \"id\": \""          << json_escape(c.id)         << "\""
+        const auto& c = all[i];
+        f << "    {\"id\": \""          << json_escape(c.id)         << "\""
           << ", \"severity\": \""    << json_escape(c.severity)   << "\""
-          << ", \"cvss\": "          << std::fixed << std::setprecision(1) << c.cvss
           << ", \"description\": \"" << json_escape(c.description) << "\"}";
         if (i + 1 < all.size()) f << ",";
         f << "\n";

@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <array>
+#include <cstdint>
 
 // FIX: lambda вместо &pclose
 static std::string exec_cmd(const std::string& cmd) {
@@ -17,6 +18,16 @@ static std::string exec_cmd(const std::string& cmd) {
     while (fgets(buffer.data(), (int)buffer.size(), pipe.get()) != nullptr)
         result += buffer.data();
     return result;
+}
+
+static bool is_private_or_loopback_ipv4(const std::string& ip) {
+    uint32_t a = 0, b = 0, c = 0, d = 0;
+    if (sscanf(ip.c_str(), "%u.%u.%u.%u", &a, &b, &c, &d) != 4) return false;
+    if (a > 255 || b > 255 || c > 255 || d > 255) return false;
+    return (a == 10) ||
+           (a == 172 && b >= 16 && b <= 31) ||
+           (a == 192 && b == 168) ||
+           (a == 127);
 }
 
 // ── Парсим одно поле из JSON ──────────────────────────
@@ -45,7 +56,9 @@ WhoisResult Whois::lookup(const std::string& target) {
     std::string output = exec_cmd(cmd);
 
     if (output.empty() || output.find("fail") != std::string::npos) {
-        result.country  = "Приватная сеть (RFC1918)";
+        result.country  = is_private_or_loopback_ipv4(target)
+                        ? "Приватная сеть (RFC1918)"
+                        : "Неизвестно";
         result.region   = "-";
         result.city     = "-";
         result.org      = "-";    

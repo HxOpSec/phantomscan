@@ -30,22 +30,17 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 # ─────────────────────────────────────────────────────────────────────────────
 os.environ.setdefault("PYTHONUNBUFFERED", "1")
 WEB_DIR = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.dirname(WEB_DIR)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = BASE_DIR
 PHANTOMSCAN = os.path.join(BASE_DIR, "builds", "phantomscan")
 REPORTS_DIR = os.path.join(BASE_DIR, "reports")
 LOGS_DIR = os.path.join(BASE_DIR, "logs")
 WEB_REPORTS_DIR = os.path.join(WEB_DIR, "reports")
 WEB_LOGS_DIR = os.path.join(WEB_DIR, "logs")
-# Ensure report/log directories exist regardless of current working directory.
 os.makedirs(REPORTS_DIR, exist_ok=True)
 os.makedirs(LOGS_DIR, exist_ok=True)
 os.makedirs(WEB_REPORTS_DIR, exist_ok=True)
 os.makedirs(WEB_LOGS_DIR, exist_ok=True)
-os.makedirs("reports", exist_ok=True)
-os.makedirs("logs", exist_ok=True)
-os.makedirs("../reports", exist_ok=True)
-os.makedirs("../logs", exist_ok=True)
 FULL_SCAN_TIMEOUT_SECONDS = 420
 SCORECARD_TIMEOUT_SECONDS = 300
 LOG_LIMIT = 500
@@ -200,7 +195,7 @@ def parse_iso_datetime(raw: str) -> Optional[datetime]:
         return None
 
 
-def normalize_report_payload(content: dict, path: Optional[str] = None) -> dict:
+def normalize_report(content: dict, path: Optional[str] = None) -> dict:
     if not isinstance(content, dict):
         content = {}
     mtime = None
@@ -327,6 +322,10 @@ def normalize_report_payload(content: dict, path: Optional[str] = None) -> dict:
         "recommendations": content.get("recommendations", []),
     }
     return normalized
+
+
+def normalize_report_payload(content: dict, path: Optional[str] = None) -> dict:
+    return normalize_report(content, path)
 
 
 def load_report_file(path: str) -> Optional[dict]:
@@ -783,8 +782,7 @@ def stream_scan(scan_id: str, target: str, module: str, extra_inputs: dict, root
                 try:
                     raw = os.read(master_fd, 4096)
                     if not raw:
-                        ws_emit("scan_complete", {"scan_id": scan_id, "status": "done"}, room=scan_id)
-                        break
+                        raise OSError("PTY master returned EOF unexpectedly; scan process may have terminated prematurely")
                     no_output_count = 0
                     text = line_buf + raw.decode("utf-8", errors="replace")
                     line_buf = ""
@@ -1051,50 +1049,48 @@ def cancel_scan(scan_id: str):
 
 
 @app.route("/api/history", methods=["GET"])
-def history():
+def api_history():
     try:
         files = sorted(glob.glob(os.path.join(REPORTS_DIR, "*.json")), key=os.path.getmtime, reverse=True)[:20]
-        from_files = []
+        result = []
         for path in files:
-            content = load_report_file(path)
-            if not content:
+            try:
+                content = load_report_file(path)
+                if not content:
+                    continue
+                normalized = normalize_report(content, path)
+                result.append(
+                    {
+                        "target": normalized.get("target", "unknown"),
+                        "date": normalized.get("scan_started_at", ""),
+                        "ports": len(normalized.get("open_ports") or []),
+                        "score": normalized.get("score", "N/A"),
+                        "grade": normalized.get("grade", "N/A"),
+                        "file": os.path.basename(path),
+                        "timestamp": normalized.get("scan_started_at")
+                        or datetime.fromtimestamp(os.path.getmtime(path), tz=timezone.utc).isoformat(),
+                    }
+                )
+            except Exception:
                 continue
-            normalized = normalize_report_payload(content, path)
-            from_files.append(
-                {
-                    "target": normalized.get("target"),
-                    "ports": len(normalized.get("open_ports", [])),
-                    "score": normalized.get("score"),
-                    "grade": normalized.get("grade"),
-                    "file": os.path.basename(path),
-                    "date": normalized.get("scan_started_at")
-                    or datetime.fromtimestamp(os.path.getmtime(path), tz=timezone.utc).isoformat(),
-                    "timestamp": normalized.get("scan_started_at")
-                    or datetime.fromtimestamp(os.path.getmtime(path), tz=timezone.utc).isoformat(),
-                }
-            )
-        combined = list(scan_history) + from_files
-        combined.sort(key=lambda x: x.get("timestamp") or "", reverse=True)
-        return jsonify(combined[:20])
-    except (OSError, ValueError, TypeError) as exc:
-        logging.error("history error: %s", exc)
+        return jsonify(result)
+    except Exception:
         return jsonify([])
 
 
 @app.route("/api/results", methods=["GET"])
-def latest_results():
+def api_results():
     try:
-        target = sanitize_input(request.args.get("target") or "")
-        latest = find_latest_report(target=target)
-        if not latest:
+        target = request.args.get("target", "")
+        filepath = find_latest_report(target)
+        if not filepath:
             return jsonify({"error": "No report found"}), 404
-        report = load_report_file(latest)
-        if not report:
-            return jsonify({"error": "Failed to parse latest report"}), 500
-        return jsonify(normalize_report_payload(report, latest))
-    except (OSError, ValueError, TypeError) as exc:
-        logging.error("latest_results error: %s", exc)
-        return jsonify({"error": "Failed to fetch latest results"}), 500
+        raw = load_report_file(filepath)
+        if not raw:
+            return jsonify({"error": "No report found"}), 404
+        return jsonify(normalize_report(raw, filepath))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/compare", methods=["POST"])
