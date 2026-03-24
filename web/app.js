@@ -1108,7 +1108,7 @@ function renderPorts(ports) {
   ports.forEach((p, idx) => {
     const tr = document.createElement('tr');
     tr.className = 'port-row';
-    const cells = [idx + 1, p?.port ?? 'N/A', p?.service || 'N/A', p?.version || 'N/A', 'OPEN'];
+    const cells = [idx + 1, p?.port ?? 'N/A', p?.service ?? 'N/A', p?.version ?? 'N/A', 'OPEN'];
     cells.forEach((c, i) => {
       const td = document.createElement('td');
       td.textContent = c;
@@ -1263,7 +1263,7 @@ function renderAll(data) {
         copyBtn.className = 'mini-copy';
         copyBtn.textContent = 'COPY';
         copyBtn.addEventListener('click', () => {
-          navigator.clipboard?.writeText(sub || '').then(() => toast('Subdomain copied')).catch(() => toast(sub || 'N/A'));
+          navigator.clipboard?.writeText(sub || '').then(() => toast('Subdomain copied')).catch(() => toast('Failed to copy subdomain: clipboard access denied'));
         });
         li.appendChild(label);
         li.appendChild(copyBtn);
@@ -1635,6 +1635,14 @@ function flashCritical() {
 
 // ─── Deep Space Modal ────────────────────────────────────────────────────────
 class SpaceScene {
+  static MOBILE_BREAKPOINT = 768;
+  static MOBILE_STAR_COUNT = 750;
+  static DESKTOP_STAR_COUNT = 2200;
+
+  static alphaToHex(alpha) {
+    return Math.round(Math.max(0, Math.min(1, alpha)) * 255).toString(16).padStart(2, '0');
+  }
+
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
@@ -1669,7 +1677,9 @@ class SpaceScene {
   }
 
   initScene() {
-    this.starCount = this.W < 768 ? 750 : 2200;
+    this.starCount = this.W < SpaceScene.MOBILE_BREAKPOINT
+      ? SpaceScene.MOBILE_STAR_COUNT
+      : SpaceScene.DESKTOP_STAR_COUNT;
     this.bgStars = Array.from({ length: this.starCount }, () => {
       const p = Math.random();
       let r = 0.5;
@@ -1818,7 +1828,7 @@ class SpaceScene {
 
     this.nebula.forEach((n) => {
       const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
-      grad.addColorStop(0, `${n.color}${Math.round(n.alpha * 255).toString(16).padStart(2, '0')}`);
+      grad.addColorStop(0, `${n.color}${SpaceScene.alphaToHex(n.alpha)}`);
       grad.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = grad;
       ctx.beginPath();

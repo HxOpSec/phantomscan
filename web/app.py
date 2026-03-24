@@ -1000,7 +1000,7 @@ def cancel_scan(scan_id: str):
 @app.route("/api/history", methods=["GET"])
 def history():
     try:
-        files = sorted(glob.glob(os.path.join(REPORTS_DIR, "*.json")), key=os.path.getmtime, reverse=True)[:100]
+        files = sorted(glob.glob(os.path.join(REPORTS_DIR, "*.json")), key=os.path.getmtime, reverse=True)[:20]
         from_files = []
         for path in files:
             content = load_report_file(path)
