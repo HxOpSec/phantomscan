@@ -1094,7 +1094,7 @@ def latest_results():
         return jsonify(normalize_report_payload(report, latest))
     except (OSError, ValueError, TypeError) as exc:
         logging.error("latest_results error: %s", exc)
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": "Failed to fetch latest results"}), 500
 
 
 @app.route("/api/compare", methods=["POST"])

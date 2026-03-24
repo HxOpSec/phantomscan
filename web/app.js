@@ -1145,6 +1145,17 @@ async function getGeoAndInitMap(ip) {
   if (!ip || ip === 'N/A') return;
   const container = els.mapContainer || document.getElementById('map-container');
   if (!container) return;
+  const showFallback = () => {
+    container.innerHTML = '';
+    const fallback = document.createElement('div');
+    fallback.style.display = 'flex';
+    fallback.style.alignItems = 'center';
+    fallback.style.justifyContent = 'center';
+    fallback.style.height = '100%';
+    fallback.style.color = '#00d4ff';
+    fallback.textContent = `📍 ${ip}`;
+    container.appendChild(fallback);
+  };
   try {
     const r = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}`);
     const geo = await r.json();
@@ -1152,10 +1163,10 @@ async function getGeoAndInitMap(ip) {
       initMap(geo.lat, geo.lon, ip);
       return;
     }
-    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#00d4ff;">📍 ${ip}</div>`;
+    showFallback();
   } catch (e) {
     console.warn('Geo lookup failed:', e);
-    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#00d4ff;">📍 ${ip}</div>`;
+    showFallback();
   }
 }
 
