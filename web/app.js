@@ -1712,31 +1712,37 @@ function flashCritical() {
 
 // ─── Deep Space Modal ────────────────────────────────────────────────────────
 class SpaceScene {
-  static MOBILE_BREAKPOINT = 768;
-  static MOBILE_STAR_COUNT = 750;
-  static DESKTOP_STAR_COUNT = 2200;
-
-  static alphaToHex(alpha) {
-    return Math.round(Math.max(0, Math.min(1, alpha)) * 255).toString(16).padStart(2, '0');
-  }
+  static MOBILE_BREAKPOINT = 900;
+  static BASE_STAR_COUNTS = { tiny: 1600, small: 600, medium: 200, bright: 100 };
+  static BASE_MEDIUM_TINTS = { blue: 80, yellow: 70, red: 50 };
 
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.animId = null;
-    this.diskAngle = 0;
-    this.galaxyAngle = 0;
+    this.lastTime = 0;
     this.mouse = { x: 0, y: 0 };
     this.soundOn = false;
     this.ambienceNode = null;
-    this.blackHoleRadius = 120;
+    this.blackHoleRadius = 90;
+    this.starCountScale = 1;
+    this.stars = [];
+    this.twinkleStars = [];
+    this.distantGalaxies = [];
+    this.galaxyStars = [];
+    this.galaxyDustLanes = [];
+    this.nebulaClouds = [];
     this.comets = [];
-    this._onResize = () => this.resize();
+    this._tick = () => this.animate();
+    this._onResize = () => {
+      this.resize();
+      this.initScene();
+    };
     this._onMouseMove = (e) => {
       const nx = (e.clientX / Math.max(1, this.W)) - 0.5;
       const ny = (e.clientY / Math.max(1, this.H)) - 0.5;
-      this.mouse.x = nx * 40;
-      this.mouse.y = ny * 40;
+      this.mouse.x = nx * 24;
+      this.mouse.y = ny * 24;
     };
     this.resize();
     this.initScene();
@@ -1747,40 +1753,22 @@ class SpaceScene {
   resize() {
     this.W = this.canvas.width = this.canvas.offsetWidth || window.innerWidth;
     this.H = this.canvas.height = this.canvas.offsetHeight || window.innerHeight;
-    this.bhX = this.W * 0.42;
-    this.bhY = this.H * 0.5;
-    this.galX = this.W * 0.56;
-    this.galY = this.H * 0.52;
+    this.bhX = this.W * 0.35;
+    this.bhY = this.H * 0.45;
+    this.galX = this.W * 0.60;
+    this.galY = this.H * 0.48;
+    this.starCountScale = this.W < SpaceScene.MOBILE_BREAKPOINT ? 0.6 : 1;
   }
 
   initScene() {
-    this.starCount = this.W < SpaceScene.MOBILE_BREAKPOINT
-      ? SpaceScene.MOBILE_STAR_COUNT
-      : SpaceScene.DESKTOP_STAR_COUNT;
-    this.bgStars = Array.from({ length: this.starCount }, () => {
-      const p = Math.random();
-      let r = 0.5;
-      let a = 0.35;
-      if (p > 0.9) { r = 1.5 + Math.random() * 0.5; a = 0.65; }
-      else if (p > 0.7) { r = 1; a = 0.5; }
-      const tint = p > 0.9
-        ? ['rgba(180,210,255,', 'rgba(255,220,160,', 'rgba(255,170,170,'][Math.floor(Math.random() * 3)]
-        : 'rgba(230,240,255,';
-      return { x: Math.random() * this.W, y: Math.random() * this.H, r, a, tint };
-    });
-    this.distantSmudges = Array.from({ length: 4 }, () => ({
-      x: Math.random() * this.W,
-      y: Math.random() * this.H,
-      rx: 20 + Math.random() * 60,
-      ry: 6 + Math.random() * 14,
-      alpha: 0.03 + Math.random() * 0.03,
-      rot: Math.random() * Math.PI,
-    }));
-    this.galaxyStars = this.buildGalaxyStars();
-    this.clusters = this.buildClusters();
-    this.nebula = this.buildNebula();
-    this.comets = Array.from({ length: 8 }, (_, i) => this.spawnComet(i));
+    this.buildStarfield();
+    this.buildDistantGalaxies();
+    this.buildGalaxyStars();
+    this.buildDustLanes();
+    this.buildNebulaClouds();
+    this.buildComets();
     this.buildOffscreen();
+    this.lastTime = Date.now() / 1000;
   }
 
   toggleSound(sc) {
@@ -1804,68 +1792,162 @@ class SpaceScene {
     }
   }
 
+  buildStarfield() {
+    const tinyCount = Math.round(SpaceScene.BASE_STAR_COUNTS.tiny * this.starCountScale);
+    const smallCount = Math.round(SpaceScene.BASE_STAR_COUNTS.small * this.starCountScale);
+    const mediumCount = Math.round(SpaceScene.BASE_STAR_COUNTS.medium * this.starCountScale);
+    const brightCount = Math.round(SpaceScene.BASE_STAR_COUNTS.bright * this.starCountScale);
+    const mediumBlue = Math.round(SpaceScene.BASE_MEDIUM_TINTS.blue * this.starCountScale);
+    const mediumYellow = Math.round(SpaceScene.BASE_MEDIUM_TINTS.yellow * this.starCountScale);
+    const mediumRed = mediumCount - mediumBlue - mediumYellow;
+
+    this.stars = [];
+    this.twinkleStars = [];
+
+    const addStar = (r, color, alphaMin, alphaMax, isBright = false) => {
+      const baseAlpha = alphaMin + Math.random() * (alphaMax - alphaMin);
+      const star = {
+        x: Math.random() * this.W,
+        y: Math.random() * this.H,
+        r,
+        color,
+        baseAlpha,
+        twinkle: Math.random() < 0.3,
+        twinkleSpeed: 0.5 + Math.random() * 2.5,
+        twinklePhase: Math.random() * Math.PI * 2,
+        isBright,
+      };
+      this.stars.push(star);
+      if (star.twinkle) this.twinkleStars.push(star);
+    };
+
+    for (let i = 0; i < tinyCount; i++) addStar(0.4, '255,255,255', 0.4, 0.7);
+    for (let i = 0; i < smallCount; i++) addStar(0.8, '255,255,255', 0.5, 0.9);
+    for (let i = 0; i < mediumBlue; i++) addStar(1.2, '200,216,255', 0.55, 0.9);
+    for (let i = 0; i < mediumYellow; i++) addStar(1.2, '255,250,204', 0.55, 0.9);
+    for (let i = 0; i < mediumRed; i++) addStar(1.2, '255,204,204', 0.55, 0.9);
+    for (let i = 0; i < brightCount; i++) addStar(1.8, '255,255,255', 0.75, 1.0, true);
+  }
+
+  buildDistantGalaxies() {
+    const candidates = [
+      { color: '123,47,255', xMin: 0.05, xMax: 0.25, yMin: 0.08, yMax: 0.25 },
+      { color: '0,212,255', xMin: 0.78, xMax: 0.95, yMin: 0.70, yMax: 0.90 },
+      { color: '255,245,225', xMin: 0.76, xMax: 0.94, yMin: 0.10, yMax: 0.30 },
+    ];
+    this.distantGalaxies = candidates.map(g => ({
+      x: this.W * (g.xMin + Math.random() * (g.xMax - g.xMin)),
+      y: this.H * (g.yMin + Math.random() * (g.yMax - g.yMin)),
+      rx: 15 + Math.random() * 20,
+      ry: 8 + Math.random() * 7,
+      rot: Math.random() * Math.PI,
+      alpha: 0.15 + Math.random() * 0.10,
+      color: g.color,
+    }));
+  }
+
   buildGalaxyStars() {
     const armCount = 4;
-    const starsPerArm = this.W < 768 ? 500 : 900;
-    const b = 0.25;
-    const a = 9;
-    const size = this.W * 0.35;
-    const out = [];
+    const starsPerArm = this.W < SpaceScene.MOBILE_BREAKPOINT ? Math.round(900 * 0.6) : 900;
+    const thetaMax = 5.3;
+    this.galaxyStars = [];
+
     for (let arm = 0; arm < armCount; arm++) {
       const armOffset = arm * (Math.PI / 2);
       for (let i = 0; i < starsPerArm; i++) {
-        const theta = (i / starsPerArm) * Math.PI * 4 + (Math.random() - 0.5) * 0.25;
-        const r = Math.min(size, a * Math.exp(b * theta));
-        const x = r * Math.cos(theta + armOffset) + (Math.random() - 0.5) * 7;
-        const y = r * Math.sin(theta + armOffset) + (Math.random() - 0.5) * 7;
-        const centerFactor = Math.max(0, 1 - (r / size));
-        const radius = 0.4 + centerFactor * 1.2 + Math.random() * 0.8;
-        const alpha = 0.22 + centerFactor * 0.6;
-        const color = centerFactor > 0.6
-          ? `rgba(255,245,210,${alpha})`
-          : (Math.random() > 0.55 ? `rgba(185,220,255,${alpha * 0.75})` : `rgba(255,185,170,${alpha * 0.65})`);
-        out.push({ x, y, r: radius, color });
+        const theta = ((i / starsPerArm) * thetaMax) + (Math.random() - 0.5) * 0.12;
+        const r = Math.min(320, 80 * Math.exp(0.28 * theta));
+        const armAngle = theta + armOffset;
+        const scatter = (Math.random() * 30) - 15;
+        const px = r * Math.cos(armAngle) + scatter * (-Math.sin(armAngle));
+        const py = r * Math.sin(armAngle) + scatter * (Math.cos(armAngle));
+
+        let starR = 1.5 + Math.random() * 0.5;
+        let color = '255,251,230';
+        let alpha = 0.9;
+        if (r >= 80 && r <= 180) {
+          starR = 1 + Math.random() * 0.5;
+          color = Math.random() < 0.5 ? '255,255,255' : '123,47,255';
+          alpha = 0.72;
+        } else if (r > 180) {
+          starR = 0.5 + Math.random() * 0.5;
+          color = Math.random() < 0.55 ? '0,212,255' : '170,170,255';
+          alpha = 0.58;
+        }
+
+        this.galaxyStars.push({ x: px, y: py, r: starR, color, alpha });
       }
     }
-    return out;
   }
 
-  buildClusters() {
-    const n = 5 + Math.floor(Math.random() * 4);
-    return Array.from({ length: n }, () => ({
-      x: (Math.random() - 0.5) * this.W * 0.4,
-      y: (Math.random() - 0.5) * this.H * 0.16,
-      stars: 20 + Math.floor(Math.random() * 20),
+  buildDustLanes() {
+    this.galaxyDustLanes = [
+      { y: -95, c1x: -130, c1y: -145, c2x: 100, c2y: -40, ex: 245, ey: -70, width: 18 },
+      { y: -30, c1x: -180, c1y: -80, c2x: 80, c2y: 20, ex: 280, ey: 12, width: 21 },
+      { y: 40, c1x: -200, c1y: -8, c2x: 70, c2y: 80, ex: 290, ey: 102, width: 24 },
+      { y: 112, c1x: -160, c1y: 62, c2x: 100, c2y: 140, ex: 250, ey: 168, width: 25 },
+    ];
+  }
+
+  buildNebulaClouds() {
+    this.nebulaClouds = [
+      { x: -85, y: -52, r: 62, color: '123,47,255', alpha: 0.12 },
+      { x: 110, y: 36, r: 54, color: '123,47,255', alpha: 0.12 },
+      { x: 58, y: -120, r: 68, color: '0,212,255', alpha: 0.10 },
+      { x: -145, y: 84, r: 48, color: '0,212,255', alpha: 0.10 },
+      { x: 170, y: -18, r: 58, color: '255,120,0', alpha: 0.08 },
+    ];
+  }
+
+  buildComets() {
+    this.comets = Array.from({ length: 6 }, () => ({
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      speed: 0,
+      len: 0,
+      life: 0,
+      maxLife: 0,
+      behindGalaxy: false,
+      tailType: 0,
+      flickerPhase: 0,
+      flickerSpeed: 0,
     }));
+    for (let i = 0; i < this.comets.length; i++) this.resetComet(this.comets[i]);
   }
 
-  buildNebula() {
-    const colors = ['#7b2fff', '#00d4ff', '#0033ff'];
-    const n = 4 + Math.floor(Math.random() * 3);
-    return Array.from({ length: n }, () => ({
-      x: (Math.random() - 0.5) * this.W * 0.7,
-      y: (Math.random() - 0.5) * this.H * 0.24,
-      r: 45 + Math.random() * 90,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      alpha: 0.08 + Math.random() * 0.07,
-    }));
-  }
-
-  spawnComet(i = 0) {
+  resetComet(comet) {
     const side = Math.floor(Math.random() * 4);
-    const speed = 2.8 + Math.random() * 3.2;
-    const angle = Math.random() * Math.PI * 2;
-    const behindGalaxy = i % 2 === 0;
-    let x = 0; let y = 0;
-    if (side === 0) { x = -80; y = Math.random() * this.H; }
-    if (side === 1) { x = this.W + 80; y = Math.random() * this.H; }
-    if (side === 2) { x = Math.random() * this.W; y = -80; }
-    if (side === 3) { x = Math.random() * this.W; y = this.H + 80; }
-    return {
-      x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-      len: 50 + Math.random() * 100, alpha: 0.65, flicker: Math.random() * Math.PI * 2,
-      behindGalaxy, life: 1,
-    };
+    let angle = 0;
+    if (side === 0) {
+      comet.x = -100;
+      comet.y = Math.random() * this.H;
+      angle = (-Math.PI / 3) + Math.random() * ((2 * Math.PI) / 3);
+    } else if (side === 1) {
+      comet.x = this.W + 100;
+      comet.y = Math.random() * this.H;
+      angle = (2 * Math.PI / 3) + Math.random() * ((2 * Math.PI) / 3);
+    } else if (side === 2) {
+      comet.x = Math.random() * this.W;
+      comet.y = -100;
+      angle = (Math.PI / 6) + Math.random() * ((2 * Math.PI) / 3);
+    } else {
+      comet.x = Math.random() * this.W;
+      comet.y = this.H + 100;
+      angle = (-5 * Math.PI / 6) + Math.random() * ((2 * Math.PI) / 3);
+    }
+
+    comet.speed = 180 + Math.random() * 140;
+    comet.vx = Math.cos(angle) * comet.speed;
+    comet.vy = Math.sin(angle) * comet.speed;
+    comet.len = 80 + Math.random() * 80;
+    comet.life = 0;
+    comet.maxLife = 4.5 + Math.random() * 3.5;
+    comet.behindGalaxy = Math.random() < 0.5;
+    comet.tailType = Math.random() < 0.5 ? 0 : 1;
+    comet.flickerPhase = Math.random() * Math.PI * 2;
+    comet.flickerSpeed = 2 + Math.random() * 2;
   }
 
   buildOffscreen() {
@@ -1875,207 +1957,273 @@ class SpaceScene {
     const sctx = this.staticCanvas.getContext('2d');
     sctx.fillStyle = '#000000';
     sctx.fillRect(0, 0, this.W, this.H);
-    this.bgStars.forEach((s) => {
+    this.stars.forEach((s) => {
       sctx.beginPath();
       sctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      sctx.fillStyle = `${s.tint}${s.a})`;
+      sctx.fillStyle = `rgba(${s.color},${s.baseAlpha})`;
       sctx.fill();
-    });
-    this.distantSmudges.forEach((g) => {
-      sctx.save();
-      sctx.translate(g.x, g.y);
-      sctx.rotate(g.rot);
-      const grd = sctx.createRadialGradient(0, 0, 0, 0, 0, g.rx);
-      grd.addColorStop(0, `rgba(160,180,255,${g.alpha})`);
-      grd.addColorStop(1, 'rgba(0,0,0,0)');
-      sctx.fillStyle = grd;
-      sctx.scale(1, g.ry / g.rx);
-      sctx.beginPath();
-      sctx.arc(0, 0, g.rx, 0, Math.PI * 2);
-      sctx.fill();
-      sctx.restore();
+      if (s.isBright) {
+        sctx.strokeStyle = `rgba(255,255,255,${Math.min(0.4, s.baseAlpha * 0.45)})`;
+        sctx.lineWidth = 0.6;
+        sctx.beginPath();
+        sctx.moveTo(s.x - 3, s.y);
+        sctx.lineTo(s.x + 3, s.y);
+        sctx.moveTo(s.x, s.y - 3);
+        sctx.lineTo(s.x, s.y + 3);
+        sctx.stroke();
+      }
     });
   }
 
-  drawGalaxyLayer(ctx) {
-    ctx.save();
-    ctx.translate(this.galX, this.galY);
-    ctx.rotate(this.galaxyAngle);
-    ctx.scale(1, 0.45);
+  drawDistantGalaxies() {
+    const { ctx } = this;
+    for (let i = 0; i < this.distantGalaxies.length; i++) {
+      const g = this.distantGalaxies[i];
+      ctx.save();
+      ctx.translate(g.x, g.y);
+      ctx.rotate(g.rot);
+      ctx.scale(1, g.ry / g.rx);
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, g.rx);
+      grad.addColorStop(0, `rgba(${g.color},${g.alpha})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, g.rx, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
 
-    this.nebula.forEach((n) => {
+  drawGalaxy(time) {
+    const { ctx } = this;
+    ctx.save();
+    ctx.translate(this.galX + this.mouse.x * 0.18, this.galY + this.mouse.y * 0.18);
+    ctx.rotate(time * ((Math.PI * 2) / 90));
+    ctx.scale(1, 0.42);
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    for (let i = 0; i < this.nebulaClouds.length; i++) {
+      const n = this.nebulaClouds[i];
       const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
-      grad.addColorStop(0, `${n.color}${SpaceScene.alphaToHex(n.alpha)}`);
+      grad.addColorStop(0, `rgba(${n.color},${n.alpha})`);
       grad.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
       ctx.fill();
-    });
+    }
+    ctx.restore();
 
-    this.galaxyStars.forEach((s) => {
+    for (let i = 0; i < this.galaxyStars.length; i++) {
+      const s = this.galaxyStars[i];
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = s.color;
+      ctx.fillStyle = `rgba(${s.color},${s.alpha})`;
       ctx.fill();
-    });
+    }
 
-    this.clusters.forEach((cluster) => {
-      for (let i = 0; i < cluster.stars; i++) {
-        const x = cluster.x + (Math.random() - 0.5) * 26;
-        const y = cluster.y + (Math.random() - 0.5) * 16;
-        ctx.beginPath();
-        ctx.arc(x, y, 0.5 + Math.random() * 1.2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${0.45 + Math.random() * 0.4})`;
-        ctx.fill();
-      }
-    });
-
-    for (let i = 0; i < 4; i++) {
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    for (let i = 0; i < this.galaxyDustLanes.length; i++) {
+      const lane = this.galaxyDustLanes[i];
+      ctx.lineWidth = lane.width;
+      ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.ellipse(0, 0, this.W * 0.08 + i * 25, this.W * 0.017 + i * 7, 0, (i * Math.PI) / 4, ((i + 1.8) * Math.PI) / 4);
-      ctx.strokeStyle = `rgba(0,0,0,${0.15 + i * 0.03})`;
-      ctx.lineWidth = 6;
+      ctx.moveTo(-280, lane.y);
+      ctx.bezierCurveTo(lane.c1x, lane.c1y, lane.c2x, lane.c2y, lane.ex, lane.ey);
       ctx.stroke();
     }
 
-    const core = ctx.createRadialGradient(0, 0, 0, 0, 0, 60);
-    core.addColorStop(0, 'rgba(255,255,255,0.95)');
-    core.addColorStop(0.35, 'rgba(255,240,180,0.7)');
-    core.addColorStop(0.65, 'rgba(255,170,80,0.35)');
-    core.addColorStop(1, 'rgba(255,120,40,0)');
+    const core = ctx.createRadialGradient(0, 0, 0, 0, 0, 90);
+    core.addColorStop(0, 'rgba(255,255,255,1)');
+    core.addColorStop(0.22, 'rgba(255,224,102,0.95)');
+    core.addColorStop(0.56, 'rgba(255,149,0,0.65)');
+    core.addColorStop(1, 'rgba(255,149,0,0)');
     ctx.fillStyle = core;
     ctx.beginPath();
-    ctx.arc(0, 0, 60, 0, Math.PI * 2);
+    ctx.arc(0, 0, 90, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
-    this.galaxyAngle += (Math.PI * 2) / (120 * 60);
   }
 
-  drawComets(ctx, behindGalaxy = false) {
-    this.comets.forEach((c, idx) => {
-      if (c.behindGalaxy !== behindGalaxy) return;
-      c.x += c.vx;
-      c.y += c.vy;
-      c.life -= 0.0025;
-      c.flicker += 0.08;
-      const headAlpha = Math.max(0.2, c.alpha * (0.75 + 0.25 * Math.sin(c.flicker)));
-      const speed = Math.hypot(c.vx, c.vy) || 1;
-      const tailX = c.x - (c.vx / speed) * c.len;
-      const tailY = c.y - (c.vy / speed) * c.len;
-      const grad = ctx.createLinearGradient(tailX, tailY, c.x, c.y);
-      grad.addColorStop(0, 'rgba(123,47,255,0)');
-      grad.addColorStop(0.5, `rgba(0,212,255,${headAlpha * 0.35})`);
-      grad.addColorStop(1, `rgba(255,255,255,${headAlpha})`);
-      ctx.beginPath();
-      ctx.moveTo(c.x, c.y);
-      ctx.lineTo(tailX, tailY);
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = 1.5 + Math.random() * 1.2;
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, 1.8 + Math.random() * 1.2, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255,255,255,${headAlpha})`;
-      ctx.fill();
-      if (c.life <= 0 || c.x < -200 || c.x > this.W + 200 || c.y < -200 || c.y > this.H + 200) {
-        this.comets[idx] = this.spawnComet(idx);
-      }
-    });
-  }
+  drawBlackHole(time) {
+    const { ctx } = this;
+    const x = this.bhX + this.mouse.x * 0.1;
+    const y = this.bhY + this.mouse.y * 0.1;
 
-  drawBlackHole(ctx, time) {
-    const x = this.bhX;
-    const y = this.bhY;
-    const halo = ctx.createRadialGradient(x, y, 30, x, y, this.blackHoleRadius + 40);
-    halo.addColorStop(0, 'rgba(0,0,0,0.95)');
-    halo.addColorStop(0.5, 'rgba(123,47,255,0.18)');
-    halo.addColorStop(0.8, 'rgba(0,212,255,0.12)');
-    halo.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = halo;
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    const lens = ctx.createRadialGradient(x, y, 0, x, y, 280);
+    lens.addColorStop(0, 'rgba(0,0,0,0)');
+    lens.addColorStop(0.321, 'rgba(0,0,0,0)');
+    lens.addColorStop(0.464, 'rgba(0,212,255,0.15)');
+    lens.addColorStop(0.714, 'rgba(123,47,255,0.12)');
+    lens.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = lens;
     ctx.beginPath();
-    ctx.arc(x, y, this.blackHoleRadius + 40, 0, Math.PI * 2);
+    ctx.arc(x, y, 280, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
 
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate((20 * Math.PI) / 180);
-    ctx.scale(1, 0.56);
-    const diskShift = Math.sin(time * 0.0002) * 0.12;
+    ctx.rotate((25 * Math.PI) / 180);
+    ctx.rotate(time * ((Math.PI * 2) / 8));
+    ctx.scale(1, 0.42);
+
     const rings = [
-      { rx: 125, ry: 40, c0: `rgba(255,245,210,${0.85 + diskShift * 0.1})`, c1: 'rgba(255,210,80,0.4)', c2: 'rgba(255,170,60,0)' },
-      { rx: 148, ry: 48, c0: 'rgba(255,185,70,0.58)', c1: 'rgba(255,110,20,0.30)', c2: 'rgba(180,40,0,0)' },
-      { rx: 172, ry: 56, c0: 'rgba(200,55,25,0.42)', c1: 'rgba(140,30,20,0.18)', c2: 'rgba(80,0,0,0)' },
+      { inner: 100, outer: 115, from: '255,255,255', to: '255,244,180', opacity: 0.95 },
+      { inner: 115, outer: 145, from: '255,155,40', to: '255,210,70', opacity: 0.8 },
+      { inner: 145, outer: 185, from: '170,36,24', to: '95,0,0', opacity: 0.5 },
     ];
-    rings.forEach((r, i) => {
-      const g = ctx.createRadialGradient(0, 0, r.rx * 0.15, 0, 0, r.rx);
-      g.addColorStop(0, r.c0);
-      g.addColorStop(0.55, r.c1);
-      g.addColorStop(1, r.c2);
+
+    for (let i = 0; i < rings.length; i++) {
+      const ring = rings[i];
+      const rr = (ring.inner + ring.outer) * 0.5;
+      const grad = ctx.createLinearGradient(-ring.outer, 0, ring.outer, 0);
+      grad.addColorStop(0, `rgba(${ring.from},${ring.opacity})`);
+      grad.addColorStop(1, `rgba(${ring.to},${ring.opacity})`);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = ring.outer - ring.inner;
       ctx.beginPath();
-      ctx.ellipse(0, 0, r.rx, r.ry, this.diskAngle + i * 0.15, 0, Math.PI * 2);
-      ctx.fillStyle = g;
-      ctx.fill();
-    });
+      ctx.ellipse(0, 0, rr, rr, 0, 0.15, Math.PI * 1.95);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = 'rgba(255,255,245,1)';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 122, 122, 0, Math.PI * 0.96, Math.PI * 1.25);
+    ctx.stroke();
     ctx.restore();
-    this.diskAngle += 0.002;
 
-    const shimmer = ctx.createRadialGradient(x, y, 24, x, y, this.blackHoleRadius + 20);
-    shimmer.addColorStop(0, 'rgba(0,212,255,0.22)');
-    shimmer.addColorStop(1, 'rgba(0,212,255,0)');
-    ctx.fillStyle = shimmer;
-    ctx.beginPath();
-    ctx.arc(x, y, this.blackHoleRadius + 20, 0, Math.PI * 2);
-    ctx.fill();
-
-    const jetAlpha = 0.35 + Math.sin(time * 0.01) * 0.1;
-    const jetGradUp = ctx.createLinearGradient(x, y - 8, x, y - 260);
-    jetGradUp.addColorStop(0, `rgba(255,255,255,${jetAlpha})`);
-    jetGradUp.addColorStop(0.4, `rgba(0,212,255,${jetAlpha * 0.8})`);
-    jetGradUp.addColorStop(1, 'rgba(0,212,255,0)');
-    ctx.strokeStyle = jetGradUp;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x, y - 8);
-    ctx.lineTo(x + Math.sin(time * 0.001) * 2, y - 260);
-    ctx.stroke();
-
-    const jetGradDown = ctx.createLinearGradient(x, y + 8, x, y + 260);
-    jetGradDown.addColorStop(0, `rgba(255,255,255,${jetAlpha})`);
-    jetGradDown.addColorStop(0.4, `rgba(0,212,255,${jetAlpha * 0.8})`);
-    jetGradDown.addColorStop(1, 'rgba(0,212,255,0)');
-    ctx.strokeStyle = jetGradDown;
-    ctx.beginPath();
-    ctx.moveTo(x, y + 8);
-    ctx.lineTo(x + Math.sin(time * 0.0013) * 2, y + 260);
-    ctx.stroke();
+    const flicker = 0.8 + 0.2 * Math.sin(time * 3);
+    const drawJet = (dir) => {
+      const tipY = y + (250 * dir);
+      const grad = ctx.createLinearGradient(x, y, x, tipY);
+      grad.addColorStop(0, `rgba(255,255,255,${flicker})`);
+      grad.addColorStop(0.4, `rgba(0,212,255,${0.75 * flicker})`);
+      grad.addColorStop(1, 'rgba(0,212,255,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(x - 1.5, y);
+      ctx.lineTo(x + 1.5, y);
+      ctx.lineTo(x, tipY);
+      ctx.closePath();
+      ctx.fill();
+    };
+    drawJet(-1);
+    drawJet(1);
 
     ctx.beginPath();
-    ctx.arc(x, y, 72, 0, Math.PI * 2);
+    ctx.arc(x, y, this.blackHoleRadius, 0, Math.PI * 2);
     ctx.fillStyle = '#000000';
     ctx.fill();
   }
 
-  draw(time = 0) {
-    const { ctx } = this;
-    ctx.clearRect(0, 0, this.W, this.H);
-    ctx.drawImage(this.staticCanvas, this.mouse.x * 0.3, this.mouse.y * 0.3);
+  updateComets(time) {
+    const dt = Math.min(0.033, time - this.lastTime);
+    for (let i = 0; i < this.comets.length; i++) {
+      const c = this.comets[i];
+      c.x += c.vx * dt;
+      c.y += c.vy * dt;
+      c.life += dt;
+      if (c.life >= c.maxLife || c.x < -220 || c.x > this.W + 220 || c.y < -220 || c.y > this.H + 220) {
+        this.resetComet(c);
+      }
+    }
+  }
 
-    const vignette = ctx.createRadialGradient(this.W / 2, this.H / 2, this.W * 0.25, this.W / 2, this.H / 2, this.W * 0.7);
+  drawComets(time, behindGalaxy) {
+    const { ctx } = this;
+    for (let i = 0; i < this.comets.length; i++) {
+      const c = this.comets[i];
+      if (c.behindGalaxy !== behindGalaxy) continue;
+
+      const headAlpha = 0.7 + 0.2 * Math.sin((time * c.flickerSpeed) + c.flickerPhase);
+      const dirX = c.vx / c.speed;
+      const dirY = c.vy / c.speed;
+      const tailX = c.x - dirX * c.len;
+      const tailY = c.y - dirY * c.len;
+      const grad = ctx.createLinearGradient(tailX, tailY, c.x, c.y);
+      if (c.tailType === 0) {
+        grad.addColorStop(0, 'rgba(0,212,255,0)');
+      } else {
+        grad.addColorStop(0, 'rgba(123,47,255,0)');
+      }
+      grad.addColorStop(1, `rgba(255,255,255,${headAlpha})`);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y);
+      ctx.lineTo(tailX, tailY);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${headAlpha})`;
+      ctx.fill();
+    }
+  }
+
+  drawTwinkle(time) {
+    const { ctx } = this;
+    for (let i = 0; i < this.twinkleStars.length; i++) {
+      const s = this.twinkleStars[i];
+      const alpha = Math.max(0.05, Math.min(1, s.baseAlpha * (0.8 + 0.2 * Math.sin((time * s.twinkleSpeed * Math.PI * 2) + s.twinklePhase))));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${s.color},${alpha})`;
+      ctx.fill();
+      if (s.isBright) {
+        ctx.strokeStyle = `rgba(255,255,255,${Math.min(0.4, alpha * 0.45)})`;
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(s.x - 3, s.y);
+        ctx.lineTo(s.x + 3, s.y);
+        ctx.moveTo(s.x, s.y - 3);
+        ctx.lineTo(s.x, s.y + 3);
+        ctx.stroke();
+      }
+    }
+  }
+
+  drawVignette() {
+    const { ctx } = this;
+    const vignette = ctx.createRadialGradient(
+      this.W / 2, this.H / 2, this.H * 0.3,
+      this.W / 2, this.H / 2, this.H * 0.85,
+    );
     vignette.addColorStop(0, 'rgba(0,0,0,0)');
-    vignette.addColorStop(1, 'rgba(0,0,0,0.65)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.75)');
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, this.W, this.H);
+  }
 
-    this.drawComets(ctx, true);
-    this.drawGalaxyLayer(ctx);
-    this.drawComets(ctx, false);
-    this.drawBlackHole(ctx, time);
-    this.animId = requestAnimationFrame((ts) => this.draw(ts));
+  drawBackground() {
+    this.ctx.drawImage(this.staticCanvas, this.mouse.x * 0.2, this.mouse.y * 0.2);
+  }
+
+  animate() {
+    this.animId = requestAnimationFrame(this._tick);
+    const time = Date.now() / 1000;
+    const { ctx } = this;
+    ctx.clearRect(0, 0, this.W, this.H);
+    this.drawBackground();
+    this.drawDistantGalaxies();
+    this.updateComets(time);
+    this.drawComets(time, true);
+    this.drawGalaxy(time);
+    this.drawBlackHole(time);
+    this.drawComets(time, false);
+    this.drawTwinkle(time);
+    this.drawVignette();
+    this.lastTime = time;
   }
 
   start() {
-    if (!this.animId) this.draw();
+    if (!this.animId) this.animate();
   }
 
   stop() {
